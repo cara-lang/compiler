@@ -91,8 +91,9 @@ DEFINITELY:
     * foo(x: Int, Int): Int    // <- disallowed
     * foo(x: Int, y: Int): Int // <- allowed
   * return type cannot be omitted
-  * Int == Int64
-  * Float == Float64
+* Int == Int64
+* Float == Float64
+* number thousand separators (_ anywhere in a number)
 
 
 WANTED:
