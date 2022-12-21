@@ -1,0 +1,2 @@
+#!/usr/bin/env cara
+IO.println(123)

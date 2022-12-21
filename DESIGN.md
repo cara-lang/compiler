@@ -1,5 +1,6 @@
 DEFINITELY:
 * usable for scripting
+  * allow shebang
 * comments: // and /* ... */
 * pure
 * functional
@@ -108,6 +109,7 @@ WANTED:
 * Fraction type?
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
 * Probably no <| pipelines? << and >> still might have their place. 
+* 0x, 0b, 0o, floats scientific notation?
 
 TODO:
 * check out OCaml modules
@@ -120,6 +122,7 @@ TODO:
 * guard syntax for equational style?
 * does dot syntax putting things on the left instead of on the right (like |>) play nice? Isn't it contradictory? Which way wins in the stdlib? Should those be unified?
 * does ordered let together with implicit main mean top level declarations are ordered like F# is?
+* how to do multiline strings?
 
 CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?
