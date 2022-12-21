@@ -1,0 +1,3 @@
+x = {a: 1}
+y = x.a
+IO.println(y)
