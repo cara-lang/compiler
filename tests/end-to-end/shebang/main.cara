@@ -1,2 +1,2 @@
 #!/usr/bin/env cara
-IO.println(123)
+IO.inspect(123)

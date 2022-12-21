@@ -1,4 +1,4 @@
 x = {a: 1}
 f = .a
 y = x |> f
-IO.println(y)
+IO.inspect(y)

@@ -1,5 +1,5 @@
 main() =
-  IO.println(x + y)
+  IO.inspect(x + y)
   where
     x = 1
     y = 1 + x

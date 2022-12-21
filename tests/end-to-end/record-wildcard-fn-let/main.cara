@@ -1,7 +1,7 @@
 f(rec) =
   {..} = rec
-  IO.println(a)
-  IO.println(b)
+  IO.inspect(a)
+  IO.inspect(b)
 
 main() =
   x = {a: 1, b: "Hello"}

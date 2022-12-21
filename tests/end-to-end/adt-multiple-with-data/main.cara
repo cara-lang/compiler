@@ -5,4 +5,4 @@ type Foo =
 x : Foo
 x = Baz("Hello")
 
-IO.println(x)
+IO.inspect(x)

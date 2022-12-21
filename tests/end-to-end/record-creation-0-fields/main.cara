@@ -1,2 +1,2 @@
 x = {}
-IO.println(x)
+IO.inspect(x)

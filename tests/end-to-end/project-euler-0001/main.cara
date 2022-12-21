@@ -8,4 +8,4 @@ Find the sum of all the multiples of 3 or 5 below 1000.
 
 1...1000
   |> Seq.sum((_ % 3 == 0 || _ % 5 == 0))
-  |> IO.println
+  |> IO.inspect

@@ -2,4 +2,4 @@ fac(0) = 1
 fac(n) = n * fac(n-1)
 
 x = fac(20)
-IO.println(x)
+IO.inspect(x)

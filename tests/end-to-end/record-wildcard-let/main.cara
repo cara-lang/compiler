@@ -1,4 +1,4 @@
 x = {a: 1, b: "Hello"}
 {..} = x
-IO.println(a)
-IO.println(b)
+IO.inspect(a)
+IO.inspect(b)

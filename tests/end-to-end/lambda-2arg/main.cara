@@ -1,4 +1,4 @@
 f = \x,y -> x + y
 y = f(5,4)
-IO.println(f)
-IO.println(y)
+IO.inspect(f)
+IO.inspect(y)
