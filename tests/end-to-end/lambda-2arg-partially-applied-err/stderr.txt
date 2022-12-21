@@ -1,0 +1,12 @@
+E0005: Function used with too few arguments
+
+The function `f` was used with 1 argument, while it needs 2.
+
+The type signature of the function is:
+
+  f: (x: Int, y: Int) -> Int
+
+main.cara:2:6
+━━┓
+2 ┃ y = f(5)
+  ┃      ^

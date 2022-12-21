@@ -1,0 +1,6 @@
+E0006: Record created with duplicate fields
+
+main.cara:1:12
+━━┓
+1 ┃ x = {a: 1, a: 2}
+  ┃            ^

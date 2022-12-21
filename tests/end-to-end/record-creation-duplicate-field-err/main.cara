@@ -1,0 +1,2 @@
+x = {a: 1, a: 2}
+IO.println(x)
