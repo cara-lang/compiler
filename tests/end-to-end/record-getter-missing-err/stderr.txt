@@ -1,0 +1,9 @@
+E0007: Trying to access a missing record field
+
+The record contains these fields:
+- a
+
+main.cara:2:7
+━━┓
+2 ┃ y = x.b
+  ┃       ^
