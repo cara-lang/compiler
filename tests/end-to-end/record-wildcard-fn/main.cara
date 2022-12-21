@@ -1,0 +1,7 @@
+f({..}) =
+  IO.println(a)
+  IO.println(b)
+
+main() =
+  x = {a: 1, b: "Hello"}
+  f(x)
