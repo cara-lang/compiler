@@ -3,7 +3,9 @@
 dst = IO.ask("Enter destination filename: ")
 dstHandle = FS.open(src, IO.Write)
 
+timestampFmt = "hh:mm:ss.fff"
+
 (1..10).forEach(\i -> 
   time = Time.now()
-  FS.write("[${Time.format("hh:mm:ss.fff")}] Hello number $i\n")
+  dstHandle |> FS.write("[${Time.format(timestampFmt, time)}] Hello number $i\n")
 )
