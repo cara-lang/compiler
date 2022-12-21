@@ -1,0 +1,26 @@
+import PRNG.SplitMix as PRNG
+
+randomNumbers(UInt64, PRNG.State): (List(UInt64), PRNG.State)
+randomNumbers(count, state) =
+  if count <= 0 then
+    []
+  else
+    (randomNumber, newState) = PRNG.next(state)
+    randomNumber ++ randomNumbers(count - 1, newState)
+
+main() =
+  seed = 1234
+  state = PRNG.init(seed)
+  (numbers, _) = randomNumbers(5, state)
+  IO.println(numbers)
+
+/* alternatively:
+
+main() =
+  1234
+  |> PRNG.init
+  |> randomNumbers(5, _)    // could also have been: |> randomNumbers(5)
+  |> first                  // maybe we could allow: |> .first() ?
+  |> IO.println
+
+*/

@@ -1,0 +1,24 @@
+/*
+https://projecteuler.net/problem=1
+
+If we list all the natural numbers below 10 that are multiples of 3 or 5, we get 3, 5, 6 and 9. The sum of these multiples is 23.
+
+Find the sum of all the multiples of 3 or 5 below 1000.
+*/
+
+1...1000
+  |> Seq.sum((_ % 3 == 0 || _ % 5 == 0))
+  |> IO.println
+
+/* alternatively
+
+1...1000
+  |> Seq.filter((_ % 3 == 0 || _ % 5 == 0))
+  |> Seq.sum
+  |> IO.println
+
+This demonstrates functions having multiple possible arities (Seq.sum)
+Also, call parentheses aren't necessarily needed in pipelines.
+
+*/
+

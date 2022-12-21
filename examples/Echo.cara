@@ -1,0 +1,4 @@
+main() =
+  line = IO.readLine()
+  IO.println(line)
+  main()

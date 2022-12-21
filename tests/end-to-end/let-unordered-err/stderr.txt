@@ -1,0 +1,9 @@
+E0001: Unknown variable: `x`
+
+Hint: You're defining the variable `x` after it's used. Reorder the definitions
+or use the `where` syntax which allows definitions out of order.
+
+main.cara:2:11
+━━┓
+2 ┃   y = 1 + x
+  ┃           ^

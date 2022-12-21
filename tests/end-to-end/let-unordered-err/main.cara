@@ -1,0 +1,4 @@
+main() =
+  y = 1 + x
+  x = 1
+  IO.println(x + y)
