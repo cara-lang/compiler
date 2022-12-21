@@ -1,0 +1,7 @@
+type Foo =
+  | Bar(a: Int, b: Int)
+
+x : Foo
+x = Bar(123,456)
+
+IO.println(x)

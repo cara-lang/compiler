@@ -90,9 +90,12 @@ DEFINITELY:
     * foo(x: Int, Int): Int    // <- disallowed
     * foo(x: Int, y: Int): Int // <- allowed
   * return type cannot be omitted
+  * Int == Int64
+  * Float == Float64
 
 
 WANTED:
+* type _aliases_
 * general purpose rather than HTML/JS (at least as first priority)
 * no currying?
 * give users access to the whole syntax (operators, implementing core typeclasses etc.)

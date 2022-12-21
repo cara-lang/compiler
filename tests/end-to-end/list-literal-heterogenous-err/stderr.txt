@@ -1,0 +1,20 @@
+E0002: List contains values of different types
+
+Lists can only contain values of the same type.
+
+Hint: A way to solve this is to wrap the different types in an ADT:
+
+  type User =
+    | ByName(String)
+    | ById(Int)
+
+  list = [ByName("a"), ByInt(123)]
+
+Another common way of solving this is to use a tuple instead of a list:
+
+  tuple = ("a", 123)
+
+main.cara:1:10
+━━┓
+1 ┃ x = [1,2,"oops"]
+  ┃          ^

@@ -1,0 +1,9 @@
+E0001: Unknown variable: `x`
+
+Hint: You're defining the variable `x` after it's used. Define it first to be
+able to use it later.
+
+main.cara:1:9
+━━┓
+1 ┃ y = 1 + x
+  ┃         ^

@@ -1,0 +1,18 @@
+E0003: ADT constructor parameters with same type are missing a name
+
+The ADT constructor contains parameters of the same type. Whenever that
+happens, it's mandatory to provide names for the parameters:
+
+  type Foo = Bar(a: Int, b: Int)
+
+Hint: You can also wrap your types in more meaningful names; this will make
+them impossible to swap by accident:
+
+  type X = X Int
+  type Y = Y Int
+  type Foo = Bar(X,Y)
+
+main.cara:1:16
+━━┓
+3 ┃   | Baz(String,String)
+  ┃                ^
