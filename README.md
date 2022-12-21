@@ -36,6 +36,7 @@ isPrime(n) =
     |> Seq.any(n % _ == 0)
 
 x = isPrime(1111111111111111111)
+
 IO.println(x)
 // -> True
 ```
@@ -46,6 +47,11 @@ quickSort([]) = []
 quickSort(x::xs) =
   (lt, gt) = List.partition((x >= _), xs)
   quickSort(lt) ++ x ++ quickSort(gt)
+
+xs = [3,1,2,5,4]
+
+IO.println(xs.quickSort())
+// -> [1,2,3,4,5]
 ```
 
 ```cara
@@ -61,4 +67,11 @@ traverse(fn,list) = go(list,[])
       case fn(a) of
         Nothing -> Nothing
         Just(b) -> go(as,b::bs)
+
+xs = [1,2,3,4,5]
+ys = [6,7,8,9,10]
+f = \n -> if n == 3 then Nothing else Just(n)
+
+IO.println(xs.traverse(f)) // -> Nothing
+IO.println(ys.traverse(f)) // -> Just([6,7,8,9,10])
 ```
