@@ -70,13 +70,6 @@ DEFINITELY:
     * data |> x(2) --> x(2, data)
     * Can be overriden with _
       * data |> x(2,_,3) --> x(2,data,3)
-* dot syntax
-  * a single-line alternative to when |> would be too verbose / vertically heavy
-  * encouraged as an alternative to stacking functions g(f(x)), combats the lack of <| or $ a little
-  * `data.x().y()` means `y(x(data))`
-  * `data.x(1).y(2,3)` means `y(2,3,x(1,data))`
-  * as with |>, can be overriden with _
-    * `data.x(_,1).y(2,_,3)` means `y(2,x(data,1),3)`
 * ++ for sequence-adding
   * with overloaded operators, it could be arbitrary:
     * A ++ [B,C,D] --> [A,B,C,D]
@@ -94,6 +87,7 @@ DEFINITELY:
 * Int == Int64
 * Float == Float64
 * number thousand separators (_ anywhere in a number)
+* allow ' in var names
 
 
 WANTED:
@@ -111,6 +105,7 @@ WANTED:
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
 * Probably no <| pipelines? << and >> still might have their place. 
 * 0x, 0b, 0o, floats scientific notation?
+* inline pragmas? for Maybe.map to become tail-safe etc.
 
 TODO:
 * check out OCaml modules
@@ -124,6 +119,18 @@ TODO:
 * does dot syntax putting things on the left instead of on the right (like |>) play nice? Isn't it contradictory? Which way wins in the stdlib? Should those be unified?
 * does ordered let together with implicit main mean top level declarations are ordered like F# is?
 * how to do multiline strings?
+* `as` to be an allowed identifier
+* dot syntax
+  * can't really be used with qualified functions... in which scenarios would it be useful then? Would it have some automatic resolution?
+    * dstHandle.write("...") == FS.write("...", dstHandle) ?
+  * It still seems very elegant for functions written in this module. Perhaps let's keep it :)
+  * --------------
+  * a single-line alternative to when |> would be too verbose / vertically heavy
+  * encouraged as an alternative to stacking functions g(f(x)), combats the lack of <| or $ a little
+  * `data.x().y()` means `y(x(data))`
+  * `data.x(1).y(2,3)` means `y(2,3,x(1,data))`
+  * as with |>, can be overriden with _
+    * `data.x(_,1).y(2,_,3)` means `y(2,x(data,1),3)`
 
 CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?

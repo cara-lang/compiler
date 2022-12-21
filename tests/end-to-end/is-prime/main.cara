@@ -1,0 +1,6 @@
+isPrime(n) =
+  2..sqrt(n)
+    |> Seq.any(n % _ == 0)
+
+x = isPrime(1111111111111111111)
+IO.println(x)
