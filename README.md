@@ -1,5 +1,7 @@
 # Cara
 
+![Cara logo](https://github.com/cara-lang/compiler/raw/main/assets/logo.svg)
+
 Cara is a programming language!
 
 Here are some of its characteristics:
