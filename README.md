@@ -1,6 +1,4 @@
-# Cara
-
-![Cara logo](https://github.com/cara-lang/compiler/raw/main/assets/logo.svg)
+<img alt="Cara logo" src="https://github.com/cara-lang/compiler/raw/main/assets/logo.svg" width="196" height="196" />
 
 Cara is a programming language!
 
