@@ -111,6 +111,7 @@ WANTED:
 * 0x, 0b, 0o, floats scientific notation?
 * inline pragmas? for Maybe.map to become tail-safe etc.
 * holes syntax: would it be better to do \(_ + 1) instead of (_ + 1)?
+* what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
 
 TODO:
 * check out OCaml modules
@@ -125,6 +126,7 @@ TODO:
   * Haskell typeclasses: 0 or 1 implementations, never more (can be done with newtypes)
   * no hierarchy / inheritance; object conforms to a protocol only if it implements the contract
   * Haskell: dispatches on the return type as well. Clojure: dispatches only on first fn arg
+  * Haskell: allows overloading even values, not just functions (minBound)
 * extension functions / objects / vals
 * unsure: imports: by default `import SplitMix` implies `exposing (SplitMix)` if the module exposes that. (Should this default/principal type to import be defined in the imported module?)
 * example of scripting main that takes cmdline args, and perhaps reads 
@@ -144,6 +146,12 @@ TODO:
   * `data.x(1).y(2,3)` means `y(2,3,x(1,data))`
   * as with |>, can be overriden with _
     * `data.x(_,1).y(2,_,3)` means `y(2,x(data,1),3)`
+* postfix op for seq access - desugar to `getAt`? Not all seqs would implement that
+  * [1]      -> getAt(i: Int, coll: Seq(a)): Maybe(a) given ...
+  * [-1]     -> -//-
+  * [1..3]   -> getAt(r: Range, coll: Seq(a)): Maybe(a) given ...
+  * [1,3..8] -> -//-
+  * [3..] ? do we want to allow infinite ranges?
 
 CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?
