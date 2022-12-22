@@ -1,0 +1,10 @@
+contains(a, List(a)): Bool
+  given Eq(a)
+contains(a,[]) = False
+contains(a,(x::xs)) = a == x || elementOf(a,xs)
+
+r1 = [1,2,3,4,5].contains(4)
+r2 = [1,2,3,4,5].contains(8)
+
+IO.inspect(r1)
+IO.inspect(r2)
