@@ -1,0 +1,1 @@
+Yay for println debugging! user.isProgrammer=True and user={name:"Martin",isProgrammer=True}
