@@ -1,0 +1,10 @@
+E0009: Unfinished block comment
+
+End of file was reached while searching for the block comment ending delimiter */.
+
+The block comment started here:
+
+main.cara:1:1
+━━┓
+1 ┃ /* Hello
+  ┃ ^
