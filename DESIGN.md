@@ -117,6 +117,14 @@ TODO:
 * anonymous ADTs? check out open unions/tags in Roc/Grace/...
 * default arguments?
 * typeclasses? interfaces? protocols? late extension of those? (Clojure, Kotlin)
+  * adhoc polymorphism: function overloading, sep. implementations for different types
+  * parametric polymorphism: one function with one implementation working on many types
+    * id : a -> a
+    * map : (a -> b) -> [a] -> [b]
+  * open: allow adding after the fact (not just near the type/class definition)
+  * Haskell typeclasses: 0 or 1 implementations, never more (can be done with newtypes)
+  * no hierarchy / inheritance; object conforms to a protocol only if it implements the contract
+  * Haskell: dispatches on the return type as well. Clojure: dispatches only on first fn arg
 * extension functions / objects / vals
 * unsure: imports: by default `import SplitMix` implies `exposing (SplitMix)` if the module exposes that. (Should this default/principal type to import be defined in the imported module?)
 * example of scripting main that takes cmdline args, and perhaps reads 
