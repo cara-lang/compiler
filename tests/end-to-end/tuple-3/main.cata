@@ -1,4 +1,4 @@
 x : (Int, String, Bool)
 x = (123, "Hello", True)
 
-IO.println(x)
+IO.inspect(x)

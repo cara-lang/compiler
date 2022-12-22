@@ -1,5 +1,5 @@
 x : (Int, String)
 x = (123, "Hello")
 
-IO.println(x.first())
-IO.println(x.el0())
+IO.inspect(x.first())
+IO.inspect(x.el0())

@@ -39,7 +39,7 @@ isPrime(n) =
 
 x = isPrime(1111111111111111111)
 
-IO.println(x)
+IO.inspect(x)
 // -> True
 ```
 
@@ -52,7 +52,7 @@ quickSort(x::xs) =
 
 xs = [3,1,2,5,4]
 
-IO.println(xs.quickSort())
+IO.inspect(xs.quickSort())
 // -> [1,2,3,4,5]
 ```
 
@@ -74,6 +74,6 @@ xs = [1,2,3,4,5]
 ys = [6,7,8,9,10]
 f = \n -> if n == 3 then Nothing else Just(n)
 
-IO.println(xs.traverse(f)) // -> Nothing
-IO.println(ys.traverse(f)) // -> Just([6,7,8,9,10])
+IO.inspect(xs.traverse(f)) // -> Nothing
+IO.inspect(ys.traverse(f)) // -> Just([6,7,8,9,10])
 ```
