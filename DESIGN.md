@@ -88,6 +88,10 @@ DEFINITELY:
 * Float == Float64
 * number thousand separators (_ anywhere in a number)
 * allow ' in var names
+* Strings: seqs of extended grapheme clusters
+  * https://manishearth.github.io/blog/2017/01/14/stop-ascribing-meaning-to-unicode-code-points/
+  * check out how Swift and Perl 6 do things
+  * Char = basically a string (not an integer)
 
 
 WANTED:
