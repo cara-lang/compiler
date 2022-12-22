@@ -77,3 +77,16 @@ f = \n -> if n == 3 then Nothing else Just(n)
 IO.inspect(xs.traverse(f)) // -> Nothing
 IO.inspect(ys.traverse(f)) // -> Just([6,7,8,9,10])
 ```
+
+```cara
+fizzbuzz(n) =
+  if n % 15 == 0 then "FizzBuzz"
+  else if n % 3 == 0 then "Fizz"
+  else if n % 5 == 0 then "Buzz"
+  else String.fromInt(n)
+
+1..20
+  |> List.map(fizzbuzz)
+  |> IO.inspect
+// -> ["1","2","Fizz","4","Buzz","Fizz","7","8","Fizz","Buzz","11","Fizz","13","14","FizzBuzz","16","17","Fizz","19","Buzz"]
+```

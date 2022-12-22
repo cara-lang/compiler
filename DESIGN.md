@@ -120,7 +120,7 @@ TODO:
 * extension functions / objects / vals
 * unsure: imports: by default `import SplitMix` implies `exposing (SplitMix)` if the module exposes that. (Should this default/principal type to import be defined in the imported module?)
 * example of scripting main that takes cmdline args, and perhaps reads 
-* guard syntax for equational style?
+* guard syntax for equational style? perhaps not?
 * does dot syntax putting things on the left instead of on the right (like |>) play nice? Isn't it contradictory? Which way wins in the stdlib? Should those be unified?
 * does ordered let together with implicit main mean top level declarations are ordered like F# is?
 * how to do multiline strings?
