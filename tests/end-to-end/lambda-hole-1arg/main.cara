@@ -1,0 +1,3 @@
+f = (_ + 1)
+x = f(5)
+IO.inspect(x)

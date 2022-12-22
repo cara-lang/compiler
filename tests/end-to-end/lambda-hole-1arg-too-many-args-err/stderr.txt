@@ -1,0 +1,12 @@
+E0008: Function used with too many arguments
+
+The function `f` was used with 2 arguments, while it needs 1.
+
+The type signature of the function is:
+
+  f(x: Int): Int
+
+main.cara:2:9
+━━┓
+2 ┃ y = f(5,8)
+  ┃         ^

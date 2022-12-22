@@ -106,6 +106,7 @@ WANTED:
 * Probably no <| pipelines? << and >> still might have their place. 
 * 0x, 0b, 0o, floats scientific notation?
 * inline pragmas? for Maybe.map to become tail-safe etc.
+* holes syntax: would it be better to do \(_ + 1) instead of (_ + 1)?
 
 TODO:
 * check out OCaml modules
