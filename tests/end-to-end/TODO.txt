@@ -1,0 +1,48 @@
+- [ ] adhoc polymorphism (without typeclasses, just straight up function overloading - multiple arities)
+- [ ] adhoc polymorphism (without typeclasses, just straight up function overloading - single arity different types)
+- [ ] adhoc polymorphism (typeclass instances)
+- [ ] anonymous record punning
+- [ ] anonymous record destructuring of single field
+- [ ] anonymous record destructuring of multiple fields
+- [ ] record in a type annotation
+- [ ] record in ADT
+- [ ] tail recursion (100k steps loop?)
+- [ ] tail recursion modulo cons (show off different function calls)
+- [ ] case-of style fib
+- [ ] if..then style fib
+- [ ] case..of OR pattern (A|B|C)
+- [ ] case..of A a | B a if the `a` is the same
+- [ ] case..of A a b | B a b if the `a` and `b` are the same respectively
+- [ ] case..of guards
+- [ ] eq.style OR pattern
+- [ ] eq.style A a | B a if the `a` is the same
+- [ ] eq.style A a b | B a b if the `a` and `b` are the same respectively
+- [ ] eq.style guards
+- [ ] i8,i16,i32,i64
+- [ ] u8,u16,u32,u64
+- [ ] BigInteger
+- [ ] upcasting integers
+- [ ] f32,f64
+- [ ] BigDecimal
+- [ ] Rational
+- [ ] effects are automatically bound (>>=)
+- [ ] effects tracked in signature
+- [ ] |> pipeline without parens
+- [ ] |> pipeline with 1 arg
+- [ ] |> pipeline with 2 args
+- [ ] |> pipeline with lambda
+- [ ] |> pipeline with hole
+- [ ] |> pipeline with .foo()
+- [ ] |> pipeline with .foo record getter
+- [ ] dot syntax - no arg
+- [ ] dot syntax - 1 arg
+- [ ] dot syntax - 2 args
+- [ ] dot syntax - hole
+- [ ] implementation of toString for ADT?
+- [ ] Char type
+- [ ] String deals with extended grapheme clusters
+- [ ] type annotation: omit name
+- [ ] type annotation: omit type
+- [ ] type annotation: omit name for 2 args of the same type - error
+- [ ] type annotation: 2 labelled args with same type
+- [ ] type annotation: omit return type - error
