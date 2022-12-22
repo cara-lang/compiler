@@ -1,0 +1,4 @@
+(executable
+ (public_name compiler)
+ (name main)
+ (libraries compiler))
