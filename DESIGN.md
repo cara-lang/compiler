@@ -104,6 +104,7 @@ WANTED:
 * no \case, we don't have currying?
 * ranges: `1..5, 1...5, 1,3..8, 5..1, 5...1, 5,3..-8` = list-like things. Likely a Sequence protocol like Clojure has, and majority of stdlib working on sequences rather than lists?
 * implements LSP(?) and Debug Adapter Protocol (to have VSCode/... debugger out of box)
+  * https://microsoft.github.io/debug-adapter-protocol/
 * holes? to aid programming and ask the typechecker for its opinion
 * Fraction type?
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
@@ -124,6 +125,7 @@ TODO:
     * map : (a -> b) -> [a] -> [b]
   * open: allow adding after the fact (not just near the type/class definition)
   * Haskell typeclasses: 0 or 1 implementations, never more (can be done with newtypes)
+  * George Wilson: https://www.youtube.com/watch?v=2EdQFCP5mZ8
   * no hierarchy / inheritance; object conforms to a protocol only if it implements the contract
   * Haskell: dispatches on the return type as well. Clojure: dispatches only on first fn arg
   * Haskell: allows overloading even values, not just functions (minBound)

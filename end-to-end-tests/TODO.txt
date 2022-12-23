@@ -1,5 +1,7 @@
 - [ ] adhoc polymorphism (without typeclasses, just straight up function overloading - multiple arities)
 - [ ] adhoc polymorphism (without typeclasses, just straight up function overloading - single arity different types)
+- [ ] eq typeclass
+- [ ] usage of eq typeclass for member function
 - [ ] adhoc polymorphism (typeclass instances)
 - [ ] anonymous record punning
 - [ ] anonymous record destructuring of single field
