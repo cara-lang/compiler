@@ -152,6 +152,8 @@ TODO:
   * [1..3]   -> getAt(r: Range, coll: Seq(a)): Maybe(a) given ...
   * [1,3..8] -> -//-
   * [3..] ? do we want to allow infinite ranges?
+* collection API: HandAxe? https://www.youtube.com/watch?v=YDq251FbmK4
 
 CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?
+
