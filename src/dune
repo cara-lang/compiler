@@ -1,0 +1,9 @@
+(menhir
+ (modules parser))
+
+(executable
+ (name compiler)
+ (public_name cara)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries sedlex menhirLib))
