@@ -1,0 +1,8 @@
+type Foo =
+  | Foo(Int)
+  | Bar(Int)
+
+f = \Foo(x) -> x + 1
+y = f(Bar(5))
+
+IO.inspect(y)

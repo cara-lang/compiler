@@ -8,3 +8,4 @@ E0006,Record created with duplicate fields
 E0007,Trying to access a missing record field
 E0008,Function used with too many arguments
 E0009,Unfinished block comment
+E0010,Non-exhaustive anonymous function argument

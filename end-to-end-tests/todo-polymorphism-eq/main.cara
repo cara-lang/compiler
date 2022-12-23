@@ -1,4 +1,0 @@
-class Eq(a)
-  eq(a,a): Bool
-
-operator `==` = eq (infix, 4)

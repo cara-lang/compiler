@@ -1,0 +1,18 @@
+E0010: Non-exhaustive anonymous function argument
+
+The pattern used for the argument doesn't span all possible values of the argument type.
+
+Missing patterns:
+- Bar(_)
+
+Note: It's not possible to provide multiple patterns in an anonymous function argument. Either define the function via the `foo(x) = ...` syntax (providing multiple such lines) or use `case..of` inside the anonymous function:
+
+  \x ->
+    case x of
+      Foo(x) -> ...
+      Bar(x) -> ...
+
+main.cara:5:6
+━━┓
+5 ┃ f = \Foo(x) -> x + 1
+  ┃      ^
