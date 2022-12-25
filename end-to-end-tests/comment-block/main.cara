@@ -2,5 +2,3 @@
 There
 World
 */
-
-IO.println("done")
