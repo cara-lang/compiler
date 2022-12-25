@@ -113,6 +113,21 @@ WANTED:
 * inline pragmas? for Maybe.map to become tail-safe etc.
 * holes syntax: would it be better to do \(_ + 1) instead of (_ + 1)?
 * what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
+* GADTs?
+* automatic letrec
+* explicit qualification like `List.map` etc. is preferable over typeclass-y `fmap`
+* functions can be implicitly namespaced, as if methods on a type
+  * Logger.pure(
+  * `pure` and `bind` are used in the monad blocks `MonadName { ... }` by the compiler
+  * can we later do something cool with the namespace itself?
+    * see `monad-state` test, with `derive IdGen.each as Monad.each`
+  * allow unqualified dot notation on these? myXY.addX(1) if there is a fn XY.addX? and not for other unqualified fns?
+* name collisions of type constructors can have collisions; they need to be distinguished like:
+  * type X = A | B(Int)
+  * type Y = A | B(Int)
+  * foo = A // error
+  * foo = X.A // ok!
+
 
 TODO:
 * check out OCaml modules
@@ -159,3 +174,54 @@ TODO:
 CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?
 
+
+----------------
+
+
+WHAT'S MISSING FROM ELM:
+
+* plugging into comparable, appendable, ...
+* custom operators
+* custom everything (full language unlocked -- effect modules etc.)
+* deriving implementations of Functor etc.
+* GADTs
+* some form of do notation?
+* A|B|C -> or patterns
+* equational fn declarations
+* lambda holes
+* Extension functions / values
+
+
+WHAT'S GOOD ABOUT ELM:
+
+* pipeline style
+* explicit function qualification
+* immutability
+* purity
+
+
+FOMO FROM OTHER LANGUAGES:
+
+* OCaml modules
+* Algebraic effects instead of monads?
+
+-----------------------------
+
+Current thinking about monads:
+
+Monad syntax sugar:
+
+1) Monad-y code needs to be run inside MonadName { ... } blocks.
+2) MonadName { ... } blocks are available if these functions are in scope:
+     MonadName.pure
+     MonadName.bind
+3) IO { ... } is implicit if omitting main().
+4) If a monadic value is to be left "unwrapped",
+     use x = monadicValue
+      or x = monadicValue(x,y,z) if creating it needs arguments.
+5) If a monadic value is to be executed,
+     use x = monadicValue!
+      or x = monadicValue!(x,y,z) if creating it needs arguments.
+6) If not binding the result to a name, `_ =` can be omitted:
+     log!("hello") // is the same as
+     _ = log!("hello")

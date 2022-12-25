@@ -1,0 +1,39 @@
+// Adapted from https://dev.realworldocaml.org/gadts.html
+
+type Value(_) =
+  | VInt(Int): Value(Int)
+  | VBool(Bool): Value(Bool)
+
+type Expr(_) =
+  | EValue(Value(a)): Expr(a)
+  | Eq(Expr(Int), Expr(Int)): Expr(Bool)
+  | Plus(Expr(Int),Expr(Int)): Expr(Int)
+  | If(Expr(Bool),Expr(a),Expr(a)): Expr(a)
+
+
+int(x)  = EValue(VInt(x))
+bool(x) = EValue(VBool(x))
+
+// TODO: operator definitions, precedence, ...
+x +: y = Plus(x,y)
+
+IO.inspect(int(3) +: int(6))
+
+// impossible: int(3) +: bool(False) - TODO create an -err test for this
+
+// TODO: does the below need a forall syntax? What does the `type a.` in `let eval_value : type a. a value -> a` mean?
+// It's mentioned somewhat in the article: we need to mark `eval` as polymorphic. It's also polymorphic recursion (*gulp*)
+// "Basically impossible to infer automatically" -- so we'll likely need an explicit annotation for the polymorphism.
+// So the annotations below will likely need to change:
+
+evalValue(Value(a)): a
+evalValue(VInt(x)) = x
+evalValue(VBool(x)) = x
+
+eval(Expr(a)): a
+eval(EValue(v)) = evalValue(v)
+eval(If(c,t,e)) = if eval(c) then eval(t) else eval(e)
+eval(Eq(x,y)) = eval(x) == eval(y)
+eval(Plus(x,y)) = eval(x) + eval(y)
+
+// TODO there are more examples of GADTs in that article (flexible_find), make tests out of those

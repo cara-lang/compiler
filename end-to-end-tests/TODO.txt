@@ -48,3 +48,4 @@
 - [ ] type annotation: omit name for 2 args of the same type - error
 - [ ] type annotation: 2 labelled args with same type
 - [ ] type annotation: omit return type - error
+- [ ] monad examples - multiple files, show off the possibility to import and use unqualified

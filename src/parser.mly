@@ -15,7 +15,7 @@
 
 main: expr EOL { $1 };
 expr:
-    | INT { ELiteral $1 }
+    | INT { EInt $1 }
     | LPAREN expr RPAREN { $2 }
     | expr PLUS expr  { EBinOp ($1, OpPlus, $3) }
     | expr MINUS expr { EBinOp ($1, OpMinus, $3) }

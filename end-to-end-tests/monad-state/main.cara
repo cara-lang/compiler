@@ -1,0 +1,58 @@
+//////////////////////
+// State definition //
+
+type IdGen(a) = IdGen(Int -> (a,Int))
+
+IdGen.pure(a) : IdGen(a)
+IdGen.pure(a) = IdGen(\id -> (a,id))
+
+IdGen.bind(fn: (a -> IdGen(b)), m: IdGen(a)): IdGen(b)
+IdGen.bind(fn,IdGen(runA)) =
+  IdGen(\id ->
+    (a,idA) = runA(id)
+    IdGen(runB) = fn(a)
+    runB(idA)
+  )
+
+IdGen.get : IdGen(Int)
+IdGen.get = IdGen(\id -> (id,id))
+
+IdGen.inc : IdGen(())
+IdGen.inc = IdGen(\id -> ((),id+1))
+
+IdGen.run(m: IdGen(a), Int): (a,Int)
+IdGen.run(IdGen(run), startId) = run(startId)
+
+IdGen.each(fn: (a -> IdGen b), list: List(a)): IdGen(List(b))
+IdGen.each = derived from Monad.each
+
+///////////////////
+// IdGen example //
+
+getAndInc : IdGen(Int)
+getAndInc = IdGen {
+  id = IdGen.get!
+  IdGen.inc!
+  id
+}
+
+idGenExample : IdGen(String)
+idGenExample = IdGen {
+  1..5 
+    |> IdGen.each!(\_ ->
+      id = IdGen.getAndInc!
+      "$id"
+    )
+    |> String.join ","
+}
+
+idGenExampleRan1 : (String, Int)
+idGenExampleRan1 =
+  IdGen.run(idGenExample, 0)
+
+idGenExampleRan2 : (String, Int)
+idGenExampleRan2 =
+  IdGen.run(idGenExample, 3)
+
+IO.inspect(idGenExampleRan1)
+IO.inspect(idGenExampleRan2)

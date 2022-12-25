@@ -1,3 +1,6 @@
-venv:  source ../e2e-test-runner/venv/bin/activate 
-test:  ok venv && python ../e2e-test-runner/runner.py
-debug: ok venv && textual run --dev ../e2e-test-runner/runner.py
+build:  dune build @all
+run:    ./_build/default/src/compiler.exe
+venv:   source ../e2e-test-runner/venv/bin/activate 
+test:   ok venv && python ../e2e-test-runner/runner.py
+debug:  ok venv && textual run --dev ../e2e-test-runner/runner.py
+format: ocamlformat --inplace ./src/*.ml
