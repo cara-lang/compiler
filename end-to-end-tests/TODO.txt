@@ -49,3 +49,7 @@
 - [ ] type annotation: 2 labelled args with same type
 - [ ] type annotation: omit return type - error
 - [ ] monad examples - multiple files, show off the possibility to import and use unqualified
+- [ ] operators used in the prefix form
+- [ ] string unicode escapes
+- [ ] string \n \r \t escapes
+- [ ] multiline strings

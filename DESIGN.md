@@ -130,6 +130,12 @@ WANTED:
 
 
 TODO:
+* Monad syntax ("computation expressions")... should we default to the await, and give a special not-so-often-used syntax to _not_ await?
+* Consider Maybe[List[b]] instead of Maybe(List(b)) to distinguish fn annotations and fn headers a little?
+* It should be possible to infer holes just from the presence of _, instead of from the extra parentheses. We shall see?
+  * Seq.any(n % _ == 0)    // preferable to:
+  * Seq.any((n % _ == 0))  // or even:
+  * Seq.any(\(n % _ == 0))
 * check out OCaml modules
 * anonymous ADTs? check out open unions/tags in Roc/Grace/...
 * default arguments?

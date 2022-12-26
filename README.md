@@ -21,14 +21,14 @@ At the moment, Cara is in the design phase: I'm trying to figure out its feature
 ```cara
 #!/usr/bin/env cara
 
-dst = IO.ask("Enter destination filename: ")
-dstHandle = FS.open(src, IO.Write)
+dst = IO.ask!("Enter destination filename: ")
+dstHandle = FS.open!(src, IO.Write)
 
 timestampFmt = "hh:mm:ss.fff"
 
-(1..10).forEach(\i -> 
-  time = Time.now()
-  dstHandle |> FS.write("[${Time.format(timestampFmt, time)}] Hello number $i\n")
+(1..10).each(\i -> 
+  time = Time.now!()
+  dstHandle |> FS.write!("[${Time.format(timestampFmt, time)}] Hello number $i\n")
 )
 ```
 
@@ -47,7 +47,7 @@ IO.inspect(x)
 quickSort(list: List(Int)): List(Int)
 quickSort([]) = []
 quickSort(x::xs) =
-  (lt, gt) = List.partition((x >= _), xs)
+  (lt, gt) = List.partition(x >= _, xs)
   quickSort(lt) ++ x ++ quickSort(gt)
 
 xs = [3,1,2,5,4]
