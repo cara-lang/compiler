@@ -33,6 +33,8 @@ rule next_token = parse
   | '/' { DIV }
   | '(' { LPAREN }
   | ')' { RPAREN }
+  | ',' { COMMA }
+  | '!' { BANG }
   | "IO.println!" { IO_PRINTLN } (* kludge *)
 
   | _ as c { illegal c }

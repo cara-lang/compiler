@@ -1,4 +1,1 @@
-x : ()
-x = ()
-
-IO.inspect(x)
+IO.inspect(())

@@ -2,10 +2,11 @@
 
 %token <int> INT
 %token <string> STRING
+%token IO_PRINTLN
 %token PLUS MINUS TIMES DIV
 %token LPAREN RPAREN
+%token COMMA BANG
 %token EOL EOF
-%token IO_PRINTLN
 
 %left PLUS MINUS /* lowest precedence */
 %left TIMES DIV  /* medium precedence */
@@ -20,6 +21,7 @@ main:
     ;
 
 expr:
+    | IO_PRINTLN  { EIoPrintln }
     | INT    { EInt $1 }
     | STRING { EString $1 }
     | LPAREN expr RPAREN { $2 }
@@ -28,5 +30,5 @@ expr:
     | expr TIMES expr { EBinOp ($1, OpTimes, $3) }
     | expr DIV expr   { EBinOp ($1, OpDiv, $3) }
     | MINUS expr %prec UMINUS { EUnOp (OpNeg, $2) }
-    | IO_PRINTLN LPAREN expr RPAREN { EIoPrintln $3 }
+    | expr LPAREN separated_list(COMMA,expr) RPAREN { ECall ($1, $3) }
     ;
