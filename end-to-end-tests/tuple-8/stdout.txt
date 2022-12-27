@@ -1,1 +1,1 @@
-(123,"Hello",True,1,"World",False,42,"Yay")
+(1,Hello,3,There,5,World,7,!)

@@ -1,4 +1,1 @@
-x : (Int, String, Bool, Int, String, Bool, Int, String)
-x = (123, "Hello", True, 1, "World", False, 42, "Yay")
-
-IO.inspect!(x)
+IO.println!((1, "Hello", 3, "There", 5, "World", 7, "!"))

@@ -1,4 +1,1 @@
-x : (Int, String)
-x = (123, "Hello")
-
-IO.inspect!(x)
+IO.println!((123, "Hello"))
