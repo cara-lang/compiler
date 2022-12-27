@@ -3,18 +3,38 @@ open Syntax
 
 let printf = Stdlib.Printf.printf
 
-let rec eval program =
+let rec interpret program =
   match program with
-  | EInt i -> i
-  | EUnOp (unop,e1) -> (match unop with
-      | OpNeg -> -(eval e1)
+  | EInt i -> VInt i
+  | EString s -> VString s
+  | EUnOp (unop,e1) ->(
+      match (interpret e1) with
+        | VInt i -> (match unop with
+            | OpNeg -> VInt (neg i)
+        )
+        | VString _ -> (match unop with
+            | OpNeg -> failwith "Can't negate string"
+        )
+        | VUnit -> (match unop with
+            | OpNeg -> failwith "Can't negate unit"
+        )
     )
-  | EBinOp (e1,binop,e2) -> (match binop with
-    | OpPlus  -> eval e1 + eval e2
-    | OpMinus -> eval e1 - eval e2
-    | OpTimes -> eval e1 * eval e2
-    | OpDiv   -> eval e1 / eval e2
-  )
+  | EBinOp (e1,binop,e2) -> (
+      match (interpret e1, interpret e2) with
+        | (VInt i1, VInt i2) -> (
+          match binop with
+            | OpPlus  -> VInt (i1 + i2)
+            | OpMinus -> VInt (i1 - i2)
+            | OpTimes -> VInt (i1 * i2)
+            | OpDiv   -> VInt (i1 / i2)
+          )
+        | _ -> failwith "Unsupported binop"
+    )
+  | EIoPrintln e -> 
+      match (interpret e) with
+        | VInt i    -> printf("%d\n") i; VUnit
+        | VString s -> printf("%s\n") s; VUnit
+        | VUnit     -> printf("()\n");   VUnit
 
 let argv = Sys.get_argv ()
 let _ =
@@ -27,9 +47,6 @@ let _ =
 
       let filename = argv.(1) in
       let ic = Stdio.In_channel.create filename in
-
-      Parser.parse_chan ic
-      |> eval
-      |> printf("%d\n");
+      let _ = Parser.parse_chan ic |> interpret in
 
       Stdio.Out_channel.flush Stdio.stdout

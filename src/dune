@@ -7,6 +7,12 @@
     nice_parser
     base
   )
-  (preprocess (pps ppx_jane))
+  (preprocess
+    (pps 
+      ppx_deriving.show
+      ppx_deriving.map
+      ppx_jane
+    )
+  )
 )
 
