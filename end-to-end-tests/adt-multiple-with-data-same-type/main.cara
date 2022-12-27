@@ -5,4 +5,4 @@ type Foo =
 x : Foo
 x = Baz("Hello", "World")
 
-IO.inspect(x)
+IO.inspect!(x)

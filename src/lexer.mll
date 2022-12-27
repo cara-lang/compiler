@@ -35,6 +35,7 @@ rule next_token = parse
   | ')' { RPAREN }
   | ',' { COMMA }
   | '!' { BANG }
+  | '=' { EQUALS }
   | "IO.println!" { IO_PRINTLN } (* kludge *)
 
   | _ as c { illegal c }

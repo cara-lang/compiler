@@ -34,4 +34,4 @@ loggerExampleRan : (List(String), Int)
 loggerExampleRan =
   Logger.run(loggerExample)
 
-IO.inspect(loggerExampleRan)
+IO.inspect!(loggerExampleRan)

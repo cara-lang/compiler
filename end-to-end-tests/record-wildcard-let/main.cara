@@ -1,4 +1,4 @@
 x = {a: 1, b: "Hello"}
 {..} = x
-IO.inspect(a)
-IO.inspect(b)
+IO.inspect!(a)
+IO.inspect!(b)

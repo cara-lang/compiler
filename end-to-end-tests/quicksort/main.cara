@@ -6,4 +6,4 @@ quickSort(x::xs) =
 
 xs  = [5,1,3,2,4]
 xs' = quickSort(xs)
-IO.inspect(xs')
+IO.inspect!(xs')

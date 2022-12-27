@@ -4,4 +4,4 @@ type Foo =
 x : Foo
 x = Bar(123,"Hello")
 
-IO.inspect(x)
+IO.inspect!(x)

@@ -1,5 +1,5 @@
 x : (Int, String, Bool)
 x = (123, "Hello", True)
 
-IO.inspect(x.third())
-IO.inspect(x.el2())
+IO.inspect!(x.third())
+IO.inspect!(x.el2())

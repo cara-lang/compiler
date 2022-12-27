@@ -17,7 +17,7 @@ bool(x) = EValue(VBool(x))
 // TODO: operator definitions, precedence, ...
 x +: y = Plus(x,y)
 
-IO.inspect(int(3) +: int(6))
+IO.inspect!(int(3) +: int(6))
 
 // impossible: int(3) +: bool(False) - TODO create an -err test for this
 

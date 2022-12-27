@@ -1,2 +1,2 @@
 x = {}
-IO.inspect(x)
+IO.inspect!(x)

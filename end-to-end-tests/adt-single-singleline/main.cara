@@ -3,4 +3,4 @@ type Foo = Bar
 x : Foo
 x = Bar
 
-IO.inspect(x)
+IO.inspect!(x)

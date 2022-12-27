@@ -1,70 +1,16 @@
-DEFINITELY:
-* usable for scripting
-  * allow shebang
-* comments: // and /* ... */
-* pure
-* functional
-* immutable
-* strong static type system
-  * automatic type inference (bidi? HM?)
+WANTED (but doesn't yet have tests):
 * functions can have multiple arities with different implementations (and return types)
   * (Seq.sum(lambda, seq) vs Seq.sum(seq))
   * can have the same arity multiple times, dispatching on the input types
 * strong stdlib
   * I have a much higher tolerance and need for `elm-community/*-extra`
   * Closer to Clojure than to Elm!
-* ADTs
-* anonymous records
-  * types like:  { x: Int, y: Bool }
-  * values like: { x: 123, y: False }
-* record updates
-  * {...old, x: 1} // sets the x field if it exists in `old` already
-                   // adds the x field if it doesn't!
-* record creation using locally available names
-  * seed = 123
-    acc = []
-    {seed,acc} // -> { seed: 123, acc: [] }
-* record unboxing
-  * email(LoggedIn({..})) = Just(email) // <- {..} unboxes all the fields to locals
-* unlimited length tuples
-  * probably done via (a,b,c) being (a,(b,c)) under the hood
-* lambdas - anonymous functions
-  * \x -> 1 + x
-* lambda shorthand: 
-  * `(_ + 1) === \x -> x + 1`
-  * `(_1 + _2) === \x y -> x + y`
-  * The specific syntax might change, depending on how it plays with the rest, like implicit parens in pipelines
 * automatic tail recursion (Erlang/Elm style)
   * modulo cons? allowing for `go n = n :: go (n - 1)` to be tail-optimized
-* equational style (Haskell-like) as an alternative syntax to case..of
-  * fib(0) = 0
-    fib(1) = 1
-    fib(n) = fib(n-1) + fib(n-2)
 * pattern matching has `A|B|C -> ...`
 * integer types: Int8, Int16, ..., Int64, BigInt
   * automatic upcasting from i32 to i64 etc
 * float types: Float32, Float64, BigDecimal
-* do notation or something similar
-  * hopefully automatically inferred, no difference between let x = 1 and x <- y
-* no let..in keywords, but let..in is implicit with whitespace
-  * instead things follow each other sequentially, and the last thing is the returned item
-  * fn(n) =
-      y = n + 1
-      x = y + 2
-      x + y      // <- returned
-  * out of order still possible with `where`
-    * fn(n) =
-        x + y
-          where
-            x = y + 2
-            y = n + 1
-* string interpolation with $ and ${...}:
-  * "hello $foo" --> "hello world"
-  * "hello ${user.name}" --> "hello Martin"
-  * debug helper ${...=}
-    * similar to Python f-string f'{abc=}'
-    * "${foo=}" returns "foo=123"
-    * "${user.name=}" returns "user.name=Martin"
 * `|>` pipelines
   * They put the left side into the last position of right side by default
     * data |> x(2) --> x(2, data)
@@ -159,6 +105,7 @@ TODO:
   * Haskell: allows overloading even values, not just functions (minBound)
 * extension functions / objects / vals
 * unsure: imports: by default `import SplitMix` implies `exposing (SplitMix)` if the module exposes that. (Should this default/principal type to import be defined in the imported module?)
+* unsure: do we want the order of definitions to not matter? Probably not
 * example of scripting main that takes cmdline args, and perhaps reads 
 * guard syntax for equational style? perhaps not?
 * does dot syntax putting things on the left instead of on the right (like |>) play nice? Isn't it contradictory? Which way wins in the stdlib? Should those be unified?
@@ -239,3 +186,4 @@ Monad syntax sugar:
 6) If not binding the result to a name, `_ =` can be omitted:
      log!("hello") // is the same as
      _ = log!("hello")
+7) Non-monadic exprs without an `x =` binding are only allowed as the last stmt

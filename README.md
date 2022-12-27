@@ -39,7 +39,7 @@ isPrime(n) =
 
 x = isPrime(1111111111111111111)
 
-IO.inspect(x)
+IO.inspect!(x)
 // -> True
 ```
 
@@ -52,7 +52,7 @@ quickSort(x::xs) =
 
 xs = [3,1,2,5,4]
 
-IO.inspect(xs.quickSort())
+IO.inspect!(xs.quickSort())
 // -> [1,2,3,4,5]
 ```
 
@@ -74,8 +74,8 @@ xs = [1,2,3,4,5]
 ys = [6,7,8,9,10]
 f = \n -> if n == 3 then Nothing else Just(n)
 
-IO.inspect(xs.traverse(f)) // -> Nothing
-IO.inspect(ys.traverse(f)) // -> Just([6,7,8,9,10])
+IO.inspect!(xs.traverse(f)) // -> Nothing
+IO.inspect!(ys.traverse(f)) // -> Just([6,7,8,9,10])
 ```
 
 ```cara
@@ -87,6 +87,6 @@ fizzbuzz(n) =
 
 1..20
   |> List.map(fizzbuzz)
-  |> IO.inspect
+  |> IO.inspect!
 // -> ["1","2","Fizz","4","Buzz","Fizz","7","8","Fizz","Buzz","11","Fizz","13","14","FizzBuzz","16","17","Fizz","19","Buzz"]
 ```

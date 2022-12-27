@@ -1,4 +1,4 @@
 f = (_ + 1)
 y = f(5,8)
-IO.inspect(f)
-IO.inspect(y)
+IO.inspect!(f)
+IO.inspect!(y)

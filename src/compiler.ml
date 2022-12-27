@@ -3,11 +3,22 @@ open Syntax
 
 let printf = Stdlib.Printf.printf
 
+let rec expr_to_string = function
+  | EInt i     -> Int.to_string i
+  | EString s  -> s
+  | EUnit      -> "()"
+  | ETuple es  -> "(" ^ (String.concat ~sep:"," (List.map es ~f:expr_to_string)) ^ ")"
+  | EIoPrintln -> "<IO.println>"
+  | EUnOp _    -> "<unop>"
+  | EBinOp _   -> "<binop>"
+  | ECall _    -> "<function call>"
+
 let rec interpret program =
   match program with
   | EInt i -> EInt i
   | EString s -> EString s
   | EUnit -> EUnit
+  | ETuple es -> ETuple (List.map es ~f:interpret)
   | EIoPrintln -> EIoPrintln
   | EUnOp (unop,e1) ->
       (match unop with
@@ -32,21 +43,12 @@ let rec interpret program =
         | EIoPrintln -> 
             (match args with
               | [arg] ->
-                  (match (interpret arg) with
-                    | EInt i     -> printf("%d\n") i
-                    | EString s  -> printf("%s\n") s
-                    | EUnit      -> printf("()\n")
-                    | EIoPrintln -> printf("<IO.println>")
-                    | EUnOp _    -> printf("<unop>")
-                    | EBinOp _   -> printf("<binop>")
-                    | ECall _    -> printf("<function call>")
-                  );
+                  printf("%s\n") (expr_to_string (interpret arg));
                   EUnit
               | _ -> failwith "Arity error (IO.println)"
             )
         | _ -> failwith "Can't call anything that's not IO.println"
       )
-
 
 let argv = Sys.get_argv ()
 let _ =

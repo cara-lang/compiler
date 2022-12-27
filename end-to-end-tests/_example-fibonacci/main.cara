@@ -3,4 +3,4 @@ fib(1) = 1
 fib(n) = fib(n-1) + fib(n-2)
 
 x = fib(32)
-IO.inspect(x)
+IO.inspect!(x)

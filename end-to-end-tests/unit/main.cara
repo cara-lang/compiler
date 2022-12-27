@@ -1,1 +1,1 @@
-IO.inspect(())
+IO.println!(())

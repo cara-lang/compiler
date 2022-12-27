@@ -5,7 +5,9 @@
 %token IO_PRINTLN
 %token PLUS MINUS TIMES DIV
 %token LPAREN RPAREN
-%token COMMA BANG
+%token COMMA
+%token EQUALS
+%token BANG
 %token EOL EOF
 
 %left PLUS MINUS /* lowest precedence */
@@ -21,10 +23,15 @@ main:
     ;
 
 expr:
-    | IO_PRINTLN  { EIoPrintln }
+    | IO_PRINTLN { EIoPrintln }
     | INT    { EInt $1 }
     | STRING { EString $1 }
-    | LPAREN expr RPAREN { $2 }
+    | LPAREN separated_list(COMMA,expr) RPAREN { 
+        match $2 with
+            | [] -> EUnit
+            | [e] -> e
+            | _ -> ETuple $2
+    }
     | expr PLUS expr  { EBinOp ($1, OpPlus, $3) }
     | expr MINUS expr { EBinOp ($1, OpMinus, $3) }
     | expr TIMES expr { EBinOp ($1, OpTimes, $3) }
