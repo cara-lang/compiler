@@ -1,11 +1,11 @@
 #!/usr/bin/env cara
 
-dst = IO.ask("Enter destination filename: ")
-dstHandle = FS.open(src, IO.Write)
+dst = IO.ask!("Enter destination filename: ")
+dstHandle = FS.open!(src, FS.Write)
 
 timestampFmt = "hh:mm:ss.fff"
 
 (1..10).forEach(\i -> 
-  time = Time.now()
-  dstHandle |> FS.write("[${Time.format(timestampFmt, time)}] Hello number $i\n")
+  time = Time.now!()
+  dstHandle |> FS.write!("[${Time.format(timestampFmt, time)}] Hello number $i\n")
 )

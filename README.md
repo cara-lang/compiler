@@ -22,7 +22,7 @@ At the moment, Cara is in the design phase: I'm trying to figure out its feature
 #!/usr/bin/env cara
 
 dst = IO.ask!("Enter destination filename: ")
-dstHandle = FS.open!(src, IO.Write)
+dstHandle = FS.open!(src, FS.Write)
 
 timestampFmt = "hh:mm:ss.fff"
 
@@ -44,7 +44,7 @@ IO.inspect!(x)
 ```
 
 ```cara
-quickSort(list: List(Int)): List(Int)
+quickSort(list: List[Int]): List[Int]
 quickSort([]) = []
 quickSort(x::xs) =
   (lt, gt) = List.partition(x >= _, xs)
@@ -57,11 +57,11 @@ IO.inspect!(xs.quickSort())
 ```
 
 ```cara
-type Maybe(a) =
+type Maybe[a] =
   | Nothing
-  | Just(a)
+  | Just[a]
 
-traverse(fn: a -> Maybe(b), list: List(a)): Maybe(List(b))
+traverse(fn: a -> Maybe[b], list: List[a]): Maybe[List[b]]
 traverse(fn,list) = go(list,[])
   where
     go([],bs) = Just(List.reverse(bs))
