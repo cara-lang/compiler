@@ -95,6 +95,13 @@ DEFINITELY:
 
 
 WANTED:
+* ocaml has
+    match foo with
+      | X abc
+      | Y def -> 123
+      | Z ghi -> 234
+  as "or-patterns"
+
 * type _aliases_
 * general purpose rather than HTML/JS (at least as first priority)
 * no currying?
@@ -179,6 +186,7 @@ TODO:
 
 CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?
+  * OCaml 5 just got effects (via GADTs): https://v2.ocaml.org/releases/5.0/manual/effects.html
 
 
 ----------------

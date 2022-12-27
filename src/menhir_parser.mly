@@ -3,7 +3,7 @@
 %token <int> INT
 %token PLUS MINUS TIMES DIV
 %token LPAREN RPAREN
-%token EOL
+%token EOL EOF
 
 %left PLUS MINUS /* lowest precedence */
 %left TIMES DIV  /* medium precedence */
@@ -13,7 +13,10 @@
 
 %%
 
-main: expr EOL { $1 };
+main: 
+    | expr list(EOL) EOF { $1 }
+    ;
+
 expr:
     | INT { EInt $1 }
     | LPAREN expr RPAREN { $2 }
@@ -22,3 +25,4 @@ expr:
     | expr TIMES expr { EBinOp ($1, OpTimes, $3) }
     | expr DIV expr   { EBinOp ($1, OpDiv, $3) }
     | MINUS expr %prec UMINUS { EUnOp (OpNeg, $2) }
+    ;

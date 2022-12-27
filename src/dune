@@ -1,9 +1,12 @@
-(menhir
- (modules parser))
+(ocamllex (modules lexer))
+(menhir (modules menhir_parser))
 
 (executable
- (name compiler)
- (public_name cara)
- (preprocess
-  (pps sedlex.ppx))
- (libraries sedlex menhirLib))
+  (name compiler)
+  (libraries
+    nice_parser
+    base
+  )
+  (preprocess (pps ppx_jane))
+)
+
