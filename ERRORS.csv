@@ -10,3 +10,4 @@ E0008,Function used with too many arguments
 E0009,Unfinished block comment
 E0010,Non-exhaustive anonymous function argument
 E0011,Unused expression
+E0012,Unescaped newline in a single-line string

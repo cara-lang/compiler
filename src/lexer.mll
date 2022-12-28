@@ -86,6 +86,6 @@ and block_comment nesting = parse
   | "/*"    { block_comment (nesting+1) lexbuf }
   | "*/"    { if nesting > 0 then block_comment (nesting - 1) lexbuf }
   | newline { Lexing.new_line lexbuf; block_comment nesting lexbuf }
-  | eof     { failwith "[lexer] unterminated comment at EOF" }
+  | eof     { failwith "[lexer] unterminated block comment at EOF" }
   | _       { block_comment nesting lexbuf }
 

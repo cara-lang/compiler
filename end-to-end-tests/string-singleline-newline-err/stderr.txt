@@ -1,0 +1,14 @@
+E0012: Unescaped newline in a single-line string
+
+The string contains an unescaped newline. Escape the newline with `\n` or
+change the string to the multi-line variant with a backquote:
+
+  `abc
+  def`
+
+The newline was found immediately before the position below:
+
+main.cara:2:1
+━━┓
+2 ┃ def")
+  ┃ ^
