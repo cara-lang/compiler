@@ -1,0 +1,22 @@
+E0016: Character contains multiple visible characters
+
+A character contains more than one visible character. Remove some characters or
+convert it to a string:
+
+  "ab"
+
+Note: In Cara, each character is an "Extended Grapheme Cluster"[1], and the
+exact splitting algorithm is called "Unicode Text Segmentation"[2]. For example
+a family emoji with three family members, considered by Cara to be one
+character, will internally consist of three separate code points joined using
+ZERO WIDTH JOINER:
+
+  [ 0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466 ]
+
+[1]: https://www.unicode.org/reports/tr29/
+[2]: Definition D61 in the Unicode standard: https://www.unicode.org/versions/Unicode15.0.0/ch03.pdf#G30602
+
+main.cara:1:15
+━━┓
+1 ┃ IO.println!('ab')
+  ┃               ^

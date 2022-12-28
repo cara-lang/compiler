@@ -41,8 +41,6 @@
 - [ ] dot syntax - 2 args
 - [ ] dot syntax - hole
 - [ ] implementation of toString for ADT?
-- [ ] Char type
-- [ ] String deals with extended grapheme clusters
 - [ ] type annotation: omit name
 - [ ] type annotation: omit type
 - [ ] type annotation: omit name for 2 args of the same type - error
@@ -50,4 +48,40 @@
 - [ ] type annotation: omit return type - error
 - [ ] monad examples - multiple files, show off the possibility to import and use unqualified
 - [ ] operators used in the prefix form
-- [ ] multiline strings
+
+- [ ] multiline strings trim automatically
+  - https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
+  - https://docs.swift.org/swift-book/_images/multilineStringWhitespace_2x.png
+
+- [ ] char unicode escape: '\u{1F496}'
+- [ ] string unicode escape: "\u{1F496}"
+- [ ] multiline string unicode escape: `\u{1F496}`
+
+- [ ] chars DO need escaping '
+- [ ] chars don't need escaping "
+- [ ] chars don't need escaping `
+
+- [ ] strings don't need escaping '
+- [ ] strings DO need escaping "
+- [ ] strings don't need escaping `
+
+- [ ] multiline strings don't need escaping '
+- [ ] multiline strings don't need escaping "
+- [ ] multiline strings DO need escaping `
+
+- [ ] char.toBytes -> List[UInt8]
+- [ ] char.toCodePoints -> List[Char]?
+
+- [ ] char.lengthInBytes (name subject to change) -> length of char.toBytes
+- [ ] char.lengthInCodePoints -> length of char.toCodePoints
+
+- [ ] char.length == 1 (don't expose in API)
+- [ ] char1 == char2 needs to do the unicode algorithm, can't just compare bytes
+
+- [ ] string.toGraphemeClusters -> List[Char]
+- [ ] string.toBytes -> List[UInt8]
+- [ ] string.toCodePoints -> List[Char]?
+
+- [ ] string.length -> length of toGraphemeClusters
+- [ ] string.lengthInBytes -> length of toBytes
+- [ ] string.lengthInCodePoints -> length of toCodePoints
