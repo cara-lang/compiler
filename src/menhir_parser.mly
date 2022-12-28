@@ -20,7 +20,7 @@
 %%
 
 main: 
-    | separated_list(EOL+,stmt) EOL* EOF { StmtList ($1, None) }
+    | stmt* EOL* EOF { StmtList ($1, None) }
     (* in top-level we don't do the trailing returned expr *)
     ;
 

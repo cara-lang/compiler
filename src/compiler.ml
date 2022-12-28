@@ -1,3 +1,14 @@
+(*
+failwith ("TODO SBang " ^ Sexp.to_string_hum (Syntax.sexp_of_bang bang) )
+
+failwith (
+            "TODO EIdentifier 2 /// env = "
+              ^ Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env) 
+              ^ " /// expr = " 
+              ^ Sexp.to_string_hum (Syntax.sexp_of_expr program)
+          )
+*)
+
 open Base
 open Syntax
 
@@ -51,8 +62,8 @@ let rec interpret env program =
       | (["IO"],"println") -> program (* kludge *)
       | _ -> 
         (match Map.find env (q,x) with
-          | None -> failwith ("TODO EIdentifier 1")
-          | Some _ -> failwith "TODO EIdentifier 2"
+          | None -> failwith "TODO EIdentifier - unbound identifier"
+          | Some found -> found
         )
       )
   | ETuple es -> ETuple (List.map es ~f:(interpret env))
