@@ -95,7 +95,7 @@ let interpret_bang env = function
       failwith "TODO BValue"
   | BCall (fn,args) -> 
       (match (interpret env fn) with
-        | EIdentifier (["IO"],"println") ->
+        | EIdentifier (["IO"],"println") -> (* kludge *)
             (match args with
               | [arg] ->
                   printf("%s\n") (expr_to_string env (interpret env arg));
