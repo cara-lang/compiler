@@ -47,7 +47,8 @@ rule next_token = parse
                       |> Int.of_string
                       |> INT
                     }
-  | '"'             { read_string (Buffer.create 17) lexbuf }
+  | '"' { read_singleline_string (Buffer.create 17) lexbuf }
+  | '`' { read_multiline_string  (Buffer.create 17) lexbuf }
 
   | '+' { PLUS }
   | '-' { MINUS }
@@ -63,19 +64,33 @@ rule next_token = parse
 
   | _ as c { illegal c }
 
-and read_string buf =
+and read_singleline_string buf =
   parse
   | '"'       { STRING (Buffer.contents buf) }
-  | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf }
-  | '\\' 'n'  { Buffer.add_char buf '\n'; read_string buf lexbuf }
-  | '\\' 'r'  { Buffer.add_char buf '\r'; read_string buf lexbuf }
-  | '\\' 't'  { Buffer.add_char buf '\t'; read_string buf lexbuf }
-  | '\n'      { failwith "Illegal unescaped \\n in string"}
-  | '\r'      { failwith "Illegal unescaped \\r in string"}
-  | '\t'      { failwith "Illegal unescaped \\t in string"}
+  | '\\' '\\' { Buffer.add_char buf '\\'; read_singleline_string buf lexbuf }
+  | '\\' 'n'  { Buffer.add_char buf '\n'; read_singleline_string buf lexbuf }
+  | '\\' 'r'  { Buffer.add_char buf '\r'; read_singleline_string buf lexbuf }
+  | '\\' 't'  { Buffer.add_char buf '\t'; read_singleline_string buf lexbuf }
+  | newline   { Lexing.new_line lexbuf; failwith "E0012: Unescaped newline in a single-line string"}
+  | '\t'      { failwith "E0014: Unescaped tab in a single-line string"}
   | [^ '"' '\\' '\n' '\r' '\t']+
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
-      read_string buf lexbuf
+      read_singleline_string buf lexbuf
+    }
+  | eof { failwith "[lexer] unterminated string at EOF" }
+  | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }
+
+and read_multiline_string buf =
+  parse
+  | '`'       { STRING (Buffer.contents buf) }
+  | '\\' '\\' { Buffer.add_char buf '\\'; read_multiline_string buf lexbuf }
+  | '\\' 'n'  { Buffer.add_char buf '\n'; read_multiline_string buf lexbuf }
+  | '\\' 'r'  { Buffer.add_char buf '\r'; read_multiline_string buf lexbuf }
+  | '\\' 't'  { Buffer.add_char buf '\t'; read_multiline_string buf lexbuf }
+  | newline   { Lexing.new_line lexbuf; Buffer.add_char buf '\n'; read_multiline_string buf lexbuf }
+  | [^ '`' '\\']+
+    { Buffer.add_string buf (Lexing.lexeme lexbuf);
+      read_multiline_string buf lexbuf
     }
   | eof { failwith "[lexer] unterminated string at EOF" }
   | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }

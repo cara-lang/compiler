@@ -63,7 +63,7 @@ let rec interpret env program =
       | (["IO"],"println") -> program (* kludge *)
       | _ -> 
         (match Map.find env (q,x) with
-          | None -> failwith "TODO EIdentifier - unbound identifier"
+          | None -> failwith "E0001: Unknown variable"
           | Some found -> found
         )
       )
