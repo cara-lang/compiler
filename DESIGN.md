@@ -32,7 +32,6 @@ WANTED (but doesn't yet have tests):
   * return type cannot be omitted
 * Int == Int64
 * Float == Float64
-* number thousand separators (_ anywhere in a number)
 * allow ' in var names
 * Strings: seqs of extended grapheme clusters
   * https://manishearth.github.io/blog/2017/01/14/stop-ascribing-meaning-to-unicode-code-points/
@@ -67,6 +66,7 @@ WANTED:
 * holes syntax: would it be better to do \(_ + 1) instead of (_ + 1)?
 * what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
 * GADTs?
+  * https://dev.realworldocaml.org/gadts.html
 * automatic letrec
 * explicit qualification like `List.map` etc. is preferable over typeclass-y `fmap`
 * functions can be implicitly namespaced, as if methods on a type
@@ -90,6 +90,8 @@ TODO:
   * Seq.any((n % _ == 0))  // or even:
   * Seq.any(\(n % _ == 0))
 * check out OCaml modules
+  * https://dev.realworldocaml.org/first-class-modules.html
+  * https://www.reddit.com/r/adventofcode/comments/zvl018/comment/j1vhh48/?utm_source=reddit&utm_medium=web2x&context=3
 * anonymous ADTs? check out open unions/tags in Roc/Grace/...
 * default arguments?
 * typeclasses? interfaces? protocols? late extension of those? (Clojure, Kotlin)

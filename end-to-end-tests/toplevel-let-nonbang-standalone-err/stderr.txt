@@ -1,0 +1,10 @@
+E0011: Unused expression
+
+The expression was not bound to an identifier. Either remove it or bind it:
+
+  x = 123
+
+main.cara:1:1
+━━┓
+1 ┃ 123
+  ┃ ^
