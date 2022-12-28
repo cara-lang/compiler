@@ -1,28 +1,44 @@
+open Base
+
 type unop = 
   | OpNeg
+  [@@deriving sexp]
 
 type binop =
   | OpPlus 
   | OpMinus 
   | OpTimes 
   | OpDiv
+  [@@deriving sexp]
 
 type expr =
   (* literals *)
   | EInt of int (* 123 *)
+  | EFloat of float (* -123.45e-7 *)
   | EString of string (* "abc" *)
-  | EUnit
-  | ETuple of expr list (* (1,"abc") or (1,"abc",2,()) *)
+  | EUnit (* () *)
+  | ETuple of expr list (* (1,"abc"), (1,"abc",2,()) *)
+  | EIdentifier of string list * string (* IO.println, x, Just, Maybe.Just *)
 
-  (* kludges *)
-  | EIoPrintln (* IO.println *)
-  
   (* calls *)
   | EUnOp of unop * expr (* -num *)
   | EBinOp of expr * binop * expr (* 1 + 2 *)
   | ECall of expr * expr list (* foo(1,2,3) *)
+  [@@deriving sexp]
 
-and stmt_list = 
+type bang =
+  | BValue of expr (* foo! *)
+  | BCall of expr * expr list (* foo!(1,2,3) *)
+  [@@deriving sexp]
+
+type stmt =
+  | SLet of string * expr (* x = 123 *)
+  | SLetBang of string * bang (* x = foo! *)
+  | SBang of bang (* foo! *)
+  (* TODO: function definition *)
+  [@@deriving sexp]
+
+type stmt_list = 
   | StmtList of stmt list * expr option
   (* The last expr is the returned one. If None, we return Unit.
      These get chained together:
@@ -31,12 +47,4 @@ and stmt_list =
         foo! -------> foo      >>= \() -> ...
         123 --------> (only allowed in the last position) 123
   *)
-
-and stmt =
-  | SLet of string * expr (* x = 123 *)
-  | SLetBang of string * bang (* x = foo! *)
-  | SBang of bang (* foo! *)
-
-and bang =
-  | BValue of expr (* foo! *)
-  | BCall of expr * expr list (* foo!(1,2,3) *)
+  [@@deriving sexp]

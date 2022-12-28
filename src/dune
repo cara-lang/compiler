@@ -1,5 +1,9 @@
 (ocamllex (modules lexer))
-(menhir (modules menhir_parser))
+(menhir 
+  ;; (flags --strict)
+  (flags -v)
+  (modules menhir_parser)
+)
 
 (executable
   (name compiler)

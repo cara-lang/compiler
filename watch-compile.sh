@@ -19,6 +19,7 @@ function run {
   compile;
 }
 
+rm -rf _build;
 run;
 
 chokidar src | while read WHATEVER; do
