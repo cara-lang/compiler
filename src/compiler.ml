@@ -40,6 +40,7 @@ let rec expr_to_string env = function
   | EInt i    -> Int.to_string i
   | EFloat f  -> Float.to_string f
                   |> String.rstrip ~drop:(fun c -> Char.equal c '.')
+  | EChar c   -> c
   | EString s -> s
   | EIdentifier (q,x) -> (match Map.find env (q,x) with
       | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
@@ -56,6 +57,7 @@ let rec interpret env program =
   match program with
   | EInt i -> EInt i
   | EFloat f -> EFloat f
+  | EChar c -> EChar c
   | EString s -> EString s
   | EUnit -> EUnit
   | EIdentifier (q,x) ->

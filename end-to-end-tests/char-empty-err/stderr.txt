@@ -1,0 +1,11 @@
+E0019: Empty character
+
+An empty character was found. Either add some codepoints or convert it to a
+string:
+
+  ""
+
+main.cara:1:14
+━━┓
+1 ┃ IO.println!('')
+  ┃              ^

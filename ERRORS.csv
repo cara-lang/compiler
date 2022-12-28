@@ -15,3 +15,6 @@ E0013,Assignment to underscore
 E0014,Unescaped tab in a single-line string
 E0015,Shebang comment is not first
 E0016,Character contains multiple visible characters
+E0017,Unescaped newline in a character
+E0018,Unescaped tab in a character
+E0019,Empty character

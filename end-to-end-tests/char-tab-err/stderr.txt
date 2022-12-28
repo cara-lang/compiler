@@ -1,0 +1,12 @@
+E0018: Unescaped tab in a character
+
+The character contains an unescaped tab. Escape the tab with `\t`:
+
+  '\t'
+
+The tab was found on the position below:
+
+main.cara:1:14
+━━┓
+1 ┃ IO.println!('	')
+  ┃              ^

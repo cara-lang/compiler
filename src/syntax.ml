@@ -15,6 +15,7 @@ type expr =
   (* literals *)
   | EInt of int        (* 123 *)
   | EFloat of float    (* -123.45e-7 *)
+  | EChar of string    (* 'a' *) (* It's holding a string because of extended grapheme clusters *)
   | EString of string  (* "abc" *)
   | EUnit              (* () *)
   | ETuple of expr list  (* (1,"abc"), (1,"abc",2,()) *)

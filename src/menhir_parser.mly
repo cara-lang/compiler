@@ -2,6 +2,7 @@
 
 %token <int> INT
 %token <float> FLOAT
+%token <string> CHAR
 %token <string> STRING
 %token <string> QUALIFIER
 %token <string> LOWER_NAME
@@ -39,6 +40,7 @@ bang:
 expr:
     | INT    { EInt $1 }
     | FLOAT  { EFloat $1 }
+    | CHAR   { EChar $1 } (* TODO we're guaranteed by lexer it's >0 bytes, but we still need to validate it's just one Unicode "extended grapheme cluster"! *)
     | STRING { EString $1 }
     | QUALIFIER* name { EIdentifier ($1, $2) }
     | LPAREN separated_list(COMMA,expr) RPAREN { 

@@ -45,8 +45,9 @@ rule next_token = parse
                       |> Int.of_string
                       |> INT
                     }
-  | '"' { read_singleline_string (Buffer.create 17) lexbuf }
-  | '`' { read_multiline_string  (Buffer.create 17) lexbuf }
+  | '"'  { read_singleline_string (Buffer.create 16) lexbuf }
+  | '`'  { read_multiline_string  (Buffer.create 16) lexbuf }
+  | '\'' { read_char (Buffer.create 16) lexbuf }
 
   | '+' { PLUS }
   | '-' { MINUS }
@@ -61,6 +62,24 @@ rule next_token = parse
   | '=' { EQUALS }
 
   | _ as c { illegal c }
+
+and read_char buf = parse
+  | '\''      { if Buffer.length buf > 0
+                  then CHAR (Buffer.contents buf) (* to be validated by the parser later to contain exactly one "Extended Grapheme Cluster" *)
+                  else failwith "E0019: Empty character"
+              }
+  | '\\' '\\' { Buffer.add_char buf '\\'; read_char buf lexbuf }
+  | '\\' 'n'  { Buffer.add_char buf '\n'; read_char buf lexbuf }
+  | '\\' 'r'  { Buffer.add_char buf '\r'; read_char buf lexbuf }
+  | '\\' 't'  { Buffer.add_char buf '\t'; read_char buf lexbuf }
+  | newline   { Lexing.new_line lexbuf; failwith "E0017: Unescaped newline in a character"}
+  | '\t'      { failwith "E0018: Unescaped tab in a char"}
+  | [^ '\'' '\\' '\n' '\r' '\t']+
+    { Buffer.add_string buf (Lexing.lexeme lexbuf);
+      read_char buf lexbuf
+    }
+  | eof { failwith "[lexer] unterminated char at EOF" }
+  | _   { failwith ("Illegal character: " ^ Lexing.lexeme lexbuf) }
 
 and read_singleline_string buf = parse
   | '"'       { STRING (Buffer.contents buf) }
