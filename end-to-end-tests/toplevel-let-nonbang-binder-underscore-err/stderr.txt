@@ -1,6 +1,7 @@
-E0011: Unused expression
+E0013: Assignment of expression to underscore
 
-The expression was not bound to an identifier. Either remove it or bind it:
+This type of assignment is not allowed. Either remove the expression or bind it
+to a name:
 
   x = 123
 
@@ -10,5 +11,5 @@ and thus is considered dead code.
 
 main.cara:1:1
 ━━┓
-1 ┃ 123
+1 ┃ _ = 123
   ┃ ^

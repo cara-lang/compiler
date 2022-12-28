@@ -50,8 +50,4 @@
 - [ ] type annotation: omit return type - error
 - [ ] monad examples - multiple files, show off the possibility to import and use unqualified
 - [ ] operators used in the prefix form
-- [ ] string unicode escapes
-- [ ] string \n \r \t escapes
 - [ ] multiline strings
-- [ ] `_ = 123` is unsupported
-- [ ] `_ = IO.println!(123)` is unsupported

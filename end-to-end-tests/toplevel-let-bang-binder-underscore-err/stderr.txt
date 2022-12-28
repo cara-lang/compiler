@@ -1,0 +1,10 @@
+E0013: Assignment of bang expression to underscore
+
+This type of assignment is not allowed. Remove the binder:
+
+  IO.println!(123)
+
+main.cara:1:1
+━━┓
+1 ┃ _ = IO.println!(123)
+  ┃ ^
