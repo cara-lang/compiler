@@ -8,6 +8,7 @@
 %token <string> UPPER_NAME
 %token PLUS MINUS TIMES DIV
 %token LPAREN RPAREN
+%token LBRACKET RBRACKET
 %token COMMA BANG EQUALS
 %token EOL EOF
 
@@ -46,6 +47,7 @@ expr:
             | [e] -> e
             | _ -> ETuple $2
     }
+    | LBRACKET separated_list(COMMA,expr) RBRACKET { EList $2 }
     | expr PLUS expr  { EBinOp ($1, OpPlus, $3) }
     | expr MINUS expr { EBinOp ($1, OpMinus, $3) }
     | expr TIMES expr { EBinOp ($1, OpTimes, $3) }

@@ -47,6 +47,7 @@ let rec expr_to_string env = function
     )
   | EUnit         -> "()"
   | ETuple es     -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
+  | EList es      -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
   | EUnOp _       -> "<unop>"
   | EBinOp _      -> "<binop>"
   | ECall _       -> "<function call>"
@@ -67,6 +68,7 @@ let rec interpret env program =
         )
       )
   | ETuple es -> ETuple (List.map es ~f:(interpret env))
+  | EList es -> EList (List.map es ~f:(interpret env))
   | EUnOp (unop,e1) ->
       (match unop with
         | OpNeg -> (match (interpret env e1) with

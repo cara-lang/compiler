@@ -55,6 +55,8 @@ rule next_token = parse
   | '/' { DIV }
   | '(' { LPAREN }
   | ')' { RPAREN }
+  | '[' { LBRACKET }
+  | ']' { RBRACKET }
   | ',' { COMMA }
   | '!' { BANG }
   | '=' { EQUALS }

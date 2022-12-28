@@ -17,7 +17,8 @@ type expr =
   | EFloat of float    (* -123.45e-7 *)
   | EString of string  (* "abc" *)
   | EUnit              (* () *)
-  | ETuple of expr list                  (* (1,"abc"), (1,"abc",2,()) *)
+  | ETuple of expr list  (* (1,"abc"), (1,"abc",2,()) *)
+  | EList of expr list   (* [1,2,3], [] *)
   | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
 
   (* calls *)
