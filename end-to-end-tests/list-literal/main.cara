@@ -1,2 +1,1 @@
-x = [1,2,3]
-IO.inspect!(x)
+IO.println!([1,2,3])
