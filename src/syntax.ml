@@ -13,28 +13,28 @@ type binop =
 
 type expr =
   (* literals *)
-  | EInt of int (* 123 *)
-  | EFloat of float (* -123.45e-7 *)
-  | EString of string (* "abc" *)
-  | EUnit (* () *)
-  | ETuple of expr list (* (1,"abc"), (1,"abc",2,()) *)
-  | EIdentifier of string list * string (* IO.println, x, Just, Maybe.Just *)
+  | EInt of int        (* 123 *)
+  | EFloat of float    (* -123.45e-7 *)
+  | EString of string  (* "abc" *)
+  | EUnit              (* () *)
+  | ETuple of expr list                  (* (1,"abc"), (1,"abc",2,()) *)
+  | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
 
   (* calls *)
-  | EUnOp of unop * expr (* -num *)
-  | EBinOp of expr * binop * expr (* 1 + 2 *)
-  | ECall of expr * expr list (* foo(1,2,3) *)
+  | EUnOp of unop * expr           (* -num *)
+  | EBinOp of expr * binop * expr  (* 1 + 2 *)
+  | ECall of expr * expr list      (* foo(1,2,3) *)
   [@@deriving sexp]
 
 type bang =
-  | BValue of expr (* foo! *)
-  | BCall of expr * expr list (* foo!(1,2,3) *)
+  | BValue of expr             (* foo! *)
+  | BCall of expr * expr list  (* foo!(1,2,3) *)
   [@@deriving sexp]
 
 type stmt =
-  | SLet of string * expr (* x = 123 *)
-  | SLetBang of string * bang (* x = foo! *)
-  | SBang of bang (* foo! *)
+  | SLet of string * expr      (* x = 123 *)
+  | SLetBang of string * bang  (* x = foo! *)
+  | SBang of bang              (* foo! *)
   (* TODO: function definition *)
   [@@deriving sexp]
 
