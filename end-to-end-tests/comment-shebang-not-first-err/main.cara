@@ -1,0 +1,3 @@
+IO.println!("Oops")
+#!/usr/bin/env cara
+// Shebang comments aren't supposed to be generic line comments! Use // instead.

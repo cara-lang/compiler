@@ -10,7 +10,6 @@ let[@inline] illegal c =
   failwith (Printf.sprintf "[lexer] unexpected character: '%c'" c)
 }
 
-(* regular expressions *)
 let digit  = ['0'-'9']
 let underscore = '_'
 let minus = '-'
@@ -31,8 +30,7 @@ rule next_token = parse
   | newline     { Lexing.new_line lexbuf; EOL }
   | "/*"        { block_comment 0 lexbuf; next_token lexbuf }
   | "//"        { line_comment lexbuf; next_token lexbuf }
-  | "#!"        { line_comment lexbuf; next_token lexbuf }
-  (* TODO only allow shebang on the first non-empty line *)
+  | "#!"        { shebang_comment lexbuf }
 
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
   | lower_name as n { LOWER_NAME n }
@@ -64,8 +62,7 @@ rule next_token = parse
 
   | _ as c { illegal c }
 
-and read_singleline_string buf =
-  parse
+and read_singleline_string buf = parse
   | '"'       { STRING (Buffer.contents buf) }
   | '\\' '\\' { Buffer.add_char buf '\\'; read_singleline_string buf lexbuf }
   | '\\' 'n'  { Buffer.add_char buf '\n'; read_singleline_string buf lexbuf }
@@ -80,8 +77,7 @@ and read_singleline_string buf =
   | eof { failwith "[lexer] unterminated string at EOF" }
   | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }
 
-and read_multiline_string buf =
-  parse
+and read_multiline_string buf = parse
   | '`'       { STRING (Buffer.contents buf) }
   | '\\' '\\' { Buffer.add_char buf '\\'; read_multiline_string buf lexbuf }
   | '\\' 'n'  { Buffer.add_char buf '\n'; read_multiline_string buf lexbuf }
@@ -99,10 +95,15 @@ and line_comment = parse
   | newline { Lexing.new_line lexbuf }
   | _       { line_comment lexbuf }
 
+(* We'll generate a SHEBANG token; later the parser will check it's the first
+one (barring any EOLs), else it will throw an error.  *)
+and shebang_comment = parse
+  | newline { Lexing.new_line lexbuf; SHEBANG }
+  | _       { shebang_comment lexbuf }
+
 and block_comment nesting = parse
   | "/*"    { block_comment (nesting+1) lexbuf }
   | "*/"    { if nesting > 0 then block_comment (nesting - 1) lexbuf }
   | newline { Lexing.new_line lexbuf; block_comment nesting lexbuf }
-  | eof     { failwith "[lexer] unterminated block comment at EOF" }
+  | eof     { failwith "E0009: Unfinished block comment" }
   | _       { block_comment nesting lexbuf }
-

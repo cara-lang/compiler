@@ -1,0 +1,9 @@
+E0015: Shebang comment is not first
+
+The shebang comment (`#!...`) is only allowed on the first non-empty line.
+Either move it to the very top of the file or use a line comment (`//...`).
+
+main.cara:2:1
+━━┓
+2 ┃ #!/usr/bin/env cara
+  ┃ ^

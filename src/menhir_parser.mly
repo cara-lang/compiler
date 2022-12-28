@@ -10,7 +10,7 @@
 %token LPAREN RPAREN
 %token LBRACKET RBRACKET
 %token COMMA BANG EQUALS
-%token EOL EOF
+%token SHEBANG EOL EOF
 
 %left PLUS MINUS /* lowest precedence */
 %left TIMES DIV  /* medium precedence */
@@ -21,7 +21,7 @@
 %%
 
 main: 
-    | stmt* EOL* EOF { StmtList ($1, None) }
+    | EOL* SHEBANG? EOL* stmt* EOL* EOF { StmtList ($4, None) }
     (* in top-level we don't do the trailing returned expr *)
     ;
 
