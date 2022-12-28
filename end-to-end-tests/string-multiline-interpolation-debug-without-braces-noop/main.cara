@@ -1,0 +1,3 @@
+a = 123
+IO.println!(`This doesn't do what you thought: $a=`)
+IO.println!(`The correct way is: ${a=}`)

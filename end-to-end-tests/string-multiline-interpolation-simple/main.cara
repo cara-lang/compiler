@@ -1,0 +1,3 @@
+a = 123
+x = `The number is $a`
+IO.println!(x)

@@ -1,0 +1,3 @@
+user = {name: "Martin", isProgrammer: True}
+x = `The boolean is ${user.isProgrammer}`
+IO.println!(x)

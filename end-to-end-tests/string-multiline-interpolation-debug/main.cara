@@ -1,0 +1,6 @@
+user = {name: "Martin", isProgrammer: True}
+x = `Yay for println debugging!
+${user.isProgrammer=}
+and
+${user=}`
+IO.println!(x)
