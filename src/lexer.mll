@@ -12,13 +12,13 @@ let[@inline] illegal c =
 
 (* regular expressions *)
 let digit  = ['0'-'9']
+let underscore = '_'
 let minus = '-'
 let exponent = ['e' 'E']
-let int   = minus? digit+
-let float = minus? digit+ '.' digit+ (exponent minus? digit+)?
+let int   = minus? (digit | underscore)+
+let float = minus? (digit | underscore)+ '.' (digit | underscore)+ (exponent minus? digit+)?
 let newline = "\r\n" | '\r' | '\n'
 let whitespace = ' ' | '\t'
-let underscore = '_'
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
 let lower_name = lower (lower | upper | digit | underscore)*
@@ -34,11 +34,19 @@ rule next_token = parse
   | "#!"        { line_comment lexbuf; next_token lexbuf }
   (* TODO only allow shebang on the first non-empty line *)
 
-  | qualifier as n  { QUALIFIER (String.rstrip ~drop:(fun c -> Char.equal c '.') n) }
+  | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
   | lower_name as n { LOWER_NAME n }
   | upper_name as n { UPPER_NAME n }
-  | float as n      { FLOAT (Float.of_string n) }
-  | int as n        { INT (Int.of_string n) }
+  | float as n      { n
+                      |> String.filter ~f:(fun c -> not (Char.equal c '_'))
+                      |> Float.of_string
+                      |> FLOAT
+                    }
+  | int as n        { n
+                      |> String.filter ~f:(fun c -> not (Char.equal c '_'))
+                      |> Int.of_string
+                      |> INT
+                    }
   | '"'             { read_string (Buffer.create 17) lexbuf }
 
   | '+' { PLUS }
