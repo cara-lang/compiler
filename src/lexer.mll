@@ -70,13 +70,15 @@ and read_string buf =
   | '\\' 'n'  { Buffer.add_char buf '\n'; read_string buf lexbuf }
   | '\\' 'r'  { Buffer.add_char buf '\r'; read_string buf lexbuf }
   | '\\' 't'  { Buffer.add_char buf '\t'; read_string buf lexbuf }
-  | [^ '"' '\\']+
+  | '\n'      { failwith "Illegal unescaped \\n in string"}
+  | '\r'      { failwith "Illegal unescaped \\r in string"}
+  | '\t'      { failwith "Illegal unescaped \\t in string"}
+  | [^ '"' '\\' '\n' '\r' '\t']+
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
       read_string buf lexbuf
     }
   | eof { failwith "[lexer] unterminated string at EOF" }
   | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }
-  (* TODO "" strings shouldn't be multiline *)
 
 and line_comment = parse
   | newline { Lexing.new_line lexbuf }
