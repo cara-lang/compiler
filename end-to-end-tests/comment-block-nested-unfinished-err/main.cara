@@ -1,0 +1,9 @@
+/* Hello
+There
+World
+
+  /* We are nested 
+
+This is still a comment
+*/
+IO.println!("After a nested block comment")

@@ -1,0 +1,14 @@
+E0009: Unfinished block comment
+
+End of file was reached while searching for the block comment ending delimiter
+`*/`.
+
+Note: Block comments can be nested; there must be as many `*/` as there are
+`/*`.
+
+The block comment started here:
+
+main.cara:1:1
+━━┓
+1 ┃ /* Hello
+  ┃ ^
