@@ -1,71 +1,45 @@
-(*
-failwith ("TODO SBang " ^ Sexp.to_string_hum (Syntax.sexp_of_bang bang) )
-
-failwith (
-            "TODO EIdentifier 2 /// env = "
-              ^ Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env) 
-              ^ " /// expr = " 
-              ^ Sexp.to_string_hum (Syntax.sexp_of_expr program)
-          )
-*)
-
 open Base
+open Core
 open Syntax
+open Identifier
 
 let printf = Stdlib.Printf.printf
-
-let identifier_to_string (q,x) =
-  String.concat ~sep:"." q ^ x
-
-module Identifier = struct
-  module T = struct
-    type t = string list * string [@@deriving sexp_of]
-    let compare = [%compare: string list * string]
-  end
-
-  include T
-  include Comparator.Make (T)
-end
-
-let add map k v =
-  let added = 
-      Map.remove map k
-      |> Map.add ~key:k ~data:v
-  in 
-  match added with
-    | `Ok new_map -> new_map
-    | `Duplicate -> failwith "Map add - duplicate shouldn't happen"
 
 let rec expr_to_string env = function
   | EInt i    -> Int.to_string i
   | EFloat f  -> Float.to_string f
-                  |> String.rstrip ~drop:(fun c -> Char.equal c '.')
+                  (* Float.to_string returns 123. instead of 123, so let's strip that *)
+                  |> String.rstrip ~drop:(fun c -> Char.equal c '.') 
   | EChar c   -> c
   | EString s -> s
   | EIdentifier (q,x) -> (match Map.find env (q,x) with
       | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
       | Some e -> expr_to_string env e
     )
-  | EUnit         -> "()"
-  | ETuple es     -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
-  | EList es      -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
-  | EUnOp _       -> "<unop>"
-  | EBinOp _      -> "<binop>"
-  | ECall _       -> "<function call>"
+  | EUnit            -> "()"
+  | ETuple es        -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
+  | EList es         -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
+  | EUnOp _          -> "<unop>"
+  | EBinOp _         -> "<binop>"
+  | ECall _          -> "<function call>"
+  | ELambda (_,_)    -> "<function>"
+  | EClosure (_,_,_) -> "<function>"
 
 let rec interpret env program =
   match program with
-  | EInt i -> EInt i
-  | EFloat f -> EFloat f
-  | EChar c -> EChar c
-  | EString s -> EString s
-  | EUnit -> EUnit
+  | EInt _ -> program
+  | EFloat _ -> program
+  | EChar _ -> program
+  | EString _ -> program
+  | EUnit -> program
+  | EClosure _ -> program
   | EIdentifier (q,x) ->
       (match (q,x) with
       | (["IO"],"println") -> program (* kludge *)
       | _ -> 
+        (* TODO how to hold all the possible arities and definitions of a given function at once? Where to try them out? In ECall? *)
         (match Map.find env (q,x) with
-          | None -> failwith "E0001: Unknown variable"
+          | None -> failwith "[interpret]: E0001: Unknown variable"
           | Some found -> found
         )
       )
@@ -75,7 +49,7 @@ let rec interpret env program =
       (match unop with
         | OpNeg -> (match (interpret env e1) with
           | EInt i -> EInt (neg i)
-          | _ -> failwith "Can't negate anything that's not an int"
+          | _ -> failwith "[interpret]: Can't negate anything that's not an int"
         )
       )
   | EBinOp (e1,binop,e2) -> (
@@ -87,9 +61,18 @@ let rec interpret env program =
             | OpTimes -> EInt (i1 * i2)
             | OpDiv   -> EInt (i1 / i2)
           )
-        | _ -> failwith "Unsupported binop for types that aren't two ints"
+        | _ -> failwith "[interpret]: Unsupported binop for types that aren't two ints"
     )
-  | ECall (_,_) -> failwith "TODO ECall"
+  | ECall (fn,args) -> 
+      (match interpret env fn with
+        | EClosure (params,body,defenv) -> 
+          (match List.map2 params args ~f:Tuple2.create with
+            | Unequal_lengths -> failwith "[interpret]: Called a function with a wrong number of arguments"
+            | Ok pairs -> interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
+          )
+        | _ -> failwith "[interpret]: Tried to call a non-closure"
+      )
+  | ELambda (params,body) -> EClosure (params,body,env) (* magic.gif *)
 
 let interpret_bang env = function
   | BValue expr ->
@@ -134,11 +117,10 @@ let _ =
     Caml.exit 0)
   else
       Parser.pp_exceptions (); (* enable pretty error messages *)
-
       let filename = argv.(1) in
       let ic = Stdio.In_channel.create filename in
-      let _ = 
-        Parser.parse_chan ic 
-          |> interpret_stmt_list (Map.empty (module Identifier))
-      in
+      let expr = Parser.parse_chan ic in
+      let env = Map.empty (module Identifier) in
+      (* printf("Parsed: %s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list expr)); *)
+      let _ = interpret_stmt_list env expr in
       Stdio.Out_channel.flush Stdio.stdout

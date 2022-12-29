@@ -1,2 +1,2 @@
-<function f>
+<function>
 9

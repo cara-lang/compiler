@@ -49,6 +49,9 @@ rule next_token = parse
   | '`'  { read_multiline_string  (Buffer.create 16) lexbuf }
   | '\'' { read_char (Buffer.create 16) lexbuf }
 
+  | '\\' { BACKSLASH }
+  | "->" { ARROW }
+
   | '+' { PLUS }
   | '-' { MINUS }
   | '*' { TIMES }

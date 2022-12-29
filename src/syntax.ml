@@ -1,5 +1,7 @@
 open Base
 
+open Identifier
+
 type unop = 
   | OpNeg
   [@@deriving sexp]
@@ -18,14 +20,20 @@ type expr =
   | EChar of string    (* 'a' *) (* It's holding a string because of extended grapheme clusters *)
   | EString of string  (* "abc" *)
   | EUnit              (* () *)
+
+  (* collections *)
   | ETuple of expr list  (* (1,"abc"), (1,"abc",2,()) *)
   | EList of expr list   (* [1,2,3], [] *)
-  | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
 
   (* calls *)
   | EUnOp of unop * expr           (* -num *)
   | EBinOp of expr * binop * expr  (* 1 + 2 *)
   | ECall of expr * expr list      (* foo(1,2,3) *)
+
+  (* other *)
+  | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
+  | ELambda of string list * expr        (* \(x,y) -> x + y + 1 *)
+  | EClosure of string list * expr * expr Map.M(Identifier).t (* lambda along with the environment as of time of definition *)
   [@@deriving sexp]
 
 type bang =
@@ -50,3 +58,13 @@ type stmt_list =
         123 --------> (only allowed in the last position) 123
   *)
   [@@deriving sexp]
+
+
+let add map k v =
+  let added = 
+      Map.remove map k
+      |> Map.add ~key:k ~data:v
+  in 
+  match added with
+    | `Ok new_map -> new_map
+    | `Duplicate -> failwith "Map add - duplicate shouldn't happen"

@@ -8,6 +8,7 @@
 %token <string> LOWER_NAME
 %token <string> UPPER_NAME
 %token PLUS MINUS TIMES DIV
+%token BACKSLASH ARROW
 %token LPAREN RPAREN
 %token LBRACKET RBRACKET
 %token COMMA BANG EQUALS
@@ -27,6 +28,7 @@ main:
     ;
 
 stmt:
+    (* TODO replace `LOWER_NAME` with `pattern` *)
     | LOWER_NAME EQUALS bang EOL+ { SLetBang ($1, $3) }
     | LOWER_NAME EQUALS expr EOL+ { SLet     ($1, $3) }
     | bang                   EOL+ { SBang $1 }
@@ -56,6 +58,10 @@ expr:
     | expr DIV expr   { EBinOp ($1, OpDiv, $3) }
     | MINUS expr %prec UMINUS { EUnOp (OpNeg, $2) }
     | expr LPAREN separated_list(COMMA,expr) RPAREN { ECall ($1, $3) }
+
+    (* TODO replace `LOWER_NAME` with `pattern` *)
+    | BACKSLASH                             LOWER_NAME         ARROW expr { ELambda ([$2], $4) }
+    | BACKSLASH LPAREN separated_list(COMMA,LOWER_NAME) RPAREN ARROW expr { ELambda ($3, $6) }
     ;
 
 name:
