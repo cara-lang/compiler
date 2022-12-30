@@ -24,6 +24,7 @@ f([1(2)])
 
 *)
 
+(* TODO there's a conflict about `foo = x!` vs `foo!` and `foo!(...)` *)
 
 (* lowest precedence *)
 %right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
