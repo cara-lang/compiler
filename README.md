@@ -35,7 +35,7 @@ timestampFmt = "hh:mm:ss.fff"
 ```cara
 isPrime(n) =
   2..sqrt(n)
-    |> Seq.any(n % _ == 0)
+    |> Seq.any(#(n % _ == 0))
 
 x = isPrime(1111111111111111111)
 
@@ -47,7 +47,7 @@ IO.inspect!(x)
 quickSort(list: List[Int]): List[Int]
 quickSort([]) = []
 quickSort(x::xs) =
-  (lt, gt) = List.partition(x >= _, xs)
+  (lt, gt) = List.partition(#(x >= _), xs)
   quickSort(lt) ++ x ++ quickSort(gt)
 
 xs = [3,1,2,5,4]

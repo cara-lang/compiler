@@ -30,6 +30,7 @@ let rec expr_to_string env = function
 (*** INTERPRET **************************************************)
 
 let rec interpret env program =
+  (* printf("interpreting with env %s\nexpr:\n%s\n\n") (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier)  Syntax.sexp_of_expr env)) (Sexp.to_string_hum (Syntax.sexp_of_expr program)); *)
   match program with
   | EInt _ -> program
   | EFloat _ -> program
@@ -43,7 +44,7 @@ let rec interpret env program =
       | _ -> 
         (* TODO how to hold all the possible arities and definitions of a given function at once? Where to try them out? In ECall? *)
         (match Map.find env (q,x) with
-          | None -> failwith "[interpret]: E0001: Unknown variable"
+          | None -> failwith "interpret: E0001: Unknown variable"
           | Some found -> found
         )
       )
@@ -53,7 +54,7 @@ let rec interpret env program =
       (match unop with
         | OpNeg -> (match (interpret env e1) with
           | EInt i -> EInt (neg i)
-          | _ -> failwith "[interpret]: Can't negate anything that's not an int"
+          | _ -> failwith "interpret: Can't negate anything that's not an int"
         )
       )
   | EBinOp (e1,binop,e2) -> (
@@ -65,16 +66,19 @@ let rec interpret env program =
             | OpTimes -> EInt (i1 * i2)
             | OpDiv   -> EInt (i1 / i2)
           )
-        | _ -> failwith "[interpret]: Unsupported binop for types that aren't two ints"
+        | (e1',e2') -> failwith ("interpret: Unsupported binop for types that aren't two ints\n\n" 
+                        ^ (Sexp.to_string_hum (Syntax.sexp_of_expr (EBinOp (e1',binop,e2'))));)
     )
   | ECall (fn,args) -> 
       (match interpret env fn with
         | EClosure (params,body,defenv) -> 
-          (match List.map2 params args ~f:Tuple2.create with
-            | Unequal_lengths -> failwith "[interpret]: Called a function with a wrong number of arguments"
-            | Ok pairs -> interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
+          (match List.map2 params (List.map ~f:(interpret env) args) ~f:Tuple2.create with
+            | Unequal_lengths -> failwith "interpret: Called a function with a wrong number of arguments"
+            | Ok pairs ->
+               (*printf("Enhancing defenv with %s\n") (Sexp.to_string_hum (List.sexp_of_t (Tuple2.sexp_of_t sexp_of_string Syntax.sexp_of_expr) pairs));*)
+               interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
           )
-        | _ -> failwith "[interpret]: Tried to call a non-closure"
+        | _ -> failwith "interpret: Tried to call a non-closure"
       )
   | ELambda (params,body) -> EClosure (params,body,env) (* magic.gif *)
 
@@ -125,7 +129,7 @@ let _ =
       let filename = argv.(1) in
       let ic = Stdio.In_channel.create filename in
       let stmt_list = Parser.parse_chan ic in
-      (* printf("Parsed:\n%s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list stmt_list)); *)
+      (*printf("Parsed:\n%s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list stmt_list));*)
       let env = Map.empty (module Identifier) in
       let _ = interpret_stmt_list env stmt_list in
       Stdio.Out_channel.flush Stdio.stdout

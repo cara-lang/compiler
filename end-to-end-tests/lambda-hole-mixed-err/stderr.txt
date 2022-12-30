@@ -8,5 +8,5 @@ convert the whole expression to an explicit lambda:
 
 main.cara:1:12
 ━━┓
-1 ┃ f = \(_2 + _)
+1 ┃ f = #(_2 + _)
   ┃            ^

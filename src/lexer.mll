@@ -7,7 +7,7 @@ exception LexError of string
 let[@inline] failwith msg = raise (LexError msg)
 
 let[@inline] illegal c =
-  failwith (Printf.sprintf "[lexer] unexpected character: '%c'" c)
+  failwith (Printf.sprintf "lexer: unexpected character: '%c'" c)
 }
 
 let digit  = ['0'-'9']
@@ -51,6 +51,7 @@ rule next_token = parse
 
   | '\\' { BACKSLASH }
   | "->" { ARROW }
+  | "#(" { LHOLE }
 
   | '+' { PLUS }
   | '-' { MINUS }
@@ -83,7 +84,7 @@ and read_char buf = parse
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
       read_char buf lexbuf
     }
-  | eof { failwith "[lexer] unterminated char at EOF" }
+  | eof { failwith "lexer: unterminated char at EOF" }
   | _   { failwith ("Illegal character: " ^ Lexing.lexeme lexbuf) }
 
 and read_singleline_string buf = parse
@@ -98,7 +99,7 @@ and read_singleline_string buf = parse
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
       read_singleline_string buf lexbuf
     }
-  | eof { failwith "[lexer] unterminated string at EOF" }
+  | eof { failwith "lexer: unterminated string at EOF" }
   | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }
 
 and read_multiline_string buf = parse
@@ -112,7 +113,7 @@ and read_multiline_string buf = parse
     { Buffer.add_string buf (Lexing.lexeme lexbuf);
       read_multiline_string buf lexbuf
     }
-  | eof { failwith "[lexer] unterminated string at EOF" }
+  | eof { failwith "lexer: unterminated string at EOF" }
   | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }
 
 and line_comment = parse

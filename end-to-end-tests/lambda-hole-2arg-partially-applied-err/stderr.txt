@@ -9,7 +9,7 @@ The type signature of the function is:
 Note: In case you wanted to return a partially applied function, you'll need to
 do that manually:
 
-  y = (f(5,_))
+  y = #(f(5,_))
 
 main.cara:2:6
 ━━┓

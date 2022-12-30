@@ -1,7 +1,7 @@
 quickSort(list: List[Int]): List[Int]
 quickSort([]) = []
 quickSort(x::xs) =
-  (lt, gt) = List.partition(x >= _, xs)
+  (lt, gt) = List.partition(#(x >= _), xs)
   quickSort(lt) ++ x ++ quickSort(gt)
 
 xs  = [5,1,3,2,4]
