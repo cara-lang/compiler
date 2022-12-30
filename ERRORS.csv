@@ -18,3 +18,4 @@ E0016,Character contains multiple visible characters
 E0017,Unescaped newline in a character
 E0018,Unescaped tab in a character
 E0019,Empty character
+E0020,Anonymous function shorthand with mixed holes

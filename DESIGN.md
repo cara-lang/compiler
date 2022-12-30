@@ -7,6 +7,7 @@ WANTED (but doesn't yet have tests):
   * Closer to Clojure than to Elm!
 * automatic tail recursion (Erlang/Elm style)
   * modulo cons? allowing for `go n = n :: go (n - 1)` to be tail-optimized
+    * https://www.microsoft.com/en-us/research/uploads/prod/2022/07/trmc.pdf
 * pattern matching has `A|B|C -> ...`
 * integer types: Int8, Int16, ..., Int64, BigInt
   * automatic upcasting from i32 to i64 etc
@@ -33,10 +34,9 @@ WANTED (but doesn't yet have tests):
 * Int == Int64
 * Float == Float64
 * allow ' in var names
-* Strings: seqs of extended grapheme clusters
-  * https://manishearth.github.io/blog/2017/01/14/stop-ascribing-meaning-to-unicode-code-points/
-  * check out how Swift and Perl 6 do things
-  * Char = basically a string (not an integer)
+
+* Extending others' modules with new functions and constants
+* `pub` for sharing that with everybody, without `pub` for just this module?
 
 
 WANTED:

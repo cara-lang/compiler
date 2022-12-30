@@ -33,8 +33,8 @@ rule next_token = parse
   | "#!"        { shebang_comment lexbuf }
 
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
-  | lower_name as n { LOWER_NAME n }
-  | upper_name as n { UPPER_NAME n }
+  | lower_name as n { LOWER_NAME n } (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.  *)
+  | upper_name as n { UPPER_NAME n } (*       Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
   | float as n      { n
                       |> String.filter ~f:(fun c -> not (Char.equal c '_'))
                       |> Float.of_string
@@ -63,6 +63,8 @@ rule next_token = parse
   | ',' { COMMA }
   | '!' { BANG }
   | '=' { EQUALS }
+  | '_' { UNDERSCORE }
+  | '_' digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }
 
   | _ as c { illegal c }
 

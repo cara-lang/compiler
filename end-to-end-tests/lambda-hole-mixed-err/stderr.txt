@@ -1,0 +1,12 @@
+E0020: Anonymous function shorthand with mixed holes
+
+The expression contains both numbered and non-numbered holes. Convert the
+non-numbered holes to numbered ones (`_` means the same thing as `_1`) or
+convert the whole expression to an explicit lambda:
+
+  \x y -> y + x
+
+main.cara:1:12
+━━┓
+1 ┃ f = \(_2 + _)
+  ┃            ^

@@ -5,6 +5,8 @@ open Identifier
 
 let printf = Stdlib.Printf.printf
 
+(*** TO_STRING (Io.println!) ************************************)
+
 let rec expr_to_string env = function
   | EInt i    -> Int.to_string i
   | EFloat f  -> Float.to_string f
@@ -16,14 +18,16 @@ let rec expr_to_string env = function
       | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
       | Some e -> expr_to_string env e
     )
-  | EUnit            -> "()"
-  | ETuple es        -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
-  | EList es         -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
-  | EUnOp _          -> "<unop>"
-  | EBinOp _         -> "<binop>"
-  | ECall _          -> "<function call>"
-  | ELambda (_,_)    -> "<function>"
-  | EClosure (_,_,_) -> "<function>"
+  | EUnit      -> "()"
+  | ETuple es  -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
+  | EList es   -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
+  | EUnOp _    -> "<unop>"
+  | EBinOp _   -> "<binop>"
+  | ECall _    -> "<function call>"
+  | ELambda _  -> "<function>"
+  | EClosure _ -> "<function>"
+
+(*** INTERPRET **************************************************)
 
 let rec interpret env program =
   match program with
@@ -101,13 +105,14 @@ let interpret_stmt env = function
       let _ = interpret_bang env bang in
       env
 
-let rec interpret_stmt_list env (StmtList (stmts,returned_expr)) =
+let rec interpret_stmt_list env (StmtList (stmts,ret_expr)) =
   match stmts with
-    | [] -> Option.map returned_expr ~f:(interpret env)
+    | [] -> Option.map ret_expr ~f:(interpret env)
     | stmt :: rest ->
         let env1 = interpret_stmt env stmt in
-        interpret_stmt_list env1 (StmtList (rest, returned_expr))
+        interpret_stmt_list env1 (StmtList (rest, ret_expr))
 
+(*** MAIN *******************************************************)
 
 let argv = Sys.get_argv ()
 let _ =
@@ -119,8 +124,8 @@ let _ =
       Parser.pp_exceptions (); (* enable pretty error messages *)
       let filename = argv.(1) in
       let ic = Stdio.In_channel.create filename in
-      let expr = Parser.parse_chan ic in
+      let stmt_list = Parser.parse_chan ic in
+      (* printf("Parsed:\n%s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list stmt_list)); *)
       let env = Map.empty (module Identifier) in
-      (* printf("Parsed: %s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list expr)); *)
-      let _ = interpret_stmt_list env expr in
+      let _ = interpret_stmt_list env stmt_list in
       Stdio.Out_channel.flush Stdio.stdout

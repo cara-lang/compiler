@@ -49,9 +49,14 @@
 - [ ] monad examples - multiple files, show off the possibility to import and use unqualified
 - [ ] operators used in the prefix form
 
+
+### Multiline strings trimming
+
 - [ ] multiline strings trim automatically
   - https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
   - https://docs.swift.org/swift-book/_images/multilineStringWhitespace_2x.png
+
+### Char, String escaping
 
 - [ ] char unicode escape: '\u{1F496}'
 - [ ] string unicode escape: "\u{1F496}"
@@ -69,6 +74,15 @@
 - [ ] multiline strings don't need escaping "
 - [ ] multiline strings DO need escaping `
 
+### Strings, Chars, extended grapheme clusters
+
+- [ ] https://manishearth.github.io/blog/2017/01/14/stop-ascribing-meaning-to-unicode-code-points/
+
+- [ ] Swift does this
+- [ ] Perl 6 does this
+  - [ ] some abstraction called NFG - Normalization Form Grapheme?
+  - [ ] https://perl6advent.wordpress.com/2015/12/07/day-7-unicode-perl-6-and-you/
+
 - [ ] char.toBytes -> List[UInt8]
 - [ ] char.toCodePoints -> List[Char]?
 
@@ -85,3 +99,5 @@
 - [ ] string.length -> length of toGraphemeClusters
 - [ ] string.lengthInBytes -> length of toBytes
 - [ ] string.lengthInCodePoints -> length of toCodePoints
+
+### ...
