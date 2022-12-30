@@ -23,8 +23,13 @@
 %%
 
 main: 
-    | EOL* SHEBANG? EOL* stmt* EOL* EOF { StmtList ($4, None) }
-    (* in top-level we don't do the trailing returned expr *)
+    | EOL* submain EOF { $2 }
+    ;
+
+submain:
+    | SHEBANG EOL* stmt* { StmtList ($3, None) } (* shebang already has one implicit EOL at the end *)
+    | stmt*              { StmtList ($1, None) }
+    (* toplevel doesn't do returned expr ^ *)
     ;
 
 stmt:
