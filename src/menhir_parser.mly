@@ -14,7 +14,19 @@
 %token COMMA BANG EQUALS
 %token SHEBANG EOL EOF
 
+(* TODO after relaxing `identifier` to `expr` in BCall and ECall, make CALL left-associative: 
+
+f(1)(2)
+should parse to
+[f(1)](2)
+instead of
+f([1(2)])
+
+*)
+
+
 (* lowest precedence *)
+%right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
 %left PLUS MINUS
 %left TIMES DIV
 %nonassoc UMINUS
