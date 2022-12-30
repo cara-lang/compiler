@@ -14,9 +14,11 @@
 %token COMMA BANG EQUALS
 %token SHEBANG EOL EOF
 
-%left PLUS MINUS /* lowest precedence */
-%left TIMES DIV  /* medium precedence */
-%nonassoc UMINUS /* highest precedence */
+(* lowest precedence *)
+%left PLUS MINUS
+%left TIMES DIV
+%nonassoc UMINUS
+(* highest precedence *)
 
 %start <Syntax.stmt_list> main
 
@@ -40,8 +42,8 @@ stmt:
     ;
 
 bang:
-    | expr BANG LPAREN separated_list(COMMA,expr) RPAREN { BCall ($1, $4) }
-    | expr BANG                                          { BValue $1 }
+    | identifier BANG LPAREN separated_list(COMMA,expr) RPAREN { BCall ($1, $4) }
+    | identifier BANG                                          { BValue $1 }
     ;
 
 expr:
@@ -49,7 +51,7 @@ expr:
     | FLOAT  { EFloat $1 }
     | CHAR   { EChar $1 } (* TODO we're guaranteed by lexer it's >0 bytes, but we still need to validate it's just one Unicode "extended grapheme cluster"! *)
     | STRING { EString $1 }
-    | QUALIFIER* name { EIdentifier ($1, $2) }
+    | identifier { $1 }
     | LPAREN separated_list(COMMA,expr) RPAREN { 
         match $2 with
             | [] -> EUnit
@@ -62,11 +64,15 @@ expr:
     | expr TIMES expr { EBinOp ($1, OpTimes, $3) }
     | expr DIV expr   { EBinOp ($1, OpDiv, $3) }
     | MINUS expr %prec UMINUS { EUnOp (OpNeg, $2) }
-    | expr LPAREN separated_list(COMMA,expr) RPAREN { ECall ($1, $3) }
+    | identifier LPAREN separated_list(COMMA,expr) RPAREN { ECall ($1, $3) }
 
     (* TODO replace `LOWER_NAME` with `pattern` *)
     | BACKSLASH                             LOWER_NAME         ARROW expr { ELambda ([$2], $4) }
     | BACKSLASH LPAREN separated_list(COMMA,LOWER_NAME) RPAREN ARROW expr { ELambda ($3, $6) }
+    ;
+
+identifier:
+    | QUALIFIER* name { EIdentifier ($1, $2) }
     ;
 
 name:
