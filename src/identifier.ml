@@ -14,7 +14,9 @@ module Identifier = struct
 end
 
 let identifier_to_string (q,x) =
-  String.concat ~sep:"." q ^ x
+  match q with
+  | [] -> x
+  | _ -> String.concat ~sep:"." q ^ "." ^ x
 
 module Env = Map.M(Identifier)
   [@@deriving sexp]

@@ -11,8 +11,9 @@
 %token PLUS MINUS TIMES DIV
 %token BACKSLASH ARROW UNDERSCORE LHOLE
 %token LPAREN RPAREN
+%token LBRACE RBRACE
 %token LBRACKET RBRACKET
-%token COMMA BANG EQUALS
+%token COMMA COLON BANG EQUALS
 %token SHEBANG EOL EOF
 
 (* TODO after relaxing `identifier` to `expr` in BCall and ECall, make CALL left-associative: 
@@ -74,6 +75,7 @@ bang:
     | identifier { $1 }
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
+    | LBRACE separated_list(COMMA,field) RBRACE { record($2) }    (* {x:1,y:True} *)
     | e PLUS e  { EBinOp ($1, OpPlus, $3) }
     | e MINUS e { EBinOp ($1, OpMinus, $3) }
     | e TIMES e { EBinOp ($1, OpTimes, $3) }
@@ -101,4 +103,8 @@ identifier:
 name:
     | UPPER_NAME { $1 }
     | LOWER_NAME { $1 }
+    ;
+
+field:
+    | LOWER_NAME COLON expr { ($1, $3) }
     ;

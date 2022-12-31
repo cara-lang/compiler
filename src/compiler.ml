@@ -21,11 +21,14 @@ let rec expr_to_string env = function
   | EUnit      -> "()"
   | ETuple es  -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
   | EList es   -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
+  | ERecord fs -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
   | EUnOp _    -> "<unop>"
   | EBinOp _   -> "<binop>"
   | ECall _    -> "<function call>"
   | ELambda _  -> "<function>"
   | EClosure _ -> "<function>"
+
+and field_to_string env (f,e) = f ^ ":" ^ expr_to_string env e
 
 (*** INTERPRET **************************************************)
 
@@ -44,12 +47,13 @@ let rec interpret env program =
       | _ -> 
         (* TODO how to hold all the possible arities and definitions of a given function at once? Where to try them out? In ECall? *)
         (match Map.find env (q,x) with
-          | None -> failwith "interpret: E0001: Unknown variable"
+          | None -> failwith ("interpret: E0001: Unknown variable " ^ identifier_to_string (q,x))
           | Some found -> found
         )
       )
-  | ETuple es -> ETuple (List.map es ~f:(interpret env))
-  | EList es -> EList (List.map es ~f:(interpret env))
+  | ETuple es  -> ETuple  (List.map es ~f:(interpret env))
+  | EList es   -> EList   (List.map es ~f:(interpret env))
+  | ERecord fs -> ERecord (List.map fs ~f:(fun (f,e) -> (f,interpret env e)))
   | EUnOp (unop,e1) ->
       (match unop with
         | OpNeg -> (match (interpret env e1) with

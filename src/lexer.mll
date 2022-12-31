@@ -61,7 +61,10 @@ rule next_token = parse
   | ')' { RPAREN }
   | '[' { LBRACKET }
   | ']' { RBRACKET }
+  | '{' { LBRACE }
+  | '}' { RBRACE }
   | ',' { COMMA }
+  | ':' { COLON }
   | '!' { BANG }
   | '=' { EQUALS }
   | '_' { UNDERSCORE }

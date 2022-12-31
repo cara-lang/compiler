@@ -1,4 +1,5 @@
 open Base
+open Core
 
 open Identifier
 
@@ -22,8 +23,9 @@ type expr =
   | EUnit              (* () *)
 
   (* collections *)
-  | ETuple of expr list  (* (1,"abc"), (1,"abc",2,()) *)
-  | EList of expr list   (* [1,2,3], [] *)
+  | ETuple of expr list             (* (1,"abc"), (1,"abc",2,()) *)
+  | EList of expr list              (* [1,2,3], [] *)
+  | ERecord of (string * expr) list (* {}, {a:123,b:True} *)
 
   (* calls *)
   | EUnOp of unop * expr           (* -num *)
@@ -50,12 +52,15 @@ type stmt =
 
 type stmt_list = 
   | StmtList of stmt list * expr option
-  (* The last expr is the returned one. If None, we return Unit.
-     These get chained together:
+  (* The last expr is the returned one. If None, we return Unit.  These get
+     chained together: either in the imperative way (for the interpreter and the
+     IO monad -- I suspect this will stop being enough pretty soon), or more
+     generally via monadic bind:
+
         x = 123 ----> pure 123 >>= \x  -> ...
         x = foo! ---> foo      >>= \x  -> ...
         foo! -------> foo      >>= \() -> ...
-        123 --------> (only allowed in the last position) 123
+        123 --------> (only allowed in the last position, this is an expr, not a stmt) 123
   *)
   [@@deriving sexp]
 
@@ -98,13 +103,16 @@ let rec analyze_holes = function
   | EChar _   -> NoHoles
   | EString _ -> NoHoles
   | EUnit     -> NoHoles
-  | ETuple es -> es |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes
-  | EList es  -> es |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes
+  | ETuple es  -> analyze_list es
+  | EList es   -> analyze_list es
+  | ERecord fs -> analyze_list (List.map ~f:Tuple2.get2 fs)
   | ELambda (_,e)    -> analyze_holes e
   | EClosure (_,e,_) -> analyze_holes e
   | EUnOp (_,e)      -> analyze_holes e
   | EBinOp (e1,_,e2) -> combine_holes (analyze_holes e1) (analyze_holes e2)
-  | ECall (fn,args)  -> combine_holes (analyze_holes fn) (args |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes)
+  | ECall (fn,args)  -> combine_holes (analyze_holes fn) (analyze_list args)
+
+and analyze_list es = es |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes
 
 let lambda_with_holes body =
   match analyze_holes body with
@@ -114,3 +122,8 @@ let lambda_with_holes body =
         let params = List.range 1 (max_hole + 1) |> List.map ~f:(fun i -> "_" ^ Int.to_string i) in
         ELambda (params, body)
     | Mixed -> failwith "E0020: Anonymous function shorthand with mixed holes"
+
+let record fs =
+  if List.contains_dup fs ~compare:(fun (f1,_) (f2,_) -> String.compare f1 f2)
+  then failwith "E0006: Record created with duplicate fields"
+  else ERecord fs

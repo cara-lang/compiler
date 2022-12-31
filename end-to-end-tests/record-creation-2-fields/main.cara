@@ -1,2 +1,2 @@
-x = {a: 1, b: True}
+x = {a: 1, b: []}
 IO.println!(x)
