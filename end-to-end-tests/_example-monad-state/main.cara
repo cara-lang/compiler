@@ -54,5 +54,5 @@ idGenExampleRan2 : (String, Int)
 idGenExampleRan2 =
   IdGen.run(idGenExample, 3)
 
-IO.inspect!(idGenExampleRan1)
-IO.inspect!(idGenExampleRan2)
+IO.println!(idGenExampleRan1)
+IO.println!(idGenExampleRan2)

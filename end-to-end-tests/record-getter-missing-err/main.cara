@@ -1,4 +1,4 @@
 x = {a: 1}
 y = x.b
-IO.inspect!(y)
+IO.println!(y)
 

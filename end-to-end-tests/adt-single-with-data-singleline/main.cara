@@ -3,4 +3,4 @@ type Foo = Bar(Int)
 x : Foo
 x = Bar(123)
 
-IO.inspect!(x)
+IO.println!(x)

@@ -1,4 +1,4 @@
 main() =
   y = 1 + x
   x = 1
-  IO.inspect!(x + y)
+  IO.println!(x + y)

@@ -1,2 +1,2 @@
 x = {a: 1}.a
-IO.inspect!(x)
+IO.println!(x)

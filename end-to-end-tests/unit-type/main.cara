@@ -1,4 +1,4 @@
 x : ()
 x = ()
 
-IO.inspect!(x)
+IO.println!(x)

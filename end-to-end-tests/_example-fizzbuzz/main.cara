@@ -6,4 +6,4 @@ fizzbuzz(n) =
 
 1..20
   |> List.map(fizzbuzz)
-  |> IO.inspect
+  |> IO.println
