@@ -106,5 +106,6 @@ name:
     ;
 
 field:
-    | LOWER_NAME COLON expr { ($1, $3) }
+    | LOWER_NAME COLON expr { ($1, $3) }         (* {x:1,y:2} *)
+    | LOWER_NAME { ($1, EIdentifier ([], $1)) }  (* {x,y} record punning -> {x:x,y:y} *)
     ;
