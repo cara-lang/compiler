@@ -5,7 +5,7 @@ The record doesn't contain the field `b`.
 These are the available fields:
 - a
 
-main.cara:2:7
+main.cara:3:13
 ━━┓
-2 ┃ y = x.b
-  ┃       ^
+3 ┃ IO.println!(f(x))
+  ┃             ^

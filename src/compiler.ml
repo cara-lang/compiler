@@ -5,43 +5,18 @@ open Identifier
 
 let printf = Stdlib.Printf.printf
 
-(*** TO_STRING (Io.println!) ************************************)
-
-let rec expr_to_string env = function
-  | EInt i    -> Int.to_string i
-  | EFloat f  -> Float.to_string f
-                  (* Float.to_string returns 123. instead of 123, so let's strip that *)
-                  |> String.rstrip ~drop:(fun c -> Char.equal c '.') 
-  | EChar c   -> c
-  | EString s -> s
-  | EIdentifier (q,x) -> (match Map.find env (q,x) with
-      | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
-      | Some e -> expr_to_string env e
-    )
-  | EUnit        -> "()"
-  | ETuple es    -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
-  | EList es     -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
-  | ERecord fs   -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
-  | EUnOp _      -> "<unop>"
-  | EBinOp _     -> "<binop>"
-  | ECall _      -> "<function call>"
-  | ELambda _    -> "<function>"
-  | EClosure _   -> "<function>"
-  | ERecordGet _ -> "<getter>"
-
-and field_to_string env (f,e) = f ^ ":" ^ expr_to_string env e
-
 (*** INTERPRET **************************************************)
 
 let rec interpret env program =
   (* printf("interpreting with env %s\nexpr:\n%s\n\n") (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier)  Syntax.sexp_of_expr env)) (Sexp.to_string_hum (Syntax.sexp_of_expr program)); *)
   match program with
-  | EInt _ -> program
-  | EFloat _ -> program
-  | EChar _ -> program
-  | EString _ -> program
-  | EUnit -> program
-  | EClosure _ -> program
+  | EInt _          -> program
+  | EFloat _        -> program
+  | EChar _         -> program
+  | EString _       -> program
+  | EUnit           -> program
+  | EClosure _      -> program
+  | ERecordGetter _ -> program
   | EIdentifier (q,x) ->
       (match (q,x) with
       | (["IO"],"println") -> program (* kludge *)
@@ -83,7 +58,27 @@ let rec interpret env program =
                (*printf("Enhancing defenv with %s\n") (Sexp.to_string_hum (List.sexp_of_t (Tuple2.sexp_of_t sexp_of_string Syntax.sexp_of_expr) pairs));*)
                interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
           )
-        | _ -> failwith "interpret: Tried to call a non-closure"
+        | ERecordGetter wanted_field ->
+          (match List.map ~f:(interpret env) args with
+            | [arg] -> (match interpret env arg with
+                | ERecord fs ->
+                  let found_field = List.find_map fs ~f:(fun (field,expr) -> if String.equal field wanted_field then Some expr else None) in
+                  (match found_field with
+                  | None -> failwith "E0007: Trying to access a missing record field"
+                  | Some expr -> interpret env expr
+                  )
+                | _ -> failwith ("E0022: Trying to access a record field from a non-record"
+                        ^ ":\n\n" ^ Sexp.to_string_hum (Syntax.sexp_of_expr arg)
+                        (*^ "\n\nwith env:\n\n" ^ (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env))*)
+                        )
+            )
+            | _ -> failwith ("interpret: Trying to call a record getter with " ^ Int.to_string (List.length args) ^ " arguments")
+          )
+        | e -> failwith 
+                ("interpret: Tried to call a non-closure" 
+                    ^ "\n\n" ^ (Sexp.to_string_hum (Syntax.sexp_of_expr e))
+                    ^ "\n\nwith:\n\n" ^ String.concat ~sep:"," (List.map args ~f:(fun arg -> Sexp.to_string_hum (Syntax.sexp_of_expr arg)))
+                )
       )
   | ELambda (params,body) -> EClosure (params,body,env) (* magic.gif *)
   | ERecordGet (e,f) ->

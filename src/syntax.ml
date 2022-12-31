@@ -1,6 +1,5 @@
 open Base
 open Core
-
 open Identifier
 
 type unop = 
@@ -37,6 +36,7 @@ type expr =
   | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
   | ELambda of string list * expr        (* \(x,y) -> x + y + 1 *)
   | EClosure of string list * expr * expr Map.M(Identifier).t (* lambda along with the environment as of time of definition *)
+  | ERecordGetter of string  (* .a, .el0 *)
   [@@deriving sexp]
 
 type bang =
@@ -98,12 +98,13 @@ let rec analyze_holes = function
                                then OnlyUnderscore (* _ *)
                                else OnlyNumbered (Int.of_string (String.drop_prefix x 1)) (* _3 *)
                           else NoHoles
-  | EIdentifier _ -> NoHoles
-  | EInt _    -> NoHoles
-  | EFloat _  -> NoHoles
-  | EChar _   -> NoHoles
-  | EString _ -> NoHoles
-  | EUnit     -> NoHoles
+  | EIdentifier _   -> NoHoles
+  | EInt _          -> NoHoles
+  | EFloat _        -> NoHoles
+  | EChar _         -> NoHoles
+  | EString _       -> NoHoles
+  | EUnit           -> NoHoles
+  | ERecordGetter _ -> NoHoles
   | ETuple es  -> analyze_list es
   | EList es   -> analyze_list es
   | ERecord fs -> analyze_list (List.map ~f:Tuple2.get2 fs)
@@ -129,3 +130,30 @@ let record fs =
   if List.contains_dup fs ~compare:(fun (f1,_) (f2,_) -> String.compare f1 f2)
   then failwith "E0006: Record created with duplicate fields"
   else ERecord fs
+
+(*** TO_STRING (Io.println!) ************************************)
+
+let rec expr_to_string env = function
+  | EInt i    -> Int.to_string i
+  | EFloat f  -> Float.to_string f
+                  (* Float.to_string returns 123. instead of 123, so let's strip that *)
+                  |> String.rstrip ~drop:(fun c -> Char.equal c '.') 
+  | EChar c   -> c
+  | EString s -> s
+  | EIdentifier (q,x) -> (match Map.find env (q,x) with
+      | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
+      | Some e -> expr_to_string env e
+    )
+  | EUnit           -> "()"
+  | ETuple es       -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
+  | EList es        -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
+  | ERecord fs      -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
+  | EUnOp _         -> "<unop>"
+  | EBinOp _        -> "<binop>"
+  | ECall _         -> "<function call>"
+  | ELambda _       -> "<function>"
+  | EClosure _      -> "<function>"
+  | ERecordGet _    -> "<get>"
+  | ERecordGetter _ -> "<getter>"
+
+and field_to_string env (f,e) = f ^ ":" ^ expr_to_string env e

@@ -83,6 +83,7 @@ bang:
     | e TIMES e { EBinOp ($1, OpTimes, $3) }     (* 1 * 3 *)
     | e DIV e   { EBinOp ($1, OpDiv, $3) }       (* 1 / 3 *)
     | MINUS e %prec UMINUS { EUnOp (OpNeg, $2) } (* -123 *)
+    | GETTER { ERecordGetter $1 }                (* .foo *)
     | e GETTER  { ERecordGet ($1, $2) } (* abc.foo *)
 
     (* TODO replace `LOWER_NAME` with `pattern` *)
