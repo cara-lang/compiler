@@ -72,8 +72,8 @@ bang:
             | _ -> ETuple $2  (* (1,2), (1,2,3,4,5,6,7,8) *)
     }
     | identifier { $1 }
-    | identifier LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
-    | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }               (* [1,2,3] *)
+    | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
+    | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
     | e PLUS e  { EBinOp ($1, OpPlus, $3) }
     | e MINUS e { EBinOp ($1, OpMinus, $3) }
     | e TIMES e { EBinOp ($1, OpTimes, $3) }
