@@ -1,0 +1,2 @@
+x = if True then 3
+IO.println!(x)

@@ -1,0 +1,15 @@
+E0021: If expression without an else branch
+
+All `if` expressions need to contain the `else` branch:
+
+  if foo then 3 else 9
+
+Note: Sometimes when there is no good value to put into the `else` branch,
+using Maybe is a good alternative:
+
+  if foo then Just 3 else Nothing
+
+main.cara:1:5
+━━┓
+1 ┃ x = if True then 3
+  ┃     ^

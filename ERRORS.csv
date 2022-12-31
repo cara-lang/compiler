@@ -19,3 +19,4 @@ E0017,Unescaped newline in a character
 E0018,Unescaped tab in a character
 E0019,Empty character
 E0020,Anonymous function shorthand with mixed holes
+E0021,If expression without an else branch
