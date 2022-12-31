@@ -4,6 +4,7 @@
 %token <float> FLOAT
 %token <string> CHAR
 %token <string> STRING
+%token <string> GETTER
 %token <string> QUALIFIER
 %token <string> LOWER_NAME
 %token <string> UPPER_NAME
@@ -13,7 +14,7 @@
 %token LPAREN RPAREN
 %token LBRACE RBRACE
 %token LBRACKET RBRACKET
-%token COMMA COLON BANG EQUALS
+%token COMMA COLON BANG EQUALS 
 %token SHEBANG EOL EOF
 
 (* TODO after relaxing `identifier` to `expr` in BCall and ECall, make CALL left-associative: 
@@ -32,6 +33,7 @@ f([1(2)])
 %right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
 %left PLUS MINUS
 %left TIMES DIV
+%left GETTER
 %nonassoc UMINUS
 (* highest precedence *)
 
@@ -76,11 +78,12 @@ bang:
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
     | LBRACE separated_list(COMMA,field) RBRACE { record($2) }    (* {x:1,y:True} *)
-    | e PLUS e  { EBinOp ($1, OpPlus, $3) }
-    | e MINUS e { EBinOp ($1, OpMinus, $3) }
-    | e TIMES e { EBinOp ($1, OpTimes, $3) }
-    | e DIV e   { EBinOp ($1, OpDiv, $3) }
-    | MINUS e %prec UMINUS { EUnOp (OpNeg, $2) }
+    | e PLUS e  { EBinOp ($1, OpPlus, $3) }      (* 1 + 3 *)
+    | e MINUS e { EBinOp ($1, OpMinus, $3) }     (* 1 - 3 *)
+    | e TIMES e { EBinOp ($1, OpTimes, $3) }     (* 1 * 3 *)
+    | e DIV e   { EBinOp ($1, OpDiv, $3) }       (* 1 / 3 *)
+    | MINUS e %prec UMINUS { EUnOp (OpNeg, $2) } (* -123 *)
+    | e GETTER  { ERecordGet ($1, $2) } (* abc.foo *)
 
     (* TODO replace `LOWER_NAME` with `pattern` *)
     | BACKSLASH separated_list(COMMA,LOWER_NAME) ARROW e { ELambda ($2, $4) }  (* \x -> 123, \x,y -> 123 *)

@@ -31,6 +31,7 @@ type expr =
   | EUnOp of unop * expr           (* -num *)
   | EBinOp of expr * binop * expr  (* 1 + 2 *)
   | ECall of expr * expr list      (* foo(1,2,3) *)
+  | ERecordGet of expr * string    (* r.a *)
 
   (* other *)
   | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
@@ -111,6 +112,7 @@ let rec analyze_holes = function
   | EUnOp (_,e)      -> analyze_holes e
   | EBinOp (e1,_,e2) -> combine_holes (analyze_holes e1) (analyze_holes e2)
   | ECall (fn,args)  -> combine_holes (analyze_holes fn) (analyze_list args)
+  | ERecordGet (e,_) -> analyze_holes e
 
 and analyze_list es = es |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes
 

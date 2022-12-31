@@ -1,0 +1,8 @@
+E0022: Trying to access a record field from a non-record
+
+The expression `x` is not a record, so it has no fields to access.
+
+main.cara:2:7
+━━┓
+2 ┃ y = x.b
+  ┃       ^

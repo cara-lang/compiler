@@ -1,0 +1,4 @@
+x = 123
+y = x.b
+IO.println!(y)
+

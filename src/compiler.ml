@@ -18,15 +18,16 @@ let rec expr_to_string env = function
       | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
       | Some e -> expr_to_string env e
     )
-  | EUnit      -> "()"
-  | ETuple es  -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
-  | EList es   -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
-  | ERecord fs -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
-  | EUnOp _    -> "<unop>"
-  | EBinOp _   -> "<binop>"
-  | ECall _    -> "<function call>"
-  | ELambda _  -> "<function>"
-  | EClosure _ -> "<function>"
+  | EUnit        -> "()"
+  | ETuple es    -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
+  | EList es     -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
+  | ERecord fs   -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
+  | EUnOp _      -> "<unop>"
+  | EBinOp _     -> "<binop>"
+  | ECall _      -> "<function call>"
+  | ELambda _    -> "<function>"
+  | EClosure _   -> "<function>"
+  | ERecordGet _ -> "<getter>"
 
 and field_to_string env (f,e) = f ^ ":" ^ expr_to_string env e
 
@@ -85,6 +86,16 @@ let rec interpret env program =
         | _ -> failwith "interpret: Tried to call a non-closure"
       )
   | ELambda (params,body) -> EClosure (params,body,env) (* magic.gif *)
+  | ERecordGet (e,f) ->
+      match interpret env e with
+        | ERecord fs ->
+          let found_field = List.find_map fs ~f:(fun (field,expr) -> if String.equal f field then Some expr else None) in
+          (match found_field with
+            | None -> failwith "E0007: Trying to access a missing record field"
+            | Some expr -> interpret env expr
+          )
+        | _ -> failwith "interpret: Tried to access a field from a non-record (ERecordGet)"
+
 
 let interpret_bang env = function
   | BValue expr ->

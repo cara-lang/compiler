@@ -11,18 +11,17 @@ let[@inline] illegal c =
 }
 
 let digit  = ['0'-'9']
-let underscore = '_'
-let minus = '-'
 let exponent = ['e' 'E']
-let int   = minus? digit (digit | underscore)*
-let float = minus? digit (digit | underscore)* '.' digit (digit | underscore)* (exponent minus? digit+)?
+let int   = '-'? digit (digit | '_')*
+let float = '-'? digit (digit | '_')* '.' digit (digit | '_')* (exponent '-'? digit+)?
 let newline = "\r\n" | '\r' | '\n'
 let whitespace = ' ' | '\t'
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
-let lower_name = lower (lower | upper | digit | underscore)*
-let upper_name = upper (lower | upper | digit | underscore)*
+let lower_name = lower (lower | upper | digit | '_' | '\'')*
+let upper_name = upper (lower | upper | digit | '_' | '\'')*
 let qualifier = upper_name '.'
+let getter = '.' lower_name
 
 rule next_token = parse
   | eof         { EOF }
@@ -32,6 +31,7 @@ rule next_token = parse
   | "//"        { line_comment lexbuf }
   | "#!"        { shebang_comment lexbuf }
 
+  | getter as n     { GETTER    (n |> String.lstrip ~drop:(fun c -> Char.equal c '.')) }
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
   | lower_name as n { LOWER_NAME n } (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.  *)
   | upper_name as n { UPPER_NAME n } (*       Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
