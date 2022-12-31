@@ -29,7 +29,7 @@ rule next_token = parse
   | whitespace+ { next_token lexbuf }
   | newline     { Lexing.new_line lexbuf; EOL }
   | "/*"        { block_comment 0 lexbuf; next_token lexbuf }
-  | "//"        { line_comment lexbuf; next_token lexbuf }
+  | "//"        { line_comment lexbuf }
   | "#!"        { shebang_comment lexbuf }
 
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
@@ -117,7 +117,7 @@ and read_multiline_string buf = parse
   | _   { failwith ("Illegal string character: " ^ Lexing.lexeme lexbuf) }
 
 and line_comment = parse
-  | newline { Lexing.new_line lexbuf }
+  | newline { Lexing.new_line lexbuf; EOL }
   | _       { line_comment lexbuf }
 
 (* We'll generate a SHEBANG token; later the parser will check it's the first
