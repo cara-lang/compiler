@@ -81,9 +81,8 @@ bang:
     | MINUS e %prec UMINUS { EUnOp (OpNeg, $2) }
 
     (* TODO replace `LOWER_NAME` with `pattern` *)
-    | BACKSLASH                             LOWER_NAME         ARROW e { ELambda ([$2], $4) } (* \x -> 123 *)
-    | BACKSLASH LPAREN separated_list(COMMA,LOWER_NAME) RPAREN ARROW e { ELambda ($3, $6) }   (* \(x,y) -> 123 *)
-    | LHOLE holey_expr RPAREN { lambda_with_holes($2) }  (* #(1 + _) *)
+    | BACKSLASH separated_list(COMMA,LOWER_NAME) ARROW e { ELambda ($2, $4) }  (* \x -> 123, \x,y -> 123 *)
+    | LHOLE holey_expr RPAREN { lambda_with_holes($2) }                        (* #(1 + _) *)
     ;
 
 expr:
