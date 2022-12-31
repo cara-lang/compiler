@@ -1,0 +1,2 @@
+tuple = (123, "Hello")
+IO.println!(tuple.third)

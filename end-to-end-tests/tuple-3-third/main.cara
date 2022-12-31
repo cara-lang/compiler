@@ -1,5 +1,2 @@
-x : (Int, String, Bool)
-x = (123, "Hello", True)
-
-IO.println!(x.third())
-IO.println!(x.el2())
+x = (123, "Hello", [])
+IO.println!(x.third)

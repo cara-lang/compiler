@@ -1,5 +1,2 @@
-x : (Int, String)
 x = (123, "Hello")
-
-IO.println!(x.second())
-IO.println!(x.el1())
+IO.println!(x.second)

@@ -1,0 +1,8 @@
+E0023: Trying to access a missing tuple field
+
+The tuple has 10 elements but the code below tried to access element #11.
+
+main.cara:2:15
+━━┓
+2 ┃ IO.println!(x.el11)
+  ┃               ^

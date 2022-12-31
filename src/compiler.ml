@@ -59,19 +59,8 @@ let rec interpret env program =
                interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
           )
         | ERecordGetter wanted_field ->
-          (match List.map ~f:(interpret env) args with
-            | [arg] -> (match interpret env arg with
-                | ERecord fs ->
-                  let found_field = List.find_map fs ~f:(fun (field,expr) -> if String.equal field wanted_field then Some expr else None) in
-                  (match found_field with
-                  | None -> failwith "E0007: Trying to access a missing record field"
-                  | Some expr -> interpret env expr
-                  )
-                | _ -> failwith ("E0022: Trying to access a record field from a non-record"
-                        ^ ":\n\n" ^ Sexp.to_string_hum (Syntax.sexp_of_expr arg)
-                        (*^ "\n\nwith env:\n\n" ^ (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env))*)
-                        )
-            )
+          (match args with
+            | [arg] -> interpret_getter env wanted_field arg
             | _ -> failwith ("interpret: Trying to call a record getter with " ^ Int.to_string (List.length args) ^ " arguments")
           )
         | e -> failwith 
@@ -81,15 +70,48 @@ let rec interpret env program =
                 )
       )
   | ELambda (params,body) -> EClosure (params,body,env) (* magic.gif *)
-  | ERecordGet (e,f) ->
-      match interpret env e with
-        | ERecord fs ->
-          let found_field = List.find_map fs ~f:(fun (field,expr) -> if String.equal f field then Some expr else None) in
-          (match found_field with
-            | None -> failwith "E0007: Trying to access a missing record field"
-            | Some expr -> interpret env expr
-          )
-        | _ -> failwith "E0022: Trying to access a record field from a non-record"
+  | ERecordGet (e,wanted_field) -> interpret_getter env wanted_field e
+
+and interpret_getter env wanted_field arg =
+  match interpret env arg with
+    | ERecord fs -> interpret_record_access env wanted_field fs
+    | ETuple  es -> interpret_tuple_access env wanted_field es
+    | _ -> failwith ("E0022: Trying to access a record field from a non-record"
+            ^ ":\n\n" ^ Sexp.to_string_hum (Syntax.sexp_of_expr arg)
+            (*^ "\n\nwith env:\n\n" ^ (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env))*)
+            )
+
+and interpret_record_access env wanted_field fields =
+  let found_field = List.find_map fields ~f:(fun (field,expr) -> if String.equal field wanted_field then Some expr else None) in
+  match found_field with
+    | None -> failwith "E0007: Trying to access a missing record field"
+    | Some expr -> interpret env expr
+
+and interpret_tuple_access env wanted_field elements =
+  match wanted_field with
+  | "first"   -> nth_element 0 env elements
+  | "second"  -> nth_element 1 env elements
+  | "third"   -> nth_element 2 env elements
+  | "fourth"  -> nth_element 3 env elements
+  | "fifth"   -> nth_element 4 env elements
+  | "sixth"   -> nth_element 5 env elements
+  | "seventh" -> nth_element 6 env elements
+  | "eighth"  -> nth_element 7 env elements
+  | "ninth"   -> nth_element 8 env elements
+  | "tenth"   -> nth_element 9 env elements
+  (* The madness needs to stop _somewhere_ *)
+  | _ -> if String.is_prefix wanted_field ~prefix:"el" then
+            let without_el = String.drop_prefix wanted_field 2 in
+            if String.for_all without_el ~f:Char.is_digit 
+              then nth_element (Int.of_string without_el - 1) env elements
+              else failwith "E0023: Trying to access a missing tuple field"
+         else failwith "E0023: Trying to access a missing tuple field"
+
+and nth_element n env elements =
+  match List.nth elements n with
+  | None -> failwith "E0023: Trying to access a missing tuple field"
+  | Some el -> interpret env el
+        
 
 
 let interpret_bang env = function
