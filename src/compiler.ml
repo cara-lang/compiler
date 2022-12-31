@@ -94,7 +94,7 @@ let rec interpret env program =
             | None -> failwith "E0007: Trying to access a missing record field"
             | Some expr -> interpret env expr
           )
-        | _ -> failwith "interpret: Tried to access a field from a non-record (ERecordGet)"
+        | _ -> failwith "E0022: Trying to access a record field from a non-record"
 
 
 let interpret_bang env = function
