@@ -1,0 +1,8 @@
+E0025: Binary integer started with 0B
+
+The integer started with an uppercase `0B`. Please use `0b`.
+
+main.cara:1:14
+━━┓
+1 ┃ IO.println!(0B1100)
+  ┃              ^

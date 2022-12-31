@@ -1,0 +1,8 @@
+E0026: Octal integer started with 0O
+
+The integer started with an uppercase `0O`. Please use `0o`.
+
+main.cara:1:14
+━━┓
+1 ┃ IO.println!(0O777)
+  ┃              ^

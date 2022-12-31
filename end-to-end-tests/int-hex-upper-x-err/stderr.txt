@@ -1,0 +1,8 @@
+E0024: Hexadecimal integer started with 0X
+
+The integer started with an uppercase `0X`. Please use `0x`.
+
+main.cara:1:14
+━━┓
+1 ┃ IO.println!(0Xdeadbeef)
+  ┃              ^
