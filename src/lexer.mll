@@ -51,7 +51,7 @@ rule next_token = parse
 
   | '\\' { BACKSLASH }
   | "->" { ARROW }
-  | "#(" { LHOLE }
+  | "#(" { LHOLE } (* TODO: would be lovely to have (...) or \(...) syntax instead... perhaps when I have more experience with LR(1) parsers *)
 
   | '+' { PLUS }
   | '-' { MINUS }
