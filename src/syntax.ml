@@ -135,7 +135,7 @@ let record fs =
   then failwith "E0006: Record created with duplicate fields"
   else ERecord fs
 
-(*** TO_STRING (Io.println!) ************************************)
+(*** TO_STRING (IO.println!) ************************************)
 
 let rec expr_to_string env = function
   | EInt i    -> Int.to_string i
