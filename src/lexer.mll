@@ -10,16 +10,31 @@ let[@inline] illegal c =
   failwith (Printf.sprintf "lexer: unexpected character: '%c'" c)
 }
 
-let digit  = ['0'-'9']
 let exponent = ['e' 'E']
-let int   = '-'? digit (digit | '_')*
-let float = '-'? digit (digit | '_')* '.' digit (digit | '_')* (exponent '-'? digit+)?
+
+let bin_digit = ['0'-'1']
+let oct_digit = ['0'-'7']
+let dec_digit = ['0'-'9']
+let hex_digit = ['0'-'9' 'a'-'f' 'A'-'F']
+
+let int = '-'? ( ("0b" bin_digit (bin_digit | '_')*) 
+               | ("0o" oct_digit (oct_digit | '_')*) 
+               | ("0x" hex_digit (hex_digit | '_')*) 
+               | (     dec_digit (dec_digit | '_')*)
+               )
+
+let bad_bin_int = '-'? "0B" bin_digit (bin_digit | '_')*
+let bad_oct_int = '-'? "0O" oct_digit (oct_digit | '_')*
+let bad_hex_int = '-'? "0X" hex_digit (hex_digit | '_')*
+
+let float = '-'? dec_digit (dec_digit | '_')* '.' dec_digit (dec_digit | '_')* (exponent '-'? dec_digit+)?
+
 let newline = "\r\n" | '\r' | '\n'
 let whitespace = ' ' | '\t'
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
-let lower_name = lower (lower | upper | digit | '_' | '\'')*
-let upper_name = upper (lower | upper | digit | '_' | '\'')*
+let lower_name = lower (lower | upper | dec_digit | '_' | '\'')*
+let upper_name = upper (lower | upper | dec_digit | '_' | '\'')*
 let qualifier = upper_name '.'
 let getter = '.' lower_name
 
@@ -45,6 +60,9 @@ rule next_token = parse
                       |> Int.of_string
                       |> INT
                     }
+  | bad_bin_int     { failwith "E0025: Binary integer started with 0B" }
+  | bad_oct_int     { failwith "E0026: Octal integer started with 0O" }
+  | bad_hex_int     { failwith "E0024: Hexadecimal integer started with 0X" }
   | '"'  { read_singleline_string (Buffer.create 16) lexbuf }
   | '`'  { read_multiline_string  (Buffer.create 16) lexbuf }
   | '\'' { read_char (Buffer.create 16) lexbuf }
@@ -68,7 +86,7 @@ rule next_token = parse
   | '!' { BANG }
   | '=' { EQUALS }
   | '_' { UNDERSCORE }
-  | '_' digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }
+  | '_' dec_digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }
 
   | _ as c { illegal c }
 
