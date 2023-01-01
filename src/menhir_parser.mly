@@ -46,6 +46,7 @@ main:
     ;
 
 submain:
+    | stmt* SHEBANG EOL* stmt* { failwith "E0015: Shebang comment is not first" }
     | SHEBANG EOL* stmt* { StmtList ($3, None) } (* shebang already has one implicit EOL at the end *)
     | stmt*              { StmtList ($1, None) }
     (* toplevel doesn't do returned expr ^ *)
