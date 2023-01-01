@@ -149,25 +149,39 @@ let interpret_stmt env = function
 
 let rec interpret_stmt_list env (StmtList (stmts,ret_expr)) =
   match stmts with
-    | [] -> Option.map ret_expr ~f:(interpret env)
+    | [] -> (Option.map ret_expr ~f:(interpret env), env)
     | stmt :: rest ->
         let env1 = interpret_stmt env stmt in
         interpret_stmt_list env1 (StmtList (rest, ret_expr))
 
+let interpret_file filename env =
+  filename
+  |> Parser.parse_file
+  |> interpret_stmt_list env
+  |> Tuple2.get2
+
+let interpret_string string env =
+  string
+  |> Parser.parse_string
+  |> interpret_stmt_list env
+  |> Tuple2.get2
+
 (*** MAIN *******************************************************)
+
+(*printf("Parsed:\n%s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list stmt_list));*)
 
 let argv = Sys.get_argv ()
 let _ =
   if Array.length argv <> 2 then (
-    Stdio.Out_channel.output_string Stdio.stdout
-      ("Usage: " ^ argv.(0) ^ " <SOURCE_FILE>\n");
-    Caml.exit 0)
+    printf ("Usage: %s <SOURCE_FILE>\n") argv.(0);
+    Caml.exit 2
+  )
   else
       Parser.pp_exceptions (); (* enable pretty error messages *)
-      let filename = argv.(1) in
-      let ic = Stdio.In_channel.create filename in
-      let stmt_list = Parser.parse_chan ic in
-      (*printf("Parsed:\n%s\n") (Sexp.to_string_hum (Syntax.sexp_of_stmt_list stmt_list));*)
-      let env = Map.empty (module Identifier) in
-      let _ = interpret_stmt_list env stmt_list in
+      let init_env = Map.empty (module Identifier) in
+      let _ =
+        init_env
+        |> interpret_string [%blob "stdlib.cara"]
+        |> interpret_file argv.(1)
+      in
       Stdio.Out_channel.flush Stdio.stdout

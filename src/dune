@@ -11,13 +11,16 @@
     nice_parser
     base
     core
+    ppx_blob
   )
   (preprocess
     (pps 
       ppx_deriving.show
       ppx_deriving.map
       ppx_jane
+      ppx_blob
     )
   )
+  (preprocessor_deps "../stdlib.cara")
 )
 
