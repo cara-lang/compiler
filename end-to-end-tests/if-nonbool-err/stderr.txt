@@ -1,0 +1,9 @@
+E0025: If expression with a non-bool condition
+
+The `if` expression has a non-bool condition. They need a boolean to decide
+which branch to continue with.
+
+main.cara:1:8
+━━┓
+1 ┃ x = if 1 then 1 else 2
+  ┃        ^

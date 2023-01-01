@@ -20,6 +20,7 @@ type expr =
   | EChar of string    (* 'a' *) (* It's holding a string because of extended grapheme clusters *)
   | EString of string  (* "abc" *)
   | EUnit              (* () *)
+  | EBool of bool      (* True, False *)
 
   (* collections *)
   | ETuple of expr list             (* (1,"abc"), (1,"abc",2,()) *)
@@ -37,6 +38,7 @@ type expr =
   | ELambda of string list * expr        (* \(x,y) -> x + y + 1 *)
   | EClosure of string list * expr * expr Map.M(Identifier).t (* lambda along with the environment as of time of definition *)
   | ERecordGetter of string  (* .a, .el0 *)
+  | EIf of expr * expr * expr  (* if True then 1 else 2 *)
   [@@deriving sexp]
 
 type bang =
@@ -103,6 +105,7 @@ let rec analyze_holes = function
   | EFloat _        -> NoHoles
   | EChar _         -> NoHoles
   | EString _       -> NoHoles
+  | EBool _         -> NoHoles
   | EUnit           -> NoHoles
   | ERecordGetter _ -> NoHoles
   | ETuple es  -> analyze_list es
@@ -114,6 +117,7 @@ let rec analyze_holes = function
   | EBinOp (e1,_,e2) -> combine_holes (analyze_holes e1) (analyze_holes e2)
   | ECall (fn,args)  -> combine_holes (analyze_holes fn) (analyze_list args)
   | ERecordGet (e,_) -> analyze_holes e
+  | EIf (c,t,e)      -> analyze_list [c;t;e]
 
 and analyze_list es = es |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes
 
@@ -140,6 +144,7 @@ let rec expr_to_string env = function
                   |> String.rstrip ~drop:(fun c -> Char.equal c '.') 
   | EChar c   -> c
   | EString s -> s
+  | EBool b -> string_of_bool b |> String.capitalize
   | EIdentifier (q,x) -> (match Map.find env (q,x) with
       | None -> failwith ("unknown identifier " ^ identifier_to_string (q,x))
       | Some e -> expr_to_string env e
@@ -155,5 +160,6 @@ let rec expr_to_string env = function
   | EClosure _      -> "<function>"
   | ERecordGet _    -> "<get>"
   | ERecordGetter _ -> "<getter>"
+  | EIf _           -> "<if>"
 
 and field_to_string env (f,e) = f ^ ":" ^ expr_to_string env e

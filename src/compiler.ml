@@ -15,6 +15,7 @@ let rec interpret env program =
   | EChar _         -> program
   | EString _       -> program
   | EUnit           -> program
+  | EBool _         -> program
   | EClosure _      -> program
   | ERecordGetter _ -> program
   | EIdentifier (q,x) ->
@@ -71,6 +72,11 @@ let rec interpret env program =
       )
   | ELambda (params,body) -> EClosure (params,body,env) (* magic.gif *)
   | ERecordGet (e,wanted_field) -> interpret_getter env wanted_field e
+  | EIf (c,t,e) -> (match interpret env c with
+      | EBool true -> interpret env t
+      | EBool false -> interpret env e
+      | _ -> failwith "E0025: If expression with a non-bool condition"
+    )
 
 and interpret_getter env wanted_field arg =
   match interpret env arg with

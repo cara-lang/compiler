@@ -48,8 +48,19 @@ rule next_token = parse
 
   | getter as n     { GETTER    (n |> String.lstrip ~drop:(fun c -> Char.equal c '.')) }
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
-  | lower_name as n { LOWER_NAME n } (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.  *)
-  | upper_name as n { UPPER_NAME n } (*       Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
+  | lower_name as n (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.
+                             Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
+                    { match n with
+                        | "if"   -> IF
+                        | "then" -> THEN
+                        | "else" -> ELSE
+                        | _      -> LOWER_NAME n 
+                    } 
+  | upper_name as n { match n with
+                        | "True" -> TRUE
+                        | "False" -> FALSE
+                        | _ -> UPPER_NAME n
+                    } 
   | float as n      { n
                       |> String.filter ~f:(fun c -> not (Char.equal c '_'))
                       |> Float.of_string

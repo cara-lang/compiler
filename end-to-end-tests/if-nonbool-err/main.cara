@@ -1,0 +1,2 @@
+x = if 1 then 1 else 2
+IO.println!(x)

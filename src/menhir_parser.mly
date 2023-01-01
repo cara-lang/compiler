@@ -10,6 +10,8 @@
 %token <string> UPPER_NAME
 %token <int> HOLE
 %token PLUS MINUS TIMES DIV
+%token IF THEN ELSE
+%token TRUE FALSE
 %token BACKSLASH ARROW UNDERSCORE LHOLE
 %token LPAREN RPAREN
 %token LBRACE RBRACE
@@ -69,12 +71,15 @@ bang:
     | FLOAT  { EFloat $1 }
     | CHAR   { EChar $1 } (* TODO we're guaranteed by lexer it's >0 bytes, but we still need to validate it's just one Unicode "extended grapheme cluster"! *)
     | STRING { EString $1 }
+    | TRUE   { EBool true }
+    | FALSE  { EBool false }
     | LPAREN separated_list(COMMA,e) RPAREN { 
         match $2 with
             | [] -> EUnit     (* () *)
             | [e] -> e        (* (1+2) *)
             | _ -> ETuple $2  (* (1,2), (1,2,3,4,5,6,7,8) *)
     }
+    | IF e THEN e ELSE e { EIf ($2,$4,$6) }
     | identifier { $1 }
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
