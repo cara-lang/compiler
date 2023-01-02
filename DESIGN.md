@@ -162,11 +162,19 @@ WHAT'S GOOD ABOUT ELM:
 * immutability
 * purity
 
+-------------------
 
 FOMO FROM OTHER LANGUAGES:
 
 * OCaml modules
 * Algebraic effects instead of monads?
+
+-------------------
+
+- eprintln
+- check out jakt::libc::io. How will we do this in HVM?
+- punning for function calls? (probably only makes sense if we forced f(x=1,y=2) in some places)
+- auto-derived Printable/... (doesn't need an inverse Read instance)
 
 -----------------------------
 
@@ -189,3 +197,11 @@ Monad syntax sugar:
      log!("hello") // is the same as
      _ = log!("hello")
 7) Non-monadic exprs without an `x =` binding are only allowed as the last stmt
+
+---------------------------
+
+Promises made:
+- [ ] cara build (from Tests docs)
+- [ ] cara run   (from Tests docs)
+- [ ] cara test  (from Tests docs)
+- [ ] lists have optional end and start , delimiter
