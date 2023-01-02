@@ -1,0 +1,4 @@
+test "Property" with (Int,List[Int]): \x,xs -> {
+  nonempty = x ++ xs
+  !List.isEmpty(nonempty)
+}

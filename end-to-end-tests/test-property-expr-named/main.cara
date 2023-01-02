@@ -1,0 +1,2 @@
+test "Property" with List[Int]: 
+  \list -> !List.isEmpty(1 ++ list)

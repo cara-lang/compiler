@@ -1,0 +1,4 @@
+test "Property" with Gen.list(Gen.int): \list -> {
+  nonempty = 1 ++ list
+  !List.isEmpty(nonempty)
+}

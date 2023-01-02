@@ -1,0 +1,3 @@
+Failed: List.isEmpty(nonempty)
+  list = []
+  nonempty = [1]

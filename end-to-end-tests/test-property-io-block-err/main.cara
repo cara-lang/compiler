@@ -1,0 +1,14 @@
+test with List[Int]: \list -> IO {
+  nonempty = 1 ++ list
+
+  /* This is problematic for the E2E test suite as it will run during the
+     random runs.
+
+     TODO Add a way to fix the `cara test` seed and number of runs, and then have
+     something reproducible in test-stdout.txt. Then add the `contains-tests`
+     file again.
+  */
+  IO.println!("I have access to IO! $list") 
+
+  List.isEmpty(nonempty)
+}

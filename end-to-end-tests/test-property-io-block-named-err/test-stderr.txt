@@ -1,0 +1,3 @@
+Failed: Property
+  list = []
+  nonempty = [1]

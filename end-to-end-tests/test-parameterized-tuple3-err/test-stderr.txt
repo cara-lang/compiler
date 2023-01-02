@@ -1,0 +1,10 @@
+Failed: Parameterized
+  a = 1
+  b = 2
+  expectedSum = 4
+  actualSum = 3
+Failed: Parameterized
+  a = 2
+  b = 3
+  expectedSum = 9
+  actualSum = 5

@@ -1,0 +1,4 @@
+test "Property" with List[Int]: \list -> {
+  nonempty = 1 ++ list
+  List.isEmpty(nonempty)
+}

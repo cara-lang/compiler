@@ -1,0 +1,6 @@
+test "Named IO block test": IO {
+  x = 1
+  y = 2
+  IO.println!("I have access to IO!")
+  x == y
+}

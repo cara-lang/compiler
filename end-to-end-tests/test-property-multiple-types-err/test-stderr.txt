@@ -1,0 +1,4 @@
+Failed: Property
+  x = 0
+  xs = []
+  nonempty = [0]

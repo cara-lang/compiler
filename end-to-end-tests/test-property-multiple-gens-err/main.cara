@@ -1,0 +1,4 @@
+test "Property" with (Get.int,Gen.list(Gen.int)): \x,xs -> {
+  nonempty = x ++ xs
+  List.isEmpty(nonempty)
+}

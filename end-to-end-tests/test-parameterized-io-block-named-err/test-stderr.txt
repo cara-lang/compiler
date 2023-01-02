@@ -1,0 +1,8 @@
+Failed: Named IO block parameterized
+  input = 1
+  expected = 2
+  actual = 3
+Failed: Named IO block parameterized
+  input = 2
+  expected = 3
+  actual = 4

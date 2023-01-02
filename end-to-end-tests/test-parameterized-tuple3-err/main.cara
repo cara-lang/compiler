@@ -1,0 +1,4 @@
+test "Parameterized" with [(1,2,4),(2,3,9)]: \a,b,expectedSum -> {
+  actualSum = a+b
+  actualSum == expectedSum
+}

@@ -1,0 +1,5 @@
+test "Named block test": {
+  x = 1
+  y = 2
+  x == y
+}

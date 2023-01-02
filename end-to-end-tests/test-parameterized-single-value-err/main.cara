@@ -1,0 +1,12 @@
+type alias PlusTestCase = 
+  {
+    input: Int,
+    expected: Int,
+  }
+
+c(input: Int, expected: Int) = {input,expected}
+
+test "Parameterized" with [c(1,2),c(2,3)]: \{..} -> {
+  actual = input + 2
+  actual == expected
+}

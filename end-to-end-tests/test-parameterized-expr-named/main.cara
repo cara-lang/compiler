@@ -1,0 +1,2 @@
+test "Parameterized" with [(1,2),(2,3)]: 
+  \input,expected -> input + 1 == expected

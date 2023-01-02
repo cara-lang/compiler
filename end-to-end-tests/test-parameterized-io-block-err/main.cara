@@ -1,0 +1,5 @@
+test with [(1,2),(2,3)]: \input,expected -> IO {
+  actual = input + 2
+  IO.println!("I have access to IO! ($input,$expected)")
+  actual == expected
+}
