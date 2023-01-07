@@ -44,8 +44,10 @@ rule next_token = parse
   | newline     { Lexing.new_line lexbuf; EOL }
   | "/*"        { block_comment 0 lexbuf; next_token lexbuf }
   | "//"        { line_comment lexbuf }
-  | "#!"        { shebang_comment lexbuf }
-
+  | "#!"        { if Lexing.lexeme_start lexbuf = 0
+                    then shebang_comment lexbuf
+                    else failwith "E0015: Shebang comment is not first"
+                }
   | getter as n     { GETTER    (n |> String.lstrip ~drop:(fun c -> Char.equal c '.')) }
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
   | lower_name as n (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.
@@ -153,7 +155,7 @@ and line_comment = parse
   | _       { line_comment lexbuf }
 
 (* We'll generate a SHEBANG token; later the parser will check it's the first
-one (barring any EOLs), else it will throw an error.  *)
+one, else it will throw an error.  *)
 and shebang_comment = parse
   | newline { Lexing.new_line lexbuf; SHEBANG }
   | _       { shebang_comment lexbuf }

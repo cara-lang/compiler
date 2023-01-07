@@ -1,0 +1,4 @@
+
+#!/usr/bin/env cara
+IO.println!("Oops")
+// Shebang comments need to be the first bytes in the file
