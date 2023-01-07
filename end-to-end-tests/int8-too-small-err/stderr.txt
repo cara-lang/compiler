@@ -1,0 +1,8 @@
+E0026: Integer literal is too large for the declared type
+
+The literal `1000` is too large for the type `Int8`. Use a different type.
+
+main.cara:1:11
+━━┓
+1 ┃ x: Int8 = 1000
+  ┃           ^

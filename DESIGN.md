@@ -92,6 +92,14 @@ TODO:
 * check out OCaml modules
   * https://dev.realworldocaml.org/first-class-modules.html
   * https://www.reddit.com/r/adventofcode/comments/zvl018/comment/j1vhh48/?utm_source=reddit&utm_medium=web2x&context=3
+  * OCaml modules can contain other modules as well
+  * `open M` - basically unqualified import
+  * `let open M in ...` - scoped unqualified import (would eg. be good in Elm's views?)
+    * same effect as `Gen.(generate 10 bool)` but we probably don't want that
+  * `module QR = QuickCheck.Runner` is basically Elm's `import ... as`
+  * Apart from that OCaml has signatures (interfaces) and functors (module -> module functions)
+  * we need a way to export only certain functions/types
+
 * anonymous ADTs? check out open unions/tags in Roc/Grace/...
 * default arguments?
 * typeclasses? interfaces? protocols? late extension of those? (Clojure, Kotlin)
@@ -137,9 +145,27 @@ CURRENT THINKING:
 * algebraic effects? have a specific way to say "no effect!" but otherwise the default is that whatever usages do, we do also? have a way to say "at least +Log", or "whatever, but disallow Log"?
   * OCaml 5 just got effects (via GADTs): https://v2.ocaml.org/releases/5.0/manual/effects.html
 
+=============================
+
+Data structures - Okasaki? Clojure impl?
+Fast F# - "Writing a dictionary", fast hashing/... etc.
+  - https://www.youtube.com/watch?v=Hd1XoubzdK4
+  - https://github.com/matthewcrews/FastDictionaryTest
 
 ----------------
 
+what about one-line syntax:
+
+value1: Doc = ...
+
+instead of
+
+value1: Doc
+value1 = ...
+
+?
+
+--------------------------
 
 WHAT'S MISSING FROM ELM:
 
@@ -176,6 +202,10 @@ FOMO FROM OTHER LANGUAGES:
 - punning for function calls? (probably only makes sense if we forced f(x=1,y=2) in some places)
 - auto-derived Printable/... (doesn't need an inverse Read instance)
 
+----------------------------
+
+Tests: "they don't run by default; but they are exposed values (if not `private`), they all compile down to (-> TestResult) and you can run them from the REPL etc. or even use them in your program
+
 -----------------------------
 
 Current thinking about monads:
@@ -205,3 +235,10 @@ Promises made:
 - [ ] cara run   (from Tests docs)
 - [ ] cara test  (from Tests docs)
 - [ ] lists have optional end and start , delimiter
+- [ ] complex numbers in stdlib
+- [ ] bigintegers in stdlib
+- [ ] bigdecimals in stdlib
+- [ ] fractions in stdlib
+- [ ] int8, int16, int32, int64 in language
+- [ ] uint8, uint16, uint32, uint64 in language
+- [ ] float32, float64 in language

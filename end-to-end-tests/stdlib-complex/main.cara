@@ -1,0 +1,13 @@
+x = Complex.fromTuple(1,2) // 1 + 2i
+y = Complex.real(2)        // 2 + 0i
+z = Complex.imaginary(2)   // 0 + 2i
+w = Complex.fromTuple(1.25,3.75) // 1.25 + 3.75i
+
+IO.println!(x)
+IO.println!(y)
+IO.println!(z)
+IO.println!(w)
+IO.println!(x + y + z + w)
+IO.println!(Complex.conjugate(x))
+IO.println!(x*y)
+IO.println!(x/y)

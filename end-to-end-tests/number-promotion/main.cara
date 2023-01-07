@@ -1,0 +1,4 @@
+x: Int = 125
+y: Float = 0.5
+z = x * y
+IO.println!(z) // -> z : Float

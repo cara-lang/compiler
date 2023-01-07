@@ -1,0 +1,2 @@
+x: Int8 = 1000
+IO.println!(x)
