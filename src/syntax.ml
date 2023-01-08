@@ -34,8 +34,8 @@ type expr =
   | ERecordGet of expr * string    (* r.a *)
 
   (* other *)
-  | EIdentifier of string list * string  (* IO.println, x, Just, Maybe.Just *)
-  | ELambda of string list * expr        (* \(x,y) -> x + y + 1 *)
+  | EIdentifier of Identifier.t    (* IO.println, x, Just, Maybe.Just *)
+  | ELambda of string list * expr  (* \(x,y) -> x + y + 1 *)
   | EClosure of string list * expr * expr Map.M(Identifier).t (* lambda along with the environment as of time of definition *)
   | ERecordGetter of string  (* .a, .el0 *)
   | EIf of expr * expr * expr  (* if True then 1 else 2 *)
