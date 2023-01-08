@@ -1,0 +1,3 @@
+range = 1..
+IO.println!(range)
+IO.println!(range |> Seq.take(5) |> Seq.toList)
