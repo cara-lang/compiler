@@ -1,0 +1,2 @@
+f(n) = n + 5
+IO.println!(f(5))

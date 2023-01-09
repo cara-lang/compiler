@@ -42,7 +42,7 @@ f([1(2)])
 %nonassoc UMINUS
 (* highest precedence *)
 
-%start <Syntax.program> main
+%start <Syntax.decl list> main
 
 %%
 
@@ -51,14 +51,10 @@ main:
     ;
 
 program:
-    | separated_list(EOL+,decl) EOL+ stmt* { ($1, $3) }
-    | stmt* { ([], $1) }
+    | separated_list(EOL+,decl) EOL* { $1 }
     ;
 
 decl:
-    | LOWER_NAME EQUALS expr EOL+ { DConstant ($1, $3) }  
-      (* x = 123 *)
-      (* TODO types *)
     | LOWER_NAME LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { DFunction ($1, $3, $6) }
       (* f(x,y) = e *)
       (* TODO types *)
@@ -70,6 +66,9 @@ decl:
       (* TODO right hand side is not just a string *)
     | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
     | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
+    | stmt* { DStatements $1 }
+      (* x = e *)
+      (* TODO type annotations *)
       (* type Foo     = Bar                     *)
       (* type Foo     = Bar | Baz               *)
       (* type List[a] = Empty | Cons(a,List[a]) *)

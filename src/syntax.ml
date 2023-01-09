@@ -83,7 +83,6 @@ type adt_constructor =
     [@@deriving sexp]
 
 type decl = 
-  | DConstant of string * expr (* TODO type annotation support *)
   | DFunction of string * arg_list * expr
     (* TODO type annotation support *)
     (* TODO multiple declarations of the same fn *)
@@ -91,10 +90,9 @@ type decl =
     (* type alias HttpResult[a] = Result[HttpError,a] *)
   | DType of string * typevar list * adt_constructor list
     (* type List[a] = Empty | Cons(a,List[a]) *)
+  | DStatements of stmt list
     [@@deriving sexp]
 
-type program = decl list * stmt list
-    [@@deriving sexp]
 (* the top-level stmt list can't return anything, so there's no `expr option` *)
 
 (**************** HELPERS *******************)

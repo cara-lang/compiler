@@ -1,5 +1,5 @@
-open Base
 open Core
+open Base
 open Syntax
 open Identifier
 
@@ -151,39 +151,25 @@ let interpret_stmt env = function
       let _ = interpret_bang env bang in
       env
 
-let rec interpret_stmt_list env (stmts,ret_expr) =
-  match stmts with
-    | [] -> (Option.map ret_expr ~f:(interpret env), env)
-    | stmt :: rest ->
-        let env1 = interpret_stmt env stmt in
-        interpret_stmt_list env1 (rest, ret_expr)
+let rec interpret_stmt_list env stmts =
+  List.fold stmts ~init:env ~f:interpret_stmt
 
 let interpret_decl env decl =
   match decl with
-    | DConstant (name,expr) ->
-      interpret_stmt env (SLet (name,expr))
     | DFunction (name,args,body) ->
       (* TODO Is this fine? Where does this break? (Probably with equational style and then with overloading.) *)
       interpret_stmt env (SLet (name, ELambda(args,body)))
     | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
     | DType _      -> interpret_fail "TODO: interpret_decl: DType"
+    | DStatements stmts -> interpret_stmt_list env stmts
 
 let rec interpret_decl_list env decls =
-  match decls with
-    | [] -> env
-    | decl :: rest ->
-        let env1 = interpret_decl env decl in
-        interpret_decl_list env1 rest
-
-let interpret_program env (decl_list, stmt_list) =
-  let env1 = interpret_decl_list env decl_list in
-  interpret_stmt_list env1 (stmt_list,None)
+  List.fold decls ~init:env ~f:interpret_decl
 
 let interpret_file filename env =
   filename
   |> Parser.parse_file
-  |> interpret_program env
-  |> Tuple2.get2
+  |> interpret_decl_list env
 
   (*
 let interpret_string string env =
@@ -221,7 +207,7 @@ let print_tokens tokens =
 
 let print_program program =
   program
-  |> Syntax.sexp_of_program
+  |> sexp_of_list Syntax.sexp_of_decl
   |> Sexp.to_string_hum
   |> eprintf("%s\n")
 
