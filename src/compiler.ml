@@ -246,10 +246,20 @@ let _ =
         in
         ()
       with
-      | Parser.LexError {msg} -> eprintf("%s\n") msg
-      | Parser.ParseError {token} -> 
+      (* TODO the columns aren't completely correct *)
+      | Parser.LexError {msg;loc} ->
+          eprintf("\\[%s:%d:%d]\n%s\n")
+            loc.loc_start.pos_fname
+            loc.loc_start.pos_lnum
+            (loc.loc_start.pos_bol + 1)
+            msg
+      | Parser.ParseError {token;loc} -> 
         (
-          eprintf("Unexpected token: %s\n\n") (Token.show_token token);
+          eprintf("\\[%s:%d:%d]\nUnexpected token: %s\n\n") 
+            loc.loc_start.pos_fname
+            loc.loc_start.pos_lnum
+            (loc.loc_start.pos_bol + 1)
+            (Token.show_token token);
           eprintf("Lexed:\n");
           argv.(1) |> lex_file |> print_tokens;
           eprintf("\n")
