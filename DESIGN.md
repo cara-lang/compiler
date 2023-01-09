@@ -197,14 +197,23 @@ FOMO FROM OTHER LANGUAGES:
 
 -------------------
 
+- ' and _ in identifiers
+- ? and - in identifiers?
+
 - eprintln
 - check out jakt::libc::io. How will we do this in HVM?
 - punning for function calls? (probably only makes sense if we forced f(x=1,y=2) in some places)
 - auto-derived Printable/... (doesn't need an inverse Read instance)
 
+- Seqs (eg. for infinite ranges): https://clojure.org/reference/sequences
+
 ----------------------------
 
 Tests: "they don't run by default; but they are exposed values (if not `private`), they all compile down to (-> TestResult) and you can run them from the REPL etc. or even use them in your program
+
+-----------------------------
+
+Interpreter: don't parse + interpret stdlib on each run. What are our options? Compiling to bytecode? Have the final (non-OCaml but HVM?) interpreter run on HVM code anyway, so the stdlib can be a precompiled HVM file to be concatenated to the rest?
 
 -----------------------------
 

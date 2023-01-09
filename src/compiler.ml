@@ -5,6 +5,9 @@ open Identifier
 
 let printf = Stdlib.Printf.printf
 
+exception InterpretError of string
+let[@inline] interpret_fail msg = raise (InterpretError msg)
+
 (*** INTERPRET **************************************************)
 
 let rec interpret env program =
@@ -18,13 +21,14 @@ let rec interpret env program =
   | EBool _         -> program
   | EClosure _      -> program
   | ERecordGetter _ -> program
+  | EConstructor _  -> program
   | EIdentifier (q,x) ->
       (match (q,x) with
       | (["IO"],"println") -> program (* kludge *)
       | _ -> 
         (* TODO how to hold all the possible arities and definitions of a given function at once? Where to try them out? In ECall? *)
         (match Map.find env (q,x) with
-          | None -> failwith ("interpret: E0001: Unknown variable " ^ identifier_to_string (q,x))
+          | None -> interpret_fail ("interpret: E0001: Unknown variable " ^ identifier_to_string (q,x))
           | Some found -> found
         )
       )
@@ -35,7 +39,7 @@ let rec interpret env program =
       (match unop with
         | OpNeg -> (match (interpret env e1) with
           | EInt i -> EInt (neg i)
-          | _ -> failwith "interpret: Can't negate anything that's not an int"
+          | _ -> interpret_fail "interpret: Can't negate anything that's not an int"
         )
       )
   | EBinOp (e1,binop,e2) -> (
@@ -47,14 +51,14 @@ let rec interpret env program =
             | OpTimes -> EInt (i1 * i2)
             | OpDiv   -> EInt (i1 / i2)
           )
-        | (e1',e2') -> failwith ("interpret: Unsupported binop for types that aren't two ints\n\n" 
+        | (e1',e2') -> interpret_fail ("interpret: Unsupported binop for types that aren't two ints\n\n" 
                         ^ (Sexp.to_string_hum (Syntax.sexp_of_expr (EBinOp (e1',binop,e2'))));)
     )
   | ECall (fn,args) -> 
       (match interpret env fn with
         | EClosure (params,body,defenv) -> 
           (match List.map2 params (List.map ~f:(interpret env) args) ~f:Tuple2.create with
-            | Unequal_lengths -> failwith "interpret: Called a function with a wrong number of arguments"
+            | Unequal_lengths -> interpret_fail "interpret: Called a function with a wrong number of arguments"
             | Ok pairs ->
                (*printf("Enhancing defenv with %s\n") (Sexp.to_string_hum (List.sexp_of_t (Tuple2.sexp_of_t sexp_of_string Syntax.sexp_of_expr) pairs));*)
                interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
@@ -62,9 +66,9 @@ let rec interpret env program =
         | ERecordGetter wanted_field ->
           (match args with
             | [arg] -> interpret_getter env wanted_field arg
-            | _ -> failwith ("interpret: Trying to call a record getter with " ^ Int.to_string (List.length args) ^ " arguments")
+            | _ -> interpret_fail ("interpret: Trying to call a record getter with " ^ Int.to_string (List.length args) ^ " arguments")
           )
-        | e -> failwith 
+        | e -> interpret_fail 
                 ("interpret: Tried to call a non-closure" 
                     ^ "\n\n" ^ (Sexp.to_string_hum (Syntax.sexp_of_expr e))
                     ^ "\n\nwith:\n\n" ^ String.concat ~sep:"," (List.map args ~f:(fun arg -> Sexp.to_string_hum (Syntax.sexp_of_expr arg)))
@@ -75,14 +79,14 @@ let rec interpret env program =
   | EIf (c,t,e) -> (match interpret env c with
       | EBool true -> interpret env t
       | EBool false -> interpret env e
-      | _ -> failwith "E0025: If expression with a non-bool condition"
+      | _ -> interpret_fail "E0025: If expression with a non-bool condition"
     )
 
 and interpret_getter env wanted_field arg =
   match interpret env arg with
     | ERecord fs -> interpret_record_access env wanted_field fs
     | ETuple  es -> interpret_tuple_access env wanted_field es
-    | _ -> failwith ("E0022: Trying to access a record field from a non-record"
+    | _ -> interpret_fail ("E0022: Trying to access a record field from a non-record"
             ^ ":\n\n" ^ Sexp.to_string_hum (Syntax.sexp_of_expr arg)
             (*^ "\n\nwith env:\n\n" ^ (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env))*)
             )
@@ -90,7 +94,7 @@ and interpret_getter env wanted_field arg =
 and interpret_record_access env wanted_field fields =
   let found_field = List.find_map fields ~f:(fun (field,expr) -> if String.equal field wanted_field then Some expr else None) in
   match found_field with
-    | None -> failwith "E0007: Trying to access a missing record field"
+    | None -> interpret_fail "E0007: Trying to access a missing record field"
     | Some expr -> interpret env expr
 
 and interpret_tuple_access env wanted_field elements =
@@ -110,12 +114,12 @@ and interpret_tuple_access env wanted_field elements =
             let without_el = String.drop_prefix wanted_field 2 in
             if String.for_all without_el ~f:Char.is_digit 
               then nth_element (Int.of_string without_el - 1) env elements
-              else failwith "E0023: Trying to access a missing tuple field"
-         else failwith "E0023: Trying to access a missing tuple field"
+              else interpret_fail "E0023: Trying to access a missing tuple field"
+         else interpret_fail "E0023: Trying to access a missing tuple field"
 
 and nth_element n env elements =
   match List.nth elements n with
-  | None -> failwith "E0023: Trying to access a missing tuple field"
+  | None -> interpret_fail "E0023: Trying to access a missing tuple field"
   | Some el -> interpret env el
         
 
@@ -123,7 +127,7 @@ and nth_element n env elements =
 let interpret_bang env = function
   | BValue expr ->
       let _ = interpret env expr in
-      failwith "TODO BValue"
+      interpret_fail "TODO BValue"
   | BCall (fn,args) -> 
       (match (interpret env fn) with
         | EIdentifier (["IO"],"println") -> (* kludge *)
@@ -131,9 +135,9 @@ let interpret_bang env = function
               | [arg] ->
                   printf("%s\n") (expr_to_string env (interpret env arg));
                   EUnit
-              | _ -> failwith "Arity error (IO.println!)"
+              | _ -> interpret_fail "Arity error (IO.println!)"
             )
-        | _ -> failwith "TODO BCall general case"
+        | _ -> interpret_fail "TODO BCall general case"
       )
 
 let interpret_stmt env = function
@@ -147,24 +151,79 @@ let interpret_stmt env = function
       let _ = interpret_bang env bang in
       env
 
-let rec interpret_stmt_list env (StmtList (stmts,ret_expr)) =
+let rec interpret_stmt_list env (stmts,ret_expr) =
   match stmts with
     | [] -> (Option.map ret_expr ~f:(interpret env), env)
     | stmt :: rest ->
         let env1 = interpret_stmt env stmt in
-        interpret_stmt_list env1 (StmtList (rest, ret_expr))
+        interpret_stmt_list env1 (rest, ret_expr)
+
+let interpret_decl env decl =
+  match decl with
+    | DConstant (name,expr) ->
+      interpret_stmt env (SLet (name,expr))
+    | DFunction (name,args,body) ->
+      (* TODO Is this fine? Where does this break? (Probably with equational style and then with overloading.) *)
+      interpret_stmt env (SLet (name, ELambda(args,body)))
+    | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
+    | DType _      -> interpret_fail "TODO: interpret_decl: DType"
+
+let rec interpret_decl_list env decls =
+  match decls with
+    | [] -> env
+    | decl :: rest ->
+        let env1 = interpret_decl env decl in
+        interpret_decl_list env1 rest
+
+let interpret_program env (decl_list, stmt_list) =
+  let env1 = interpret_decl_list env decl_list in
+  interpret_stmt_list env1 (stmt_list,None)
 
 let interpret_file filename env =
   filename
   |> Parser.parse_file
-  |> interpret_stmt_list env
+  |> interpret_program env
   |> Tuple2.get2
 
+  (*
 let interpret_string string env =
   string
   |> Parser.parse_string
-  |> interpret_stmt_list env
+  |> interpret_program env
   |> Tuple2.get2
+  *)
+
+let rec lex_lexbuf ?(acc=[]) lexbuf =
+  let next = Lexer.next_token lexbuf in
+  if Token.compare_token next Token.EOF = 0 then
+    List.rev (next::acc)
+  else
+    lex_lexbuf ~acc:(next::acc) lexbuf
+
+
+    (*
+let lex_string string =
+  let lexbuf = Lexing.from_string string in
+  lex_lexbuf lexbuf
+  *)
+
+let lex_file filename =
+  Stdio.In_channel.with_file filename ~f:(fun chan ->
+    let lexbuf = Lexing.from_channel chan in
+    lex_lexbuf lexbuf
+  )
+
+let print_tokens tokens =
+  tokens
+  |> List.map ~f:Token.show_token
+  |> String.concat ~sep:"\n"
+  |> eprintf("%s\n")
+
+let print_program program =
+  program
+  |> Syntax.sexp_of_program
+  |> Sexp.to_string_hum
+  |> eprintf("%s\n")
 
 (*** MAIN *******************************************************)
 
@@ -177,11 +236,32 @@ let _ =
     Caml.exit 2
   )
   else
-      Parser.pp_exceptions (); (* enable pretty error messages *)
+      (* Parser.pp_exceptions (); (* enable pretty error messages *) *)
       let init_env = Map.empty (module Identifier) in
-      let _ =
-        init_env
-        |> interpret_string [%blob "stdlib.cara"]
-        |> interpret_file argv.(1)
-      in
+      try 
+        let _ =
+          init_env
+          (*|> interpret_string [%blob "stdlib.cara"]*)
+          |> interpret_file argv.(1)
+        in
+        ()
+      with
+      | Parser.LexError {msg} -> eprintf("%s\n") msg
+      | Parser.ParseError {token} -> 
+        (
+          eprintf("Unexpected token: %s\n\n") (Token.show_token token);
+          eprintf("Lexed:\n");
+          argv.(1) |> lex_file |> print_tokens;
+          eprintf("\n")
+        )
+      | InterpretError msg ->
+        (
+          eprintf("Interpreter error: %s\n\n") msg;
+          eprintf("Lexed:\n");
+          argv.(1) |> lex_file |> print_tokens;
+          eprintf("\nParsed:\n");
+          argv.(1) |> Parser.parse_file |> print_program;
+          eprintf("\n")
+        )
+      ;
       Stdio.Out_channel.flush Stdio.stdout

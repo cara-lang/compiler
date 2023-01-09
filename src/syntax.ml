@@ -13,6 +13,9 @@ type binop =
   | OpDiv
   [@@deriving sexp]
 
+type arg_list = string list (* TODO patterns? *)
+  [@@deriving sexp]
+
 type expr =
   (* literals *)
   | EInt of int        (* 123 *)
@@ -23,9 +26,10 @@ type expr =
   | EBool of bool      (* True, False *)
 
   (* collections *)
-  | ETuple of expr list             (* (1,"abc"), (1,"abc",2,()) *)
-  | EList of expr list              (* [1,2,3], [] *)
-  | ERecord of (string * expr) list (* {}, {a:123,b:True} *)
+  | ETuple of expr list                (* (1,"abc"), (1,"abc",2,()) *)
+  | EList of expr list                 (* [1,2,3], [] *)
+  | ERecord of (string * expr) list    (* {}, {a:123,b:True} *)
+  | EConstructor of string * expr list (* Just(1) *)
 
   (* calls *)
   | EUnOp of unop * expr           (* -num *)
@@ -35,8 +39,8 @@ type expr =
 
   (* other *)
   | EIdentifier of Identifier.t    (* IO.println, x, Just, Maybe.Just *)
-  | ELambda of string list * expr  (* \(x,y) -> x + y + 1 *)
-  | EClosure of string list * expr * expr Map.M(Identifier).t (* lambda along with the environment as of time of definition *)
+  | ELambda of arg_list * expr  (* \(x,y) -> x + y + 1 *)
+  | EClosure of arg_list * expr * expr Map.M(Identifier).t (* lambda along with the environment as of time of definition *)
   | ERecordGetter of string  (* .a, .el0 *)
   | EIf of expr * expr * expr  (* if True then 1 else 2 *)
   [@@deriving sexp]
@@ -53,20 +57,47 @@ type stmt =
   (* TODO: function definition *)
   [@@deriving sexp]
 
-type stmt_list = 
-  | StmtList of stmt list * expr option
-  (* The last expr is the returned one. If None, we return Unit.  These get
-     chained together: either in the imperative way (for the interpreter and the
-     IO monad -- I suspect this will stop being enough pretty soon), or more
-     generally via monadic bind:
+(* The last expr is the returned one. If None, we return Unit. These get
+    chained together: either in the imperative way (for the interpreter and the
+    IO monad -- I suspect this will stop being enough pretty soon), or more
+    generally via monadic bind:
 
-        x = 123 ----> pure 123 >>= \x  -> ...
-        x = foo! ---> foo      >>= \x  -> ...
-        foo! -------> foo      >>= \() -> ...
-        123 --------> (only allowed in the last position, this is an expr, not a stmt) 123
-  *)
+      x = 123 ----> pure 123 >>= \x  -> ...
+      x = foo! ---> foo      >>= \x  -> ...
+      foo! -------> foo      >>= \() -> ...
+      123 --------> (only allowed in the last position, this is an expr, not a stmt) 123
+*)
+type block = stmt list * expr option
   [@@deriving sexp]
 
+type typevar = Typevar of string
+  [@@deriving sexp]
+
+type type_ = Type of string (* TODO function types, typevars etc. *)
+  [@@deriving sexp]
+
+type adt_constructor =
+  { name : string;
+    arguments : type_ list
+  }
+    [@@deriving sexp]
+
+type decl = 
+  | DConstant of string * expr (* TODO type annotation support *)
+  | DFunction of string * arg_list * expr
+    (* TODO type annotation support *)
+    (* TODO multiple declarations of the same fn *)
+  | DTypeAlias of string * typevar list * type_
+    (* type alias HttpResult[a] = Result[HttpError,a] *)
+  | DType of string * typevar list * adt_constructor list
+    (* type List[a] = Empty | Cons(a,List[a]) *)
+    [@@deriving sexp]
+
+type program = decl list * stmt list
+    [@@deriving sexp]
+(* the top-level stmt list can't return anything, so there's no `expr option` *)
+
+(**************** HELPERS *******************)
 
 let add map k v =
   let added = 
@@ -108,9 +139,10 @@ let rec analyze_holes = function
   | EBool _         -> NoHoles
   | EUnit           -> NoHoles
   | ERecordGetter _ -> NoHoles
-  | ETuple es  -> analyze_list es
-  | EList es   -> analyze_list es
-  | ERecord fs -> analyze_list (List.map ~f:Tuple2.get2 fs)
+  | ETuple es           -> analyze_list es
+  | EList es            -> analyze_list es
+  | ERecord fs          -> analyze_list (List.map ~f:Tuple2.get2 fs)
+  | EConstructor (_,es) -> analyze_list es
   | ELambda (_,e)    -> analyze_holes e
   | EClosure (_,e,_) -> analyze_holes e
   | EUnOp (_,e)      -> analyze_holes e
@@ -153,6 +185,8 @@ let rec expr_to_string env = function
   | ETuple es       -> "(" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ ")"
   | EList es        -> "[" ^ (String.concat ~sep:"," (List.map es ~f:(expr_to_string env))) ^ "]"
   | ERecord fs      -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
+  | EConstructor (name,[]) -> name
+  | EConstructor (name,es) -> name ^ "(" ^ String.concat ~sep:"," (List.map es ~f:(expr_to_string env)) ^ ")"
   | EUnOp _         -> "<unop>"
   | EBinOp _        -> "<binop>"
   | ECall _         -> "<function call>"

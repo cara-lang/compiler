@@ -2,7 +2,6 @@ type Foo =
   | Bar
   | Baz
 
-x : Foo
 x = Baz
 
 IO.println!(x)

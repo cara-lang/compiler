@@ -4,7 +4,8 @@ COLOR_OFF="\e[0m";
 DIM="\e[2m";
 
 function compile {
-  dune build @all
+  rm -rf _build
+  dune build @all --profile release
 }
 
 function run {
@@ -19,7 +20,6 @@ function run {
   compile;
 }
 
-rm -rf _build;
 run;
 
 chokidar src | while read WHATEVER; do

@@ -1,6 +1,6 @@
 {
 open Base
-open Menhir_parser
+open Token
 
 exception LexError of string
 
@@ -53,10 +53,12 @@ rule next_token = parse
   | lower_name as n (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.
                              Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
                     { match n with
-                        | "if"   -> IF
-                        | "then" -> THEN
-                        | "else" -> ELSE
-                        | _      -> LOWER_NAME n 
+                        | "if"    -> IF
+                        | "then"  -> THEN
+                        | "else"  -> ELSE
+                        | "type"  -> TYPE
+                        | "alias" -> ALIAS
+                        | _       -> LOWER_NAME n 
                     } 
   | upper_name as n { match n with
                         | "True" -> TRUE
@@ -97,6 +99,7 @@ rule next_token = parse
   | ',' { COMMA }
   | ':' { COLON }
   | '!' { BANG }
+  | '|' { PIPE }
   | '=' { EQUALS }
   | '_' { UNDERSCORE }
   | '_' dec_digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }

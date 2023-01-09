@@ -1,7 +1,6 @@
 type Foo = 
   | Bar(Int,String)
 
-x : Foo
 x = Bar(123,"Hello")
 
 IO.println!(x)

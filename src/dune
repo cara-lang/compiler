@@ -2,6 +2,7 @@
 (menhir 
   ;; (flags --strict)
   ;; (flags -v)
+  (flags --external-tokens Token)
   (modules menhir_parser)
 )
 

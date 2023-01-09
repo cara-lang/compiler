@@ -1,4 +1,6 @@
-%{ open Syntax %}
+%{ 
+open Syntax
+%}
 
 %token <int> INT
 %token <float> FLOAT
@@ -12,19 +14,20 @@
 %token PLUS MINUS TIMES DIV
 %token IF THEN ELSE
 %token TRUE FALSE
+%token TYPE ALIAS
 %token BACKSLASH ARROW UNDERSCORE LHOLE
-%token LPAREN RPAREN
-%token LBRACE RBRACE
-%token LBRACKET RBRACKET
-%token COMMA COLON BANG EQUALS 
+%token LPAREN RPAREN     (* ( ) *)
+%token LBRACE RBRACE     (* { } *)
+%token LBRACKET RBRACKET (* [ ] *)
+%token COMMA COLON BANG EQUALS PIPE
 %token SHEBANG EOL EOF
 
 (* TODO after relaxing `identifier` to `expr` in BCall and ECall, make CALL left-associative: 
 
 f(1)(2)
-should parse to
+  should parse to
 [f(1)](2)
-instead of
+  instead of
 f([1(2)])
 
 *)
@@ -39,18 +42,68 @@ f([1(2)])
 %nonassoc UMINUS
 (* highest precedence *)
 
-%start <Syntax.stmt_list> main
+%start <Syntax.program> main
 
 %%
 
 main: 
-    | EOL* submain EOF { $2 }
+    | SHEBANG? EOL* program EOF { $3 }
     ;
 
-submain:
-    | SHEBANG EOL* stmt* { StmtList ($3, None) } (* shebang already has one implicit EOL at the end *)
-    | stmt*              { StmtList ($1, None) }
-    (* toplevel doesn't do returned expr ^ *)
+program:
+    | separated_list(EOL+,decl) EOL+ stmt* { ($1, $3) }
+    | stmt* { ([], $1) }
+    ;
+
+decl:
+    | LOWER_NAME EQUALS expr EOL+ { DConstant ($1, $3) }  
+      (* x = 123 *)
+      (* TODO types *)
+    | LOWER_NAME LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { DFunction ($1, $3, $6) }
+      (* f(x,y) = e *)
+      (* TODO types *)
+      (* TODO patterns instead of arguments *)
+    | TYPE ALIAS UPPER_NAME                                                 EQUALS type_ { DTypeAlias ($3, [], $5) }
+    | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { DTypeAlias ($3, $5, $8) }
+      (* type alias Foo    = Int *)
+      (* type alias Foo[a] = Dict[Int,a] *)
+      (* TODO right hand side is not just a string *)
+    | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
+    | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
+      (* type Foo     = Bar                     *)
+      (* type Foo     = Bar | Baz               *)
+      (* type List[a] = Empty | Cons(a,List[a]) *)
+      (* type Foo =
+           | Bar 
+           | Baz
+      *)
+      (********************************************)
+      (* TODO overloaded definitions of operators *)
+      (* TODO overloaded definitions of functions *)
+      (* TODO modules *)
+    ;
+
+constructor_list:
+    | separated_nonempty_list(PIPE,constructor) { $1 }
+    | pipe_constructor+ { $1 }
+    ;
+
+pipe_constructor:
+    | EOL+ PIPE constructor { $3 }
+    ;
+
+constructor:
+    | UPPER_NAME LPAREN separated_nonempty_list(COMMA,type_) RPAREN { { name = $1; arguments = $3; } }
+    | UPPER_NAME                                                    { { name = $1; arguments = []; } }
+    ;
+
+typevar:
+    | LOWER_NAME { Typevar $1 }
+    ;
+
+type_:
+    | UPPER_NAME { Type $1 }
+    | LOWER_NAME { Type $1 } (* TODO typevar *)
     ;
 
 stmt:

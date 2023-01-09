@@ -1,5 +1,7 @@
 type Foo = Bar
+type alias Baz = Foo
 
+x : Baz
 x = Bar
 
 IO.println!(x)

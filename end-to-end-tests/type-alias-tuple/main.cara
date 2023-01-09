@@ -1,0 +1,6 @@
+type alias Foo = (Int, Bool)
+
+x : Foo
+x = (1, True)
+
+IO.println!(x)
