@@ -1,1 +1,1 @@
-Bar(123,"Hello")
+Bar(123,Hello)

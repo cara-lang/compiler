@@ -90,7 +90,7 @@ type decl =
     (* type alias HttpResult[a] = Result[HttpError,a] *)
   | DType of string * typevar list * adt_constructor list
     (* type List[a] = Empty | Cons(a,List[a]) *)
-  | DStatements of stmt list
+  | DStatement of stmt
     [@@deriving sexp]
 
 (* the top-level stmt list can't return anything, so there's no `expr option` *)

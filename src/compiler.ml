@@ -10,8 +10,17 @@ let[@inline] interpret_fail msg = raise (InterpretError msg)
 
 (*** INTERPRET **************************************************)
 
+(* They will be named like #1, #2, ... *)
+let current_i : int ref =
+  ref 0
+
+let next_i () =
+  let curr = !current_i in
+  current_i := curr + 1;
+  curr
+
 let rec interpret env program =
-  (* printf("interpreting with env %s\nexpr:\n%s\n\n") (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier)  Syntax.sexp_of_expr env)) (Sexp.to_string_hum (Syntax.sexp_of_expr program)); *)
+  (*printf("interpreting with env %s\nexpr:\n%s\n\n") (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier)  Syntax.sexp_of_expr env)) (Sexp.to_string_hum (Syntax.sexp_of_expr program));*)
   match program with
   | EInt _          -> program
   | EFloat _        -> program
@@ -21,7 +30,8 @@ let rec interpret env program =
   | EBool _         -> program
   | EClosure _      -> program
   | ERecordGetter _ -> program
-  | EConstructor _  -> program
+  | EConstructor (name,es) -> 
+      EConstructor (name, List.map ~f:(interpret env) es)
   | EIdentifier (q,x) ->
       (match (q,x) with
       | (["IO"],"println") -> program (* kludge *)
@@ -57,11 +67,18 @@ let rec interpret env program =
   | ECall (fn,args) -> 
       (match interpret env fn with
         | EClosure (params,body,defenv) -> 
+            (*printf("calling closure %s\nwith params %s\n\n")
+              (Sexp.to_string_hum (Syntax.sexp_of_expr body))
+              (String.concat ~sep:"," params);*)
           (match List.map2 params (List.map ~f:(interpret env) args) ~f:Tuple2.create with
             | Unequal_lengths -> interpret_fail "interpret: Called a function with a wrong number of arguments"
             | Ok pairs ->
-               (*printf("Enhancing defenv with %s\n") (Sexp.to_string_hum (List.sexp_of_t (Tuple2.sexp_of_t sexp_of_string Syntax.sexp_of_expr) pairs));*)
-               interpret (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) body
+               (*printf("Enhancing defenv with %s\n\n") (Sexp.to_string_hum (List.sexp_of_t (Tuple2.sexp_of_t sexp_of_string Syntax.sexp_of_expr) pairs));*)
+               let enhanced_env = (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) in
+               (*printf("Enhanced env: %s\n\n") (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr enhanced_env));
+               printf("Body before: %s\n\n") (Sexp.to_string_hum (Syntax.sexp_of_expr body));*)
+               interpret enhanced_env body
+
           )
         | ERecordGetter wanted_field ->
           (match args with
@@ -140,28 +157,52 @@ let interpret_bang env = function
         | _ -> interpret_fail "TODO BCall general case"
       )
 
-let interpret_stmt env = function
+let interpret_stmt env stmt = 
+  (*printf("interpreting stmt %s\nwith env %s\n\n")
+    (Sexp.to_string_hum (Syntax.sexp_of_stmt stmt))
+    (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env));*)
+  match stmt with
   | SLet (name,expr) -> 
-      let e = interpret env expr in
-      add env ([],name) e
+      let expr' = interpret env expr in
+      add env ([],name) expr'
   | SLetBang (name,bang) -> 
-      let e = interpret_bang env bang in
-      add env ([],name) e
+      let expr' = interpret_bang env bang in
+      add env ([],name) expr'
   | SBang bang -> 
       let _ = interpret_bang env bang in
       env
 
-let rec interpret_stmt_list env stmts =
-  List.fold stmts ~init:env ~f:interpret_stmt
+let interpret_adt_constructor env constructor =
+  let expr = 
+    if List.is_empty constructor.arguments
+    then EConstructor(constructor.name, [])
+    else 
+      let args = List.map ~f:(fun _ -> "#" ^ Int.to_string (next_i ()))
+                          constructor.arguments in
+      let ids = List.map ~f:(fun arg -> EIdentifier ([],arg)) args in
+      let expr = ELambda(args, EConstructor(constructor.name, ids)) in
+      (*printf("Constructor fn: %s\n") (Sexp.to_string_hum (Syntax.sexp_of_expr expr));
+      *)
+      interpret env expr
+  in
+  add env ([],constructor.name) expr
+
+
+let interpret_dtype env typename typevars constructors =
+  (* TODO remember the type for the typechecker! *)
+  List.fold constructors ~init:env ~f:interpret_adt_constructor
+
 
 let interpret_decl env decl =
   match decl with
     | DFunction (name,args,body) ->
+      let expr = ELambda(args,body) in
+      let expr' = interpret env expr in
       (* TODO Is this fine? Where does this break? (Probably with equational style and then with overloading.) *)
-      interpret_stmt env (SLet (name, ELambda(args,body)))
+      interpret_stmt env (SLet (name, expr'))
     | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
-    | DType _      -> interpret_fail "TODO: interpret_decl: DType"
-    | DStatements stmts -> interpret_stmt_list env stmts
+    | DType (typename,typevars,constructors) -> interpret_dtype env typename typevars constructors
+    | DStatement stmt -> interpret_stmt env stmt
 
 let rec interpret_decl_list env decls =
   List.fold decls ~init:env ~f:interpret_decl
@@ -171,13 +212,10 @@ let interpret_file filename env =
   |> Parser.parse_file
   |> interpret_decl_list env
 
-  (*
 let interpret_string string env =
   string
   |> Parser.parse_string
-  |> interpret_program env
-  |> Tuple2.get2
-  *)
+  |> interpret_decl_list env
 
 let rec lex_lexbuf ?(acc=[]) lexbuf =
   let next = Lexer.next_token lexbuf in
@@ -187,11 +225,9 @@ let rec lex_lexbuf ?(acc=[]) lexbuf =
     lex_lexbuf ~acc:(next::acc) lexbuf
 
 
-    (*
 let lex_string string =
   let lexbuf = Lexing.from_string string in
   lex_lexbuf lexbuf
-  *)
 
 let lex_file filename =
   Stdio.In_channel.with_file filename ~f:(fun chan ->
@@ -222,8 +258,15 @@ let _ =
     Caml.exit 2
   )
   else
-      (* Parser.pp_exceptions (); (* enable pretty error messages *) *)
+      (* Parser.pp_exceptions (); (* enable pretty error messages *)
+      *)
       let init_env = Map.empty (module Identifier) in
+      (*printf("Interpreted env:\n%s\n") 
+        (interpret_file argv.(1) init_env
+          |> Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr
+          |> Sexp.to_string_hum
+        );
+      *)
       try 
         let _ =
           init_env

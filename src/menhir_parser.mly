@@ -47,18 +47,14 @@ f([1(2)])
 %%
 
 main: 
-    | SHEBANG? EOL* program EOF { $3 }
+    | SHEBANG? EOL* decl_with_eols+ EOF { $3 }
     ;
 
-program:
-    | separated_list(EOL+,decl) EOL* { $1 }
+decl_with_eols:
+    | decl EOL+ { $1 }
     ;
 
 decl:
-    | LOWER_NAME LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { DFunction ($1, $3, $6) }
-      (* f(x,y) = e *)
-      (* TODO types *)
-      (* TODO patterns instead of arguments *)
     | TYPE ALIAS UPPER_NAME                                                 EQUALS type_ { DTypeAlias ($3, [], $5) }
     | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { DTypeAlias ($3, $5, $8) }
       (* type alias Foo    = Int *)
@@ -66,9 +62,6 @@ decl:
       (* TODO right hand side is not just a string *)
     | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
     | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
-    | stmt* { DStatements $1 }
-      (* x = e *)
-      (* TODO type annotations *)
       (* type Foo     = Bar                     *)
       (* type Foo     = Bar | Baz               *)
       (* type List[a] = Empty | Cons(a,List[a]) *)
@@ -76,19 +69,28 @@ decl:
            | Bar 
            | Baz
       *)
-      (********************************************)
-      (* TODO overloaded definitions of operators *)
-      (* TODO overloaded definitions of functions *)
-      (* TODO modules *)
+    | LOWER_NAME           decl_after_lower_name { $2($1) }
+    | qualified_identifier decl_after_qualified  { $2($1) }
+    ;
+
+decl_after_lower_name:
+    | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
+      (* f(x,y) = e *)
+      (* TODO types *)
+      (* TODO patterns instead of arguments *)
+    | BANG                                          { fun name -> DStatement (SBang (BValue (EIdentifier ([],name)))) }
+    | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall  (EIdentifier ([],name), $3))) }
+    | EQUALS bang                                   { fun name -> DStatement (SLetBang (name, $2)) }
+    | EQUALS expr                                   { fun name -> DStatement (SLet     (name, $2)) }
+    ;
+
+decl_after_qualified:
+    | BANG                                          { fun name -> DStatement (SBang (BValue name)) }
+    | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall (name, $3))) }
     ;
 
 constructor_list:
-    | separated_nonempty_list(PIPE,constructor) { $1 }
-    | pipe_constructor+ { $1 }
-    ;
-
-pipe_constructor:
-    | EOL+ PIPE constructor { $3 }
+    | EOL* PIPE? separated_nonempty_list(PIPE,constructor) { $3 }
     ;
 
 constructor:
@@ -103,13 +105,6 @@ typevar:
 type_:
     | UPPER_NAME { Type $1 }
     | LOWER_NAME { Type $1 } (* TODO typevar *)
-    ;
-
-stmt:
-    (* TODO replace `LOWER_NAME` with `pattern` *)
-    | LOWER_NAME EQUALS bang EOL+ { SLetBang ($1, $3) }  (* x = IO.ask!("Your name: ") *)
-    | LOWER_NAME EQUALS expr EOL+ { SLet     ($1, $3) }  (* x = 123 *)
-    | bang                   EOL+ { SBang $1 }           (* IO.println!("Hello") *)
     ;
 
 bang:
@@ -159,6 +154,12 @@ holey_expr:
 
 identifier:
     | QUALIFIER* name { EIdentifier ($1, $2) }
+    ;
+
+qualified_identifier:
+     (* TODO I believe we're using this in bang patterns; UPPER_NAMES don't make
+     sense as monadic actions though. *)
+    | QUALIFIER+ name { EIdentifier ($1, $2) }
     ;
 
 name:
