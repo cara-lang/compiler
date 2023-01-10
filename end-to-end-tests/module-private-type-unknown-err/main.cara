@@ -1,0 +1,5 @@
+module Foo {
+  private type Bar = Baz | Quux
+}
+
+IO.println!(Foo.Baz)

@@ -1,0 +1,6 @@
+E0001: Unknown variable: `Baz.z`
+
+main.cara:4:9
+━━┓
+4 ┃     y = Baz.z + 1
+  ┃         ^

@@ -1,0 +1,8 @@
+module Foo {
+  private module Internal {
+    type Baz = Quux
+  }
+  type alias Baz = Internal.Baz
+}
+
+IO.println!(Foo.Quux)
