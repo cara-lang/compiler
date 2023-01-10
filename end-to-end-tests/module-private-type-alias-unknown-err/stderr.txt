@@ -1,0 +1,6 @@
+E0004: Unknown type: `Foo.Bar`
+
+main.cara:5:6
+━━┓
+5 ┃ baz: Foo.Bar = (1, True)
+  ┃      ^

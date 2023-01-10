@@ -1,0 +1,6 @@
+module Foo {
+  private type alias Bar = (Int, Bool)
+  baz: Bar = (1, True)
+}
+
+IO.println!(Foo.baz)
