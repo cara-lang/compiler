@@ -1,0 +1,6 @@
+E0001: Unknown variable: `Foo.x`
+
+main.cara:6:13
+━━┓
+6 ┃ IO.println!(Foo.x)
+  ┃             ^

@@ -1,0 +1,6 @@
+module Foo {
+  private x() = 1
+  IO.println!(x())
+}
+
+IO.println!(Foo.x())
