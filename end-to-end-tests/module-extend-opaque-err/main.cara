@@ -1,0 +1,13 @@
+module MyList {
+  opaque type MyList[a] = Empty | Cons(a,MyList[a])
+
+  empty = Empty
+
+  cons(x,xs) = Cons(x,xs)
+}
+
+extend module MyList {
+  isEmpty(l) = l == Empty
+}
+
+IO.println!(MyList.isEmpty(MyList.empty))

@@ -1,0 +1,6 @@
+E0001: Unknown variable: `x`
+
+main.cara:6:7
+━━┓
+6 ┃ y = x + 1
+  ┃     ^

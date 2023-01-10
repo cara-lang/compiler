@@ -1,0 +1,9 @@
+module Foo {
+  private x = 1
+}
+
+extend module Foo {
+  y = x + 1
+}
+
+IO.println!(Foo.y)

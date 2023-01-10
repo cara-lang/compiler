@@ -1,0 +1,6 @@
+E0001: Unknown variable: `Empty`
+
+main.cara:10:21
+━━━┓
+10 ┃   isEmpty(l) = l == Empty
+   ┃                     ^
