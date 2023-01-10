@@ -21,6 +21,10 @@ type token =
   | FALSE
   | TYPE
   | ALIAS
+  | MODULE
+  | PRIVATE
+  | OPAQUE
+  | EXTEND
   | BACKSLASH
   | ARROW
   | UNDERSCORE

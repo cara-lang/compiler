@@ -15,6 +15,7 @@ open Syntax
 %token IF THEN ELSE
 %token TRUE FALSE
 %token TYPE ALIAS
+%token MODULE PRIVATE OPAQUE EXTEND
 %token BACKSLASH ARROW UNDERSCORE LHOLE
 %token LPAREN RPAREN     (* ( ) *)
 %token LBRACE RBRACE     (* { } *)
@@ -31,8 +32,6 @@ f(1)(2)
 f([1(2)])
 
 *)
-
-(* TODO there's a conflict about `foo = x!` vs `foo!` and `foo!(...)` *)
 
 (* lowest precedence *)
 %right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
@@ -57,27 +56,14 @@ decl_with_eols:
 decl:
     | TYPE ALIAS UPPER_NAME                                                 EQUALS type_ { DTypeAlias ($3, [], $5) }
     | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { DTypeAlias ($3, $5, $8) }
-      (* type alias Foo    = Int *)
-      (* type alias Foo[a] = Dict[Int,a] *)
-      (* TODO right hand side is not just a string *)
     | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
     | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
-      (* type Foo     = Bar                     *)
-      (* type Foo     = Bar | Baz               *)
-      (* type List[a] = Empty | Cons(a,List[a]) *)
-      (* type Foo =
-           | Bar 
-           | Baz
-      *)
     | LOWER_NAME           decl_after_lower_name { $2($1) }
     | qualified_identifier decl_after_qualified  { $2($1) }
     ;
 
 decl_after_lower_name:
     | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
-      (* f(x,y) = e *)
-      (* TODO types *)
-      (* TODO patterns instead of arguments *)
     | BANG                                          { fun name -> DStatement (SBang (BValue (EIdentifier ([],name)))) }
     | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall  (EIdentifier ([],name), $3))) }
     | EQUALS bang                                   { fun name -> DStatement (SLetBang (name, $2)) }

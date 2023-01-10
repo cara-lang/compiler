@@ -54,12 +54,16 @@ rule next_token = parse
   | lower_name as n (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.
                              Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
                     { match n with
-                        | "if"    -> IF
-                        | "then"  -> THEN
-                        | "else"  -> ELSE
-                        | "type"  -> TYPE
-                        | "alias" -> ALIAS
-                        | _       -> LOWER_NAME n 
+                        | "if"      -> IF
+                        | "then"    -> THEN
+                        | "else"    -> ELSE
+                        | "type"    -> TYPE
+                        | "alias"   -> ALIAS
+                        | "module"  -> MODULE
+                        | "private" -> PRIVATE
+                        | "opaque"  -> OPAQUE
+                        | "extend"  -> EXTEND
+                        | _         -> LOWER_NAME n 
                     } 
   | upper_name as n { match n with
                         | "True" -> TRUE
