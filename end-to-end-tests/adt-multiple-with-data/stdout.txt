@@ -1,1 +1,1 @@
-Baz("Hello")
+Baz(Hello)

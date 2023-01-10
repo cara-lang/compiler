@@ -31,6 +31,7 @@ let float = '-'? dec_digit (dec_digit | '_')* '.' dec_digit (dec_digit | '_')* (
 
 let newline = "\r\n" | '\r' | '\n'
 let whitespace = ' ' | '\t'
+let pipe = newline? whitespace* '|'
 let lower = ['a'-'z']
 let upper = ['A'-'Z']
 let lower_name = lower (lower | upper | dec_digit | '_' | '\'')*
@@ -99,10 +100,11 @@ rule next_token = parse
   | ',' { COMMA }
   | ':' { COLON }
   | '!' { BANG }
-  | '|' { PIPE }
   | '=' { EQUALS }
   | '_' { UNDERSCORE }
   | '_' dec_digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }
+
+  | pipe { PIPE }
 
   | _ as c { illegal c }
 

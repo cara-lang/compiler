@@ -90,7 +90,7 @@ decl_after_qualified:
     ;
 
 constructor_list:
-    | EOL* PIPE? separated_nonempty_list(PIPE,constructor) { $3 }
+    | PIPE? separated_nonempty_list(PIPE,constructor) { $2 }
     ;
 
 constructor:
