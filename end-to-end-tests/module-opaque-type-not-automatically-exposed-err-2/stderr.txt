@@ -1,0 +1,6 @@
+E0001: Unknown value: `MyList.Empty`
+
+main.cara:9:22
+━━┓
+9 ┃ foo: MyList.Foo[a] = MyList.Empty
+  ┃                      ^

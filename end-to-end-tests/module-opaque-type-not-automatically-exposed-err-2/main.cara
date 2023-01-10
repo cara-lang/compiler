@@ -1,0 +1,11 @@
+module MyList {
+
+  opaque type Foo[a] = 
+    | Empty
+    | Cons[a]
+
+}
+
+foo: MyList.Foo[a] = MyList.Empty
+
+IO.println!(foo)

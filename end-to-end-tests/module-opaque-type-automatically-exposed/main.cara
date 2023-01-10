@@ -1,0 +1,14 @@
+module MyList {
+
+  // magic: if the opaque type is named the same as the module, it also get exposed without the namespace
+  opaque type MyList[a] = 
+    | Empty
+    | Cons[a]
+  
+  empty = Empty
+
+}
+
+foo: MyList[a] = MyList.empty
+
+IO.println!(foo)

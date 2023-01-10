@@ -1,0 +1,6 @@
+E0004: Unknown type: `Foo`
+
+main.cara:12:6
+━━━┓
+12 ┃ foo: Foo[a] = MyList.empty
+   ┃      ^
