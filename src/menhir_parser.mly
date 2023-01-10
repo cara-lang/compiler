@@ -58,6 +58,7 @@ decl:
     | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { DTypeAlias ($3, $5, $8) }
     | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
     | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
+    | UNDERSCORE EQUALS { failwith "E0013: Assignment to underscore" }
     | LOWER_NAME           decl_after_lower_name { $2($1) }
     | qualified_identifier decl_after_qualified  { $2($1) }
     ;
