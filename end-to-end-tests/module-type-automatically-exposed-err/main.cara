@@ -1,6 +1,6 @@
 module MyList {
 
-  // magic: if the opaque type is named the same as the module, it also get exposed without the namespace
+  // magic: if the type is named the same as the module, it also get exposed without the namespace
   opaque type MyList[a] = 
     | Empty
     | Cons[a]
