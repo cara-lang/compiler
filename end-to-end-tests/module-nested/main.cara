@@ -1,0 +1,9 @@
+module Foo {
+  x = 1
+  module Bar {
+    y = x + 1
+  }
+}
+
+IO.println!(Foo.x)
+IO.println!(Foo.Bar.y)
