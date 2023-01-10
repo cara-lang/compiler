@@ -9,8 +9,8 @@ Here are some of its characteristics:
 * pure
 * immutable
 * statically typed, with automatic type inference
-* compiled and interpreted
-* good for scripting
+* compiled via HVM for automatic parallelism...
+* ...or interpreted (for scripting)
 
 ## Status
 
