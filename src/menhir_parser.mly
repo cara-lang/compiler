@@ -46,7 +46,7 @@ f([1(2)])
 %%
 
 main: 
-    | SHEBANG? EOL* decl_with_eols+ EOF { $3 }
+    | SHEBANG? EOL* decl_with_eols* EOF { $3 }
     ;
 
 decl_with_eols:
