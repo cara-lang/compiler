@@ -58,6 +58,8 @@ decl:
     | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { DTypeAlias ($3, $5, $8) }
     | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
     | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
+    | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule ($2,$5) }
+    | EXTEND MODULE identifier LBRACE EOL* decl_with_eols+ RBRACE { DExtendModule ($3,$6) }
     | UNDERSCORE EQUALS { failwith "E0013: Assignment to underscore" }
     | LOWER_NAME           decl_after_lower_name { $2($1) }
     | qualified_identifier decl_after_qualified  { $2($1) }
@@ -95,8 +97,8 @@ type_:
     ;
 
 bang:
-    | identifier BANG LPAREN separated_list(COMMA,expr) RPAREN { BCall ($1, $4) }  (* IO.println!(123) *)
-    | identifier BANG                                          { BValue $1 }       (* Id.getAndInc! *)
+    | eidentifier BANG LPAREN separated_list(COMMA,expr) RPAREN { BCall ($1, $4) }  (* IO.println!(123) *)
+    | eidentifier BANG                                          { BValue $1 }       (* Id.getAndInc! *)
     ;
 
 %inline common_expr(e):
@@ -113,7 +115,7 @@ bang:
             | _ -> ETuple $2  (* (1,2), (1,2,3,4,5,6,7,8) *)
     }
     | IF e THEN e ELSE e { EIf ($2,$4,$6) }
-    | identifier { $1 }
+    | eidentifier { $1 }
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
     | LBRACE separated_list(COMMA,field) RBRACE { record($2) }    (* {x:1,y:True} *)
@@ -139,8 +141,12 @@ holey_expr:
     | common_expr(holey_expr) { $1 }
     ;
 
+eidentifier:
+    | identifier { EIdentifier $1 }
+    ;
+
 identifier:
-    | QUALIFIER* name { EIdentifier ($1, $2) }
+    | QUALIFIER* name { ($1, $2) }
     ;
 
 qualified_identifier:

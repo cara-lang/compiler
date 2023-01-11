@@ -91,6 +91,8 @@ type decl =
   | DType of string * typevar list * adt_constructor list
     (* type List[a] = Empty | Cons(a,List[a]) *)
   | DStatement of stmt
+  | DModule of string * decl list
+  | DExtendModule of Identifier.t * decl list
     [@@deriving sexp]
 
 (* the top-level stmt list can't return anything, so there's no `expr option` *)

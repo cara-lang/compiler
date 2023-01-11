@@ -1,0 +1,11 @@
+module Foo {
+  module Bar {
+    baz = 1
+  }
+}
+
+extend module Foo.Bar {
+  quux = baz + 1
+}
+
+IO.println!(Foo.Bar.quux)

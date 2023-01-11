@@ -203,8 +203,10 @@ let interpret_decl env decl =
     | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
     | DType (typename,typevars,constructors) -> interpret_dtype env typename typevars constructors
     | DStatement stmt -> interpret_stmt env stmt
+    | DModule (name,decls) -> interpret_fail "TODO: interpret_decl: DModule"
+    | DExtendModule (id,decls) -> interpret_fail "TODO: interpret_decl: DExtendModule"
 
-let rec interpret_decl_list env decls =
+let interpret_decl_list env decls =
   List.fold decls ~init:env ~f:interpret_decl
 
 let interpret_file filename env =
