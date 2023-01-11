@@ -54,7 +54,7 @@ decl_with_eols:
     ;
 
 decl:
-    | PRIVATE private_type_decl  { $2 }
+    | PRIVATE private_decl       { $2 }
     | OPAQUE  opaque_type_decl   { $2 }
     | type_decl_without_modifier { $1 }
     | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule ($2,$5) }
@@ -69,8 +69,8 @@ decl_after_lower_name:
     | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
     | BANG                                          { fun name -> DStatement (SBang (BValue (EIdentifier ([],name)))) }
     | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall  (EIdentifier ([],name), $3))) }
-    | EQUALS bang                                   { fun name -> DStatement (SLetBang (name, $2)) }
-    | EQUALS expr                                   { fun name -> DStatement (SLet     (name, $2)) }
+    | EQUALS bang                                   { fun name -> DStatement (SLetBang (             name, $2)) }
+    | EQUALS expr                                   { fun name -> DStatement (SLet     (LNoModifier, name, $2)) }
     ;
 
 decl_after_qualified:
@@ -87,9 +87,10 @@ constructor:
     | UPPER_NAME                                                    { { name = $1; arguments = []; } }
     ;
 
-private_type_decl:
-    | type_alias_decl { $1(TAPrivate) } 
-    | type_decl       { $1(TPrivate)  } 
+private_decl:
+    | type_alias_decl        { $1(TAPrivate) } 
+    | type_decl              { $1(TPrivate)  } 
+    | LOWER_NAME EQUALS expr { DStatement (SLet (LPrivate, $1, $3)) }
     ;
 
 opaque_type_decl:

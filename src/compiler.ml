@@ -162,7 +162,8 @@ let interpret_stmt env stmt =
     (Sexp.to_string_hum (Syntax.sexp_of_stmt stmt))
     (Sexp.to_string_hum (Map.sexp_of_m__t (module Identifier) Syntax.sexp_of_expr env));*)
   match stmt with
-  | SLet (name,expr) -> 
+  | SLet (modifier,name,expr) -> 
+      (* TODO use the modifier *)
       let expr' = interpret env expr in
       add env ([],name) expr'
   | SLetBang (name,bang) -> 
@@ -199,8 +200,9 @@ let interpret_decl env decl =
     | DFunction (name,args,body) ->
       let expr = ELambda(args,body) in
       let expr' = interpret env expr in
-      (* TODO Is this fine? Where does this break? (Probably with equational style and then with overloading.) *)
-      interpret_stmt env (SLet (name, expr'))
+      (* TODO Is this fine? Where does this break?
+         (Probably with equational style and then with overloading.) *)
+      interpret_stmt env (SLet (LNoModifier, name, expr'))
     | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
     | DType (modifier,typename,typevars,constructors) -> interpret_dtype env modifier typename typevars constructors
     | DStatement stmt -> interpret_stmt env stmt

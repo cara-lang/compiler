@@ -50,11 +50,15 @@ type bang =
   | BCall of expr * expr list  (* foo!(1,2,3) *)
   [@@deriving sexp]
 
+type let_modifier =
+  | LNoModifier
+  | LPrivate
+  [@@deriving sexp]
+
 type stmt =
-  | SLet of string * expr      (* x = 123 *)
-  | SLetBang of string * bang  (* x = foo! *)
-  | SBang of bang              (* foo! *)
-  (* TODO: function definition *)
+  | SLet of let_modifier * string * expr (* x = 123 *)
+  | SLetBang of string * bang            (* x = foo! *)
+  | SBang of bang                        (* foo! *)
   [@@deriving sexp]
 
 (* The last expr is the returned one. If None, we return Unit. These get
