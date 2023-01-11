@@ -82,13 +82,24 @@ type adt_constructor =
   }
     [@@deriving sexp]
 
+type type_modifier =
+  | TNoModifier
+  | TPrivate
+  | TOpaque
+  [@@deriving sexp]
+
+type type_alias_modifier =
+  | TANoModifier
+  | TAPrivate
+  [@@deriving sexp]
+
 type decl = 
   | DFunction of string * arg_list * expr
     (* TODO type annotation support *)
     (* TODO multiple declarations of the same fn *)
-  | DTypeAlias of string * typevar list * type_
+  | DTypeAlias of type_alias_modifier * string * typevar list * type_
     (* type alias HttpResult[a] = Result[HttpError,a] *)
-  | DType of string * typevar list * adt_constructor list
+  | DType of type_modifier * string * typevar list * adt_constructor list
     (* type List[a] = Empty | Cons(a,List[a]) *)
   | DStatement of stmt
   | DModule of string * decl list

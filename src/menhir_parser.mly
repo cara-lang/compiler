@@ -54,16 +54,16 @@ decl_with_eols:
     ;
 
 decl:
-    | TYPE ALIAS UPPER_NAME                                                 EQUALS type_ { DTypeAlias ($3, [], $5) }
-    | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { DTypeAlias ($3, $5, $8) }
-    | TYPE UPPER_NAME                                                 EQUALS constructor_list { DType ($2, [], $4) }
-    | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { DType ($2, $4, $7) }
+    | PRIVATE private_type_decl  { $2 }
+    | OPAQUE  opaque_type_decl   { $2 }
+    | type_decl_without_modifier { $1 }
     | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule ($2,$5) }
     | EXTEND MODULE identifier LBRACE EOL* decl_with_eols+ RBRACE { DExtendModule ($3,$6) }
     | UNDERSCORE EQUALS { failwith "E0013: Assignment to underscore" }
     | LOWER_NAME           decl_after_lower_name { $2($1) }
     | qualified_identifier decl_after_qualified  { $2($1) }
     ;
+
 
 decl_after_lower_name:
     | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
@@ -85,6 +85,30 @@ constructor_list:
 constructor:
     | UPPER_NAME LPAREN separated_nonempty_list(COMMA,type_) RPAREN { { name = $1; arguments = $3; } }
     | UPPER_NAME                                                    { { name = $1; arguments = []; } }
+    ;
+
+private_type_decl:
+    | type_alias_decl { $1(TAPrivate) } 
+    | type_decl       { $1(TPrivate)  } 
+    ;
+
+opaque_type_decl:
+    | type_decl { $1(TOpaque) }
+    ;
+
+type_decl_without_modifier:
+    | type_alias_decl { $1(TANoModifier) }
+    | type_decl       { $1(TNoModifier)  }
+    ;
+
+type_decl:
+    | TYPE UPPER_NAME                                                 EQUALS constructor_list { fun modifier -> DType (modifier, $2, [], $4) }
+    | TYPE UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS constructor_list { fun modifier -> DType (modifier, $2, $4, $7) }
+    ;
+
+type_alias_decl:
+    | TYPE ALIAS UPPER_NAME                                                 EQUALS type_ { fun modifier -> DTypeAlias (modifier, $3, [], $5) }
+    | TYPE ALIAS UPPER_NAME LBRACKET separated_list(COMMA,typevar) RBRACKET EQUALS type_ { fun modifier -> DTypeAlias (modifier, $3, $5, $8) }
     ;
 
 typevar:

@@ -188,7 +188,8 @@ let interpret_adt_constructor env constructor =
   add env ([],constructor.name) expr
 
 
-let interpret_dtype env typename typevars constructors =
+let interpret_dtype env modifier typename typevars constructors =
+  (* TODO use the modifier *)
   (* TODO remember the type for the typechecker! *)
   List.fold constructors ~init:env ~f:interpret_adt_constructor
 
@@ -201,7 +202,7 @@ let interpret_decl env decl =
       (* TODO Is this fine? Where does this break? (Probably with equational style and then with overloading.) *)
       interpret_stmt env (SLet (name, expr'))
     | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
-    | DType (typename,typevars,constructors) -> interpret_dtype env typename typevars constructors
+    | DType (modifier,typename,typevars,constructors) -> interpret_dtype env modifier typename typevars constructors
     | DStatement stmt -> interpret_stmt env stmt
     | DModule (name,decls) -> interpret_fail "TODO: interpret_decl: DModule"
     | DExtendModule (id,decls) -> interpret_fail "TODO: interpret_decl: DExtendModule"
