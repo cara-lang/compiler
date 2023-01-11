@@ -1,48 +1,52 @@
 //////////////////////
 // State definition //
 
-type IdGen(a) = IdGen(Int -> (a,Int))
+module IdGen {
 
-IdGen.pure(a) : IdGen(a)
-IdGen.pure(a) = IdGen(\id -> (a,id))
+  opaque type IdGen[a] = IdGen(Int -> (a,Int))
 
-IdGen.bind(fn: (a -> IdGen(b)), m: IdGen(a)): IdGen(b)
-IdGen.bind(fn,IdGen(runA)) =
-  IdGen(\id ->
-    (a,idA) = runA(id)
-    IdGen(runB) = fn(a)
-    runB(idA)
-  )
+  pure(a) : IdGen[a]
+  pure(a) = IdGen(\id -> (a,id))
 
-IdGen.get : IdGen(Int)
-IdGen.get = IdGen(\id -> (id,id))
+  bind(fn: (a -> IdGen[b]), m: IdGen[a]): IdGen[b]
+  bind(fn,IdGen(runA)) =
+    IdGen(\id -> {
+      (a,idA) = runA(id)
+      IdGen(runB) = fn(a)
+      runB(idA)
+    })
 
-IdGen.inc : IdGen(())
-IdGen.inc = IdGen(\id -> ((),id+1))
+  get : IdGen[Int]
+  get = IdGen(\id -> (id,id))
 
-IdGen.run(m: IdGen(a), Int): (a,Int)
-IdGen.run(IdGen(run), startId) = run(startId)
+  inc : IdGen[()]
+  inc = IdGen(\id -> ((),id+1))
 
-IdGen.each(fn: (a -> IdGen b), list: List(a)): IdGen(List(b))
-IdGen.each = derived from Monad.each
+  run(m: IdGen[a], Int): (a,Int)
+  run(IdGen(run), startId) = run(startId)
+
+  each(fn: (a -> IdGen[b]), list: List[a]): IdGen[List[b]]
+  each = derived from Monad.each
+
+}
 
 ///////////////////
 // IdGen example //
 
-getAndInc : IdGen(Int)
+getAndInc : IdGen[Int]
 getAndInc = IdGen {
-  id = IdGen.get!
-  IdGen.inc!
+  id = get!
+  inc!
   id
 }
 
-idGenExample : IdGen(String)
+idGenExample : IdGen[String]
 idGenExample = IdGen {
   1..5 
-    |> IdGen.each!(\_ ->
-      id = IdGen.getAndInc!
+    |> each!(\_ -> IdGen {
+      id = getAndInc!
       "$id"
-    )
+    })
     |> String.join ","
 }
 

@@ -1,36 +1,41 @@
 ///////////////////////
 // Logger definition //
 
-type Logger(log,a) = Logger(List(log),a)
+module Logger {
 
-Logger.pure(a: a): Logger(log,a)
-Logger.pure(a) = Logger([],a)
+  opaque type Logger[log,a] = Logger(List[log],a)
 
-Logger.bind(fn: (a -> Logger(log,b)), m: Logger(log,a)): Logger(log,b)
-Logger.bind(fn,Logger(aLog,a)) =
-  (bLog,b) = fn(a)
-  log = aLog ++ bLog
-  Logger(aLog,b)
+  pure(a) : Logger[log,a]
+  pure(a) = Logger([],a)
 
-Logger.log(x: log): Logger(log,())
-Logger.log(x) = Logger([x],())
+  bind((a -> Logger[log,b]), Logger[log,a]): Logger[log,b]
+  bind(fn,Logger(aLog,a)) = {
+    (bLog,b) = fn(a)
+    log = aLog ++ bLog
+    Logger(aLog,b)
+  }
 
-Logger.run(m: Logger(log,a)): (log,a)
-Logger.run(Logger(log,a)) = (log,a)
+  log(x: log): Logger[log,()]
+  log(x) = Logger([x],())
+
+  run(m: Logger[log,a]): (log,a)
+  run(Logger(log,a)) = (log,a)
+
+}
 
 ////////////////////
 // Logger example //
 
-loggerExample : Logger(List(String), Int)
+loggerExample : Logger[List[String], Int]
 loggerExample = Logger {
-  Logger.log!("Hello")
+  log!("Hello")
   sum = List.sum(1..5)
-  Logger.log!("The sum is $sum")
-  Logger.log!("Done")
+  log!("The sum is $sum")
+  log!("Done")
   sum
 }
 
-loggerExampleRan : (List(String), Int)
+loggerExampleRan : (List[String], Int)
 loggerExampleRan =
   Logger.run(loggerExample)
 

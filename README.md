@@ -46,9 +46,10 @@ IO.inspect!(x)
 ```cara
 quickSort(list: List[Int]): List[Int]
 quickSort([]) = []
-quickSort(x::xs) =
+quickSort(x::xs) = {
   (lt, gt) = List.partition(#(x >= _), xs)
   quickSort(lt) ++ x ++ quickSort(gt)
+}
 
 xs = [3,1,2,5,4]
 
