@@ -77,7 +77,13 @@ type block = stmt list * expr option
 type typevar = Typevar of string
   [@@deriving sexp]
 
-type type_ = Type of string (* TODO function types, typevars etc. *)
+type type_ = 
+  | TNamed of string              (* Int         *)
+  | TVar of string                (* a           *)
+  | TCall of string * type_ list  (* List[a]     *)
+  | TFn of type_ * type_          (* x -> y      *)
+  | TTuple of type_ list          (* (Int, Bool) *)
+  | TUnit                         (* ()          *)
   [@@deriving sexp]
 
 type adt_constructor =
@@ -97,20 +103,19 @@ type type_alias_modifier =
   | TAPrivate
   [@@deriving sexp]
 
+type module_modifier =
+  | MNoModifier
+  | MPrivate
+  [@@deriving sexp]
+
 type decl = 
   | DFunction of string * arg_list * expr
-    (* TODO type annotation support *)
-    (* TODO multiple declarations of the same fn *)
   | DTypeAlias of type_alias_modifier * string * typevar list * type_
-    (* type alias HttpResult[a] = Result[HttpError,a] *)
   | DType of type_modifier * string * typevar list * adt_constructor list
-    (* type List[a] = Empty | Cons(a,List[a]) *)
   | DStatement of stmt
-  | DModule of string * decl list
+  | DModule of module_modifier * string * decl list
   | DExtendModule of Identifier.t * decl list
     [@@deriving sexp]
-
-(* the top-level stmt list can't return anything, so there's no `expr option` *)
 
 (**************** HELPERS *******************)
 

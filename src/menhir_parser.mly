@@ -57,7 +57,7 @@ decl:
     | PRIVATE private_decl       { $2 }
     | OPAQUE  opaque_type_decl   { $2 }
     | type_decl_without_modifier { $1 }
-    | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule ($2,$5) }
+    | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule (MNoModifier, $2,$5) }
     | EXTEND MODULE identifier LBRACE EOL* decl_with_eols+ RBRACE { DExtendModule ($3,$6) }
     | UNDERSCORE EQUALS { failwith "E0013: Assignment to underscore" }
     | LOWER_NAME           decl_after_lower_name { $2($1) }
@@ -91,6 +91,7 @@ private_decl:
     | type_alias_decl        { $1(TAPrivate) } 
     | type_decl              { $1(TPrivate)  } 
     | LOWER_NAME EQUALS expr { DStatement (SLet (LPrivate, $1, $3)) }
+    | MODULE UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule (MPrivate, $2, $5) }
     ;
 
 opaque_type_decl:
@@ -117,8 +118,18 @@ typevar:
     ;
 
 type_:
-    | UPPER_NAME { Type $1 }
-    | LOWER_NAME { Type $1 } (* TODO typevar *)
+    (* TODO qualified/namespaced types as well! *)
+    | UPPER_NAME        { TNamed $1    }
+    | LOWER_NAME        { TVar $1      }
+    | type_ ARROW type_ { TFn ($1, $3) }
+    | UPPER_NAME LBRACKET separated_nonempty_list(COMMA,type_) RBRACKET { TCall ($1, $3) }
+    | LPAREN separated_list(COMMA,type_) RPAREN {
+        match $2 with
+          | [] -> TUnit     (* ()          *)
+          | [t] -> t        (* (List[a])   *)
+          | _ -> TTuple $2  (* (Int, Bool) *)
+    }
+    (* TODO other types *)
     ;
 
 bang:

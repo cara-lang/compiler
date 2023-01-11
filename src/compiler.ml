@@ -206,7 +206,7 @@ let interpret_decl env decl =
     | DTypeAlias _ -> interpret_fail "TODO: interpret_decl: DTypeAlias"
     | DType (modifier,typename,typevars,constructors) -> interpret_dtype env modifier typename typevars constructors
     | DStatement stmt -> interpret_stmt env stmt
-    | DModule (name,decls) -> interpret_fail "TODO: interpret_decl: DModule"
+    | DModule (modifier,name,decls) -> interpret_fail "TODO: interpret_decl: DModule"
     | DExtendModule (id,decls) -> interpret_fail "TODO: interpret_decl: DExtendModule"
 
 let interpret_decl_list env decls =
