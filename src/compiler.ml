@@ -38,7 +38,7 @@ let rec interpret env program =
       | _ -> 
         (* TODO how to hold all the possible arities and definitions of a given function at once? Where to try them out? In ECall? *)
         (match Map.find env (q,x) with
-          | None -> interpret_fail ("interpret: E0001: Unknown variable " ^ identifier_to_string (q,x))
+          | None -> interpret_fail ("E0001: Unknown variable " ^ identifier_to_string (q,x))
           | Some found -> found
         )
       )
@@ -50,17 +50,17 @@ let rec interpret env program =
         | OpNegateNum -> 
             (match (interpret env e1) with
               | EInt i -> EInt (neg i)
-              | _ -> interpret_fail "interpret: Can't negate (num) anything that's not an int"
+              | _ -> interpret_fail "Can't negate (num) anything that's not an int"
             )
         | OpNegateBool -> 
             (match (interpret env e1) with
               | EBool b -> EBool (not b)
-              | _ -> interpret_fail "interpret: Can't negate (bool) anything that's not a bool"
+              | _ -> interpret_fail "Can't negate (bool) anything that's not a bool"
             )
         | OpNegateBin -> 
             (match (interpret env e1) with
               | EInt i -> EInt (lnot i)
-              | _ -> interpret_fail "interpret: Can't negate (bin) anything that's not an int"
+              | _ -> interpret_fail "Can't negate (bin) anything that's not an int"
             )
       )
   | EBinOp (e1,binop,e2) -> (
@@ -114,7 +114,7 @@ let rec interpret env program =
             (* TODO comparison *)
             | _ -> interpret_fail ("unsupported: list " ^ Syntax.show_binop binop ^ " list")
         )
-        | (e1',e2') -> interpret_fail ("interpret: Unsupported binop\n\n" 
+        | (e1',e2') -> interpret_fail ("Unsupported binop\n\n" 
                         ^ (Sexp.to_string_hum (Syntax.sexp_of_expr (EBinOp (e1',binop,e2'))));)
     )
   | ECall (fn,args) -> 
@@ -124,7 +124,7 @@ let rec interpret env program =
               (Sexp.to_string_hum (Syntax.sexp_of_expr body))
               (String.concat ~sep:"," params);*)
           (match List.map2 params (List.map ~f:(interpret env) args) ~f:Tuple2.create with
-            | Unequal_lengths -> interpret_fail "interpret: Called a function with a wrong number of arguments"
+            | Unequal_lengths -> interpret_fail "Called a function with a wrong number of arguments"
             | Ok pairs ->
                (*printf("Enhancing defenv with %s\n\n") (Sexp.to_string_hum (List.sexp_of_t (Tuple2.sexp_of_t sexp_of_string Syntax.sexp_of_expr) pairs));*)
                let enhanced_env = (List.fold pairs ~init:defenv ~f:(fun env_ (param,arg) -> add env_ ([],param) arg)) in
@@ -136,10 +136,10 @@ let rec interpret env program =
         | ERecordGetter wanted_field ->
           (match args with
             | [arg] -> interpret_getter env wanted_field arg
-            | _ -> interpret_fail ("interpret: Trying to call a record getter with " ^ Int.to_string (List.length args) ^ " arguments")
+            | _ -> interpret_fail ("Trying to call a record getter with " ^ Int.to_string (List.length args) ^ " arguments")
           )
         | e -> interpret_fail 
-                ("interpret: Tried to call a non-closure" 
+                ("Tried to call a non-closure" 
                     ^ "\n\n" ^ (Sexp.to_string_hum (Syntax.sexp_of_expr e))
                     ^ "\n\nwith:\n\n" ^ String.concat ~sep:"," (List.map args ~f:(fun arg -> Sexp.to_string_hum (Syntax.sexp_of_expr arg)))
                 )
