@@ -39,6 +39,7 @@ f([1(2)])
 %right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
 %left ANDAND
 %left OROR
+%left PLUSPLUS
 %left RANGE_I RANGE_E
 %left PIPE
 %left CARET
