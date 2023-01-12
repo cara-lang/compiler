@@ -37,6 +37,7 @@ f([1(2)])
 
 (* lowest precedence *)
 %right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
+%left ELSE
 %left ANDAND
 %left OROR
 %left PLUSPLUS
