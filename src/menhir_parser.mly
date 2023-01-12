@@ -51,6 +51,7 @@ f([1(2)])
 %left TIMES DIV PERCENT
 %left POWER
 %nonassoc UMINUS UNEGAT
+%left LPAREN
 %left GETTER
 (* highest precedence *)
 
