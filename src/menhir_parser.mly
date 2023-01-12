@@ -161,6 +161,7 @@ bang:
             | _ -> ETuple $2  (* (1,2), (1,2,3,4,5,6,7,8) *)
     }
     | IF e THEN e ELSE e { EIf ($2,$4,$6) }
+    | IF e THEN e        { failwith "E0021: If expression without an else branch" }
     | eidentifier { $1 }
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
