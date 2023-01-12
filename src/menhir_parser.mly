@@ -41,13 +41,14 @@ f([1(2)])
 %left OROR
 %left RANGE_I RANGE_E
 %left PIPE
+%left CARET
 %left AND
 %left EQ NEQ
 %left LTE LT GT GTE
 %left SHL SHR
 %left PLUS MINUS
 %left TIMES DIV PERCENT
-%left CARET
+%left POWER
 %nonassoc UMINUS UNEGAT
 %left GETTER
 (* highest precedence *)
