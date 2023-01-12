@@ -1,0 +1,9 @@
+type alias XY = (Int, Int)
+
+`+`((ax,ay): XY, (bx,by): XY): XY = (ax+bx, ay+by)
+`*`((ax,ay): XY, (bx,by): XY): XY = (ax*bx, ay*by)
+`*`(k: Int,      (x,y): XY):   XY = (k*x,   k*y)
+
+IO.println!((1,2) + (3,4))
+IO.println!((1,2) * (3,4))
+IO.println!(3     * (3,4))
