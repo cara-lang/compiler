@@ -39,7 +39,8 @@ f([1(2)])
 %right ARROW (* \x -> (x + 1) rather than (\x -> x) + 1 *)
 %left ANDAND
 %left OROR
-%left PIPE (* TODO does this cause issues? *)
+%left RANGE_I RANGE_E
+%left PIPE
 %left AND
 %left EQ NEQ
 %left LTE LT GT GTE
