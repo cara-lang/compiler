@@ -31,6 +31,8 @@ type binop =
   | OpGte     (* >= *)
   | OpOrBool  (* || *)
   | OpAndBool (* && *)
+  (* appendables *)
+  | OpAppend (* ++ *)
   (* ranges *)
   | OpRangeInclusive (* ..  *)
   | OpRangeExclusive (* ... *)

@@ -16,6 +16,7 @@ type token =
   | DIV
   | PERCENT
   | POWER
+  | PLUSPLUS
   | SHL
   | SHR
   | CARET

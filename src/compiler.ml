@@ -90,6 +90,7 @@ let rec interpret env program =
             (* The rest is unsupported (typecheck fail later) *)
             | OpOrBool  -> interpret_fail "unsupported: int||int"
             | OpAndBool -> interpret_fail "unsupported: int&&int"
+            | OpAppend  -> interpret_fail "unsupported: int++int"
           )
         | (EBool b1, EBool b2) -> Bool.(
           match binop with
@@ -107,7 +108,13 @@ let rec interpret env program =
             (* The rest is unsupported (typecheck fail later) *)
             | _ -> interpret_fail ("unsupported: bool " ^ Syntax.show_binop binop ^ " bool")
           )
-        | (e1',e2') -> interpret_fail ("interpret: Unsupported binop for types that aren't two ints\n\n" 
+        | (EList l1, EList l2) -> (
+          match binop with
+            | OpAppend -> EList (List.append l1 l2)
+            (* TODO comparison *)
+            | _ -> interpret_fail ("unsupported: list " ^ Syntax.show_binop binop ^ " list")
+        )
+        | (e1',e2') -> interpret_fail ("interpret: Unsupported binop\n\n" 
                         ^ (Sexp.to_string_hum (Syntax.sexp_of_expr (EBinOp (e1',binop,e2'))));)
     )
   | ECall (fn,args) -> 

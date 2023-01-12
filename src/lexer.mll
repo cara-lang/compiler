@@ -90,6 +90,7 @@ rule next_token = parse
   | "->" { ARROW }
   | "#(" { LHOLE } (* TODO: would be lovely to have (...) or \(...) syntax instead... perhaps when I have more experience with LR(1) parsers *)
 
+  | "++" { PLUSPLUS }
   | '+'  { PLUS }
   | '-'  { MINUS }
   | "**" { POWER }
