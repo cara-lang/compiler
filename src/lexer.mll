@@ -102,12 +102,15 @@ rule next_token = parse
   | "&&" { ANDAND }
   | '&'  { AND }
   | "||" { OROR }
+  | "<<"  { SHL }
+  | ">>>" { SHRU }
+  | ">>"  { SHR }
   | "<=" { LTE }
   | '<'  { LT }
   | "==" { EQ }
   | "!=" { NEQ }
-  | '>'  { GT }
   | ">=" { GTE }
+  | '>'  { GT }
   | "..." { RANGE_E }
   | ".." { RANGE_I }
   | '(' { LPAREN }

@@ -11,7 +11,7 @@ open Syntax
 %token <string> LOWER_NAME
 %token <string> UPPER_NAME
 %token <int> HOLE
-%token PLUS MINUS TIMES DIV POWER PERCENT CARET TILDE AND SHL SHR
+%token PLUS MINUS TIMES DIV POWER PERCENT CARET TILDE AND SHL SHR SHRU
 %token LTE LT EQ NEQ GT GTE OROR ANDAND PLUSPLUS
 %token RANGE_I RANGE_E
 %token IF THEN ELSE
@@ -47,7 +47,7 @@ f([1(2)])
 %left AND
 %left EQ NEQ
 %left LTE LT GT GTE
-%left SHL SHR
+%left SHL SHR SHRU
 %left PLUS MINUS
 %left TIMES DIV PERCENT
 %left POWER
@@ -169,26 +169,27 @@ bang:
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
     | LBRACE separated_list(COMMA,field) RBRACE { record($2) }    (* {x:1,y:True} *)
-    | e PLUS e     { EBinOp ($1, OpPlus, $3) }     (* 1 + 3  *)
-    | e MINUS e    { EBinOp ($1, OpMinus, $3) }    (* 1 - 3  *)
-    | e TIMES e    { EBinOp ($1, OpTimes, $3) }    (* 1 * 3  *)
-    | e DIV e      { EBinOp ($1, OpDiv, $3) }      (* 1 / 3  *)
-    | e POWER e    { EBinOp ($1, OpPow, $3) }      (* 1 ** 3 *)
-    | e PERCENT e  { EBinOp ($1, OpMod, $3) }      (* 1 % 3  *)
-    | e PLUSPLUS e { EBinOp ($1, OpAppend, $3) }   (* 1 ++ 3 *)
-    | e LTE e      { EBinOp ($1, OpLte, $3) }      (* 1 <= 3 *)
-    | e LT  e      { EBinOp ($1, OpLt,  $3) }      (* 1 < 3  *)
-    | e EQ  e      { EBinOp ($1, OpEq,  $3) }      (* 1 == 3 *)
-    | e NEQ e      { EBinOp ($1, OpNeq, $3) }      (* 1 != 3 *)
-    | e GT  e      { EBinOp ($1, OpGt,  $3) }      (* 1 > 3  *)
-    | e GTE e      { EBinOp ($1, OpGte, $3) }      (* 1 >= 3 *)
-    | e ANDAND e   { EBinOp ($1, OpAndBool, $3) }  (* 1 && 3 *)
-    | e OROR e     { EBinOp ($1, OpOrBool,  $3) }  (* 1 || 3 *)
-    | e AND e      { EBinOp ($1, OpAndBin,  $3) }  (* 1 & 3  *)
-    | e PIPE e     { EBinOp ($1, OpOrBin,   $3) }  (* 1 | 3  *)
-    | e CARET e    { EBinOp ($1, OpXorBin,  $3) }  (* 1 ^ 3  *)
-    | e SHL e      { EBinOp ($1, OpShiftL,  $3) }  (* 1 << 3 *)
-    | e SHR e      { EBinOp ($1, OpShiftR,  $3) }  (* 1 >> 3 *)
+    | e PLUS e     { EBinOp ($1, OpPlus, $3) }     (* 1 + 3   *)
+    | e MINUS e    { EBinOp ($1, OpMinus, $3) }    (* 1 - 3   *)
+    | e TIMES e    { EBinOp ($1, OpTimes, $3) }    (* 1 * 3   *)
+    | e DIV e      { EBinOp ($1, OpDiv, $3) }      (* 1 / 3   *)
+    | e POWER e    { EBinOp ($1, OpPow, $3) }      (* 1 ** 3  *)
+    | e PERCENT e  { EBinOp ($1, OpMod, $3) }      (* 1 % 3   *)
+    | e PLUSPLUS e { EBinOp ($1, OpAppend, $3) }   (* 1 ++ 3  *)
+    | e LTE e      { EBinOp ($1, OpLte, $3) }      (* 1 <= 3  *)
+    | e LT  e      { EBinOp ($1, OpLt,  $3) }      (* 1 < 3   *)
+    | e EQ  e      { EBinOp ($1, OpEq,  $3) }      (* 1 == 3  *)
+    | e NEQ e      { EBinOp ($1, OpNeq, $3) }      (* 1 != 3  *)
+    | e GT  e      { EBinOp ($1, OpGt,  $3) }      (* 1 > 3   *)
+    | e GTE e      { EBinOp ($1, OpGte, $3) }      (* 1 >= 3  *)
+    | e ANDAND e   { EBinOp ($1, OpAndBool, $3) }  (* 1 && 3  *)
+    | e OROR e     { EBinOp ($1, OpOrBool,  $3) }  (* 1 || 3  *)
+    | e AND e      { EBinOp ($1, OpAndBin,  $3) }  (* 1 & 3   *)
+    | e PIPE e     { EBinOp ($1, OpOrBin,   $3) }  (* 1 | 3   *)
+    | e CARET e    { EBinOp ($1, OpXorBin,  $3) }  (* 1 ^ 3   *)
+    | e SHL e      { EBinOp ($1, OpShiftL,  $3) }  (* 1 << 3  *)
+    | e SHR e      { EBinOp ($1, OpShiftR,  $3) }  (* 1 >> 3  *)
+    | e SHRU e     { EBinOp ($1, OpShiftRU, $3) }  (* 1 >>> 3 *)
     | e RANGE_I e  { EBinOp ($1, OpRangeInclusive, $3) } (* 1..3  *)
     | e RANGE_E e  { EBinOp ($1, OpRangeExclusive, $3) } (* 1...3 *)
     | MINUS e %prec UMINUS { EUnOp (OpNegateNum,  $2) } (* -123 *)

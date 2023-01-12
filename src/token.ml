@@ -19,6 +19,7 @@ type token =
   | PLUSPLUS
   | SHL
   | SHR
+  | SHRU
   | CARET
   | ANDAND
   | AND
