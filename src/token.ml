@@ -14,6 +14,23 @@ type token =
   | MINUS
   | TIMES
   | DIV
+  | PERCENT
+  | POWER
+  | SHL
+  | SHR
+  | CARET
+  | ANDAND
+  | AND
+  | OROR
+  | LTE
+  | LT
+  | EQ
+  | NEQ
+  | GT
+  | GTE
+  | RANGE_I
+  | RANGE_E
+  | TILDE
   | IF
   | THEN
   | ELSE

@@ -47,10 +47,21 @@ let rec interpret env program =
   | ERecord fs -> ERecord (List.map fs ~f:(fun (f,e) -> (f,interpret env e)))
   | EUnOp (unop,e1) ->
       (match unop with
-        | OpNeg -> (match (interpret env e1) with
-          | EInt i -> EInt (neg i)
-          | _ -> interpret_fail "interpret: Can't negate anything that's not an int"
-        )
+        | OpNegateNum -> 
+            (match (interpret env e1) with
+              | EInt i -> EInt (neg i)
+              | _ -> interpret_fail "interpret: Can't negate (num) anything that's not an int"
+            )
+        | OpNegateBool -> 
+            (match (interpret env e1) with
+              | EBool b -> EBool (not b)
+              | _ -> interpret_fail "interpret: Can't negate (bool) anything that's not a bool"
+            )
+        | OpNegateBin -> 
+            (match (interpret env e1) with
+              | EInt i -> EInt (lnot i)
+              | _ -> interpret_fail "interpret: Can't negate (bin) anything that's not an int"
+            )
       )
   | EBinOp (e1,binop,e2) -> (
       match (interpret env e1, interpret env e2) with
@@ -60,6 +71,41 @@ let rec interpret env program =
             | OpMinus -> EInt (i1 - i2)
             | OpTimes -> EInt (i1 * i2)
             | OpDiv   -> EInt (i1 / i2)
+            | OpMod   -> EInt (i1 % i2)
+            | OpPow   -> EInt (i1 ** i2)
+            | OpOrBin  -> EInt (i1 lor  i2)
+            | OpAndBin -> EInt (i1 land i2)
+            | OpXorBin -> EInt (i1 lxor i2)
+            | OpShiftL -> EInt (i1 lsl i2)
+            | OpShiftR -> EInt (i1 asr i2)
+            | OpLte   -> EBool (i1 <= i2)
+            | OpLt    -> EBool (i1 <  i2)
+            | OpEq    -> EBool (i1 =  i2)
+            | OpNeq   -> EBool (i1 <> i2)
+            | OpGt    -> EBool (i1 >  i2)
+            | OpGte   -> EBool (i1 >= i2)
+            (* TODO: delegate the following to stdlib *)
+            | OpRangeInclusive -> interpret_fail "TODO int..int"
+            | OpRangeExclusive -> interpret_fail "TODO int...int"
+            (* The rest is unsupported (typecheck fail later) *)
+            | OpOrBool  -> interpret_fail "unsupported: int||int"
+            | OpAndBool -> interpret_fail "unsupported: int&&int"
+          )
+        | (EBool b1, EBool b2) -> Bool.(
+          match binop with
+            | OpLte     -> EBool (b1 <= b2)
+            | OpLt      -> EBool (b1 <  b2)
+            | OpEq      -> EBool (b1 =  b2)
+            | OpNeq     -> EBool (b1 <> b2)
+            | OpGt      -> EBool (b1 >  b2)
+            | OpGte     -> EBool (b1 >= b2)
+            | OpOrBool  -> EBool (b1 || b2)
+            | OpAndBool -> EBool (b1 && b2)
+            (* TODO: delegate the following to stdlib *)
+            | OpRangeInclusive -> interpret_fail "TODO bool..bool"
+            | OpRangeExclusive -> interpret_fail "TODO bool...bool"
+            (* The rest is unsupported (typecheck fail later) *)
+            | _ -> interpret_fail ("unsupported: bool " ^ Syntax.show_binop binop ^ " bool")
           )
         | (e1',e2') -> interpret_fail ("interpret: Unsupported binop for types that aren't two ints\n\n" 
                         ^ (Sexp.to_string_hum (Syntax.sexp_of_expr (EBinOp (e1',binop,e2'))));)

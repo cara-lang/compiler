@@ -3,15 +3,38 @@ open Core
 open Identifier
 
 type unop = 
-  | OpNeg
+  | OpNegateNum  (* - *)
+  | OpNegateBool (* ! *)
+  | OpNegateBin  (* ~ *)
   [@@deriving sexp]
 
 type binop =
-  | OpPlus 
-  | OpMinus 
-  | OpTimes 
-  | OpDiv
-  [@@deriving sexp]
+  (* numeric *)
+  | OpPlus  (* +  *)
+  | OpMinus (* -  *)
+  | OpTimes (* *  *)
+  | OpDiv   (* /  *)
+  | OpMod   (* %  *)
+  | OpPow   (* ** *)
+  (* binary *)
+  | OpOrBin  (* |  *)
+  | OpAndBin (* &  *)
+  | OpXorBin (* ^  *)
+  | OpShiftL (* << *)
+  | OpShiftR (* >> *)
+  (* comparisons and booleans *)
+  | OpLte     (* <= *)
+  | OpLt      (* <  *)
+  | OpEq      (* == *)
+  | OpNeq     (* != *)
+  | OpGt      (* >  *)
+  | OpGte     (* >= *)
+  | OpOrBool  (* || *)
+  | OpAndBool (* && *)
+  (* ranges *)
+  | OpRangeInclusive (* ..  *)
+  | OpRangeExclusive (* ... *)
+  [@@deriving sexp, show]
 
 type arg_list = string list (* TODO patterns? *)
   [@@deriving sexp]

@@ -81,6 +81,7 @@ WANTED:
   * foo = A // error
   * foo = X.A // ok!
 
+* Automatic hole driven development / expansion?
 
 TODO:
 * Monad syntax ("computation expressions")... should we default to the await, and give a special not-so-often-used syntax to _not_ await?

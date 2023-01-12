@@ -49,7 +49,6 @@ rule next_token = parse
                     then shebang_comment lexbuf
                     else failwith "E0015: Shebang comment is not first"
                 }
-  | getter as n     { GETTER    (n |> String.lstrip ~drop:(fun c -> Char.equal c '.')) }
   | qualifier as n  { QUALIFIER (n |> String.rstrip ~drop:(fun c -> Char.equal c '.')) }
   | lower_name as n (* Note: We must not allow creating EIdentifier ([],"_") or all hell will break lose with holes.
                              Perhaps it would be a good idea to namespace the holes with some impossible module name. *)
@@ -91,10 +90,25 @@ rule next_token = parse
   | "->" { ARROW }
   | "#(" { LHOLE } (* TODO: would be lovely to have (...) or \(...) syntax instead... perhaps when I have more experience with LR(1) parsers *)
 
-  | '+' { PLUS }
-  | '-' { MINUS }
-  | '*' { TIMES }
-  | '/' { DIV }
+  | '+'  { PLUS }
+  | '-'  { MINUS }
+  | "**" { POWER }
+  | '*'  { TIMES }
+  | '/'  { DIV }
+  | '%'  { PERCENT }
+  | '^'  { CARET }
+  | '~'  { TILDE }
+  | "&&" { ANDAND }
+  | '&'  { AND }
+  | "||" { OROR }
+  | "<=" { LTE }
+  | '<'  { LT }
+  | "==" { EQ }
+  | "!=" { NEQ }
+  | '>'  { GT }
+  | ">=" { GTE }
+  | "..." { RANGE_E }
+  | ".." { RANGE_I }
   | '(' { LPAREN }
   | ')' { RPAREN }
   | '[' { LBRACKET }
@@ -108,6 +122,7 @@ rule next_token = parse
   | '_' { UNDERSCORE }
   | '_' dec_digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }
 
+  | getter as n { GETTER (n |> String.lstrip ~drop:(fun c -> Char.equal c '.')) }
   | pipe { PIPE }
 
   | _ as c { illegal c }
