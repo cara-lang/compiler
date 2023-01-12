@@ -1,0 +1,8 @@
+plus = `+`
+IO.println!(plus(1,2))
+
+0
+  |> plus(1)
+  |> `+`(2)
+  |> #(_ + 3)
+  |> IO.println!
