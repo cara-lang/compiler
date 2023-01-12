@@ -47,7 +47,7 @@ f([1(2)])
 %left PLUS MINUS
 %left TIMES DIV PERCENT
 %left CARET
-%right UMINUS UNEGAT
+%nonassoc UMINUS UNEGAT
 %left GETTER
 (* highest precedence *)
 
