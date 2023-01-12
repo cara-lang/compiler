@@ -74,7 +74,6 @@ decl:
     | type_decl_without_modifier { $1 }
     | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule (MNoModifier, $2,$5) }
     | EXTEND MODULE identifier LBRACE EOL* decl_with_eols+ RBRACE { DExtendModule ($3,$6) }
-    | UNDERSCORE EQUALS { failwith "E0013: Assignment to underscore" }
     | LOWER_NAME           decl_after_lower_name { $2($1) }
     | qualified_identifier decl_after_qualified  { $2($1) }
     ;
@@ -166,7 +165,6 @@ bang:
             | _ -> ETuple $2  (* (1,2), (1,2,3,4,5,6,7,8) *)
     }
     | IF e THEN e ELSE e { EIf ($2,$4,$6) }
-    | IF e THEN e        { failwith "E0021: If expression without an else branch" }
     | eidentifier { $1 }
     | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
