@@ -1,0 +1,4 @@
+x = {a:1,b:[]}
+{..} = x
+IO.println!(a)
+IO.println!(b)
