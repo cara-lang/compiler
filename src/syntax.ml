@@ -142,6 +142,12 @@ type decl =
   | DStatement of stmt
   | DModule of module_modifier * string * decl list
   | DExtendModule of Identifier.t * decl list
+  | DValueAnnotation of string * type_
+  (* TODO if we want to allow type annotations inside statements, it will make
+     sense to move DValueAnnotation into DStatement *)
+  (* TODO DFunctionAnnotation
+          x(y: Int): Bool
+   *)
     [@@deriving sexp]
 
 (**************** HELPERS *******************)

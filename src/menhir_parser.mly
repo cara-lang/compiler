@@ -82,11 +82,12 @@ decl:
 
 
 decl_after_lower_name:
-    | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
+    | COLON type_                                   { fun name -> DValueAnnotation (name, $2) }
     | BANG                                          { fun name -> DStatement (SBang (BValue (EIdentifier ([],name)))) }
     | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall  (EIdentifier ([],name), $3))) }
     | EQUALS bang                                   { fun name -> DStatement (SLetBang (             name, $2)) }
     | EQUALS expr                                   { fun name -> DStatement (SLet     (LNoModifier, name, $2)) }
+    | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
     ;
 
 decl_after_qualified:

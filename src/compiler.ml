@@ -274,6 +274,7 @@ let interpret_decl env decl =
     | DStatement stmt -> interpret_stmt env stmt
     | DModule (modifier,name,decls) -> interpret_fail "TODO: interpret_decl: DModule"
     | DExtendModule (id,decls) -> interpret_fail "TODO: interpret_decl: DExtendModule"
+    | DValueAnnotation _ -> (* TODO actually use this information *) env
 
 let interpret_decl_list env decls =
   List.fold decls ~init:env ~f:interpret_decl
