@@ -100,8 +100,13 @@ constructor_list:
     ;
 
 constructor:
-    | UPPER_NAME LPAREN separated_nonempty_list(COMMA,type_) RPAREN { { name = $1; arguments = $3; } }
-    | UPPER_NAME                                                    { { name = $1; arguments = []; } }
+    | UPPER_NAME LPAREN separated_nonempty_list(COMMA,constructor_arg) RPAREN { { name = $1; arguments = $3; } }
+    | UPPER_NAME                                                              { { name = $1; arguments = []; } }
+    ;
+
+constructor_arg:
+    | type_                  { (None,    $1) }
+    | LOWER_NAME COLON type_ { (Some $1, $3) }
     ;
 
 private_decl:

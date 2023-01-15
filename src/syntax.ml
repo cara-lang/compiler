@@ -115,7 +115,7 @@ type type_ =
 
 type adt_constructor =
   { name : string;
-    arguments : type_ list
+    arguments : (string option * type_) list
   }
     [@@deriving sexp]
 
