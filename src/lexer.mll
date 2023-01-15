@@ -127,6 +127,7 @@ rule next_token = parse
   | '_' dec_digit+ as n { String.drop_prefix n 1 |> Int.of_string |> HOLE }
 
   | getter as n { GETTER (n |> String.lstrip ~drop:(fun c -> Char.equal c '.')) }
+  | pipe '>' { PIPELINE }
   | pipe { PIPE }
 
   | _ as c { illegal c }

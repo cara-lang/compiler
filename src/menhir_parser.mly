@@ -19,6 +19,7 @@ open Syntax
 %token TYPE ALIAS
 %token MODULE PRIVATE OPAQUE EXTEND
 %token BACKSLASH ARROW UNDERSCORE LHOLE
+%token PIPELINE
 %token LPAREN RPAREN     (* ( ) *)
 %token LBRACE RBRACE     (* { } *)
 %token LBRACKET RBRACKET (* [ ] *)
@@ -41,6 +42,7 @@ f([1(2)])
 %left ANDAND
 %left OROR
 %left PLUSPLUS
+%left PIPELINE
 %left RANGE_I RANGE_E
 %left PIPE
 %left CARET
@@ -192,6 +194,7 @@ bang:
     | e SHRU e     { EBinOp ($1, OpShiftRU, $3) }  (* 1 >>> 3 *)
     | e RANGE_I e  { EBinOp ($1, OpRangeInclusive, $3) } (* 1..3  *)
     | e RANGE_E e  { EBinOp ($1, OpRangeExclusive, $3) } (* 1...3 *)
+    | e PIPELINE e { EPipeline ($1, $3) } (* a |> b *)
     | MINUS e %prec UMINUS { EUnOp (OpNegateNum,  $2) } (* -123 *)
     | BANG  e %prec UNEGAT { EUnOp (OpNegateBool, $2) } (* !foo *)
     | TILDE e %prec UNEGAT { EUnOp (OpNegateBin,  $2) } (* ~123 *)

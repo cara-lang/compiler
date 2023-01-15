@@ -54,6 +54,7 @@ type token =
   | RBRACE
   | LBRACKET
   | RBRACKET
+  | PIPELINE
   | COMMA
   | COLON
   | BANG

@@ -62,6 +62,7 @@ type expr =
   | EBinOp of expr * binop * expr  (* 1 + 2 *)
   | ECall of expr * expr list      (* foo(1,2,3) *)
   | ERecordGet of expr * string    (* r.a *)
+  | EPipeline of expr * expr       (* a |> b *)
 
   (* other *)
   | EIdentifier of Identifier.t    (* IO.println, x, Just, Maybe.Just *)
@@ -189,13 +190,14 @@ let rec analyze_holes = function
   | EList es            -> analyze_list es
   | ERecord fs          -> analyze_list (List.map ~f:Tuple2.get2 fs)
   | EConstructor (_,es) -> analyze_list es
-  | ELambda (_,e)    -> analyze_holes e
-  | EClosure (_,e,_) -> analyze_holes e
-  | EUnOp (_,e)      -> analyze_holes e
-  | EBinOp (e1,_,e2) -> combine_holes (analyze_holes e1) (analyze_holes e2)
-  | ECall (fn,args)  -> combine_holes (analyze_holes fn) (analyze_list args)
-  | ERecordGet (e,_) -> analyze_holes e
-  | EIf (c,t,e)      -> analyze_list [c;t;e]
+  | ELambda (_,e)     -> analyze_holes e
+  | EClosure (_,e,_)  -> analyze_holes e
+  | EUnOp (_,e)       -> analyze_holes e
+  | EPipeline (e1,e2) -> combine_holes (analyze_holes e1) (analyze_holes e2)
+  | EBinOp (e1,_,e2)  -> combine_holes (analyze_holes e1) (analyze_holes e2)
+  | ECall (fn,args)   -> combine_holes (analyze_holes fn) (analyze_list args)
+  | ERecordGet (e,_)  -> analyze_holes e
+  | EIf (c,t,e)       -> analyze_list [c;t;e]
 
 and analyze_list es = es |> List.map ~f:analyze_holes |> List.fold ~init:NoHoles ~f:combine_holes
 
@@ -233,6 +235,7 @@ let rec expr_to_string env = function
   | ERecord fs      -> "{" ^ (String.concat ~sep:"," (List.map fs ~f:(field_to_string env))) ^ "}"
   | EConstructor (name,[]) -> name
   | EConstructor (name,es) -> name ^ "(" ^ String.concat ~sep:"," (List.map es ~f:(expr_to_string env)) ^ ")"
+  | EPipeline (e1,e2) -> expr_to_string env e1 ^ " |> " ^ expr_to_string env e2
   | EUnOp _         -> "<unop>"
   | EBinOp _        -> "<binop>"
   | ECall _         -> "<function call>"

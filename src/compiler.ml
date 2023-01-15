@@ -152,6 +152,18 @@ let rec interpret env program =
       | EBool false -> interpret env e
       | _ -> interpret_fail "E0025: If expression with a non-bool condition"
     )
+  | EPipeline (e1,e2) -> (match e2 with
+      (* x |> f === f(x) *)
+      | EIdentifier i -> interpret env (ECall (e2,[e1]))
+      (* x |> #(...) === #(...)(x) *)
+      (* x |> (\a -> ...) === (\a -> ...)(x) *)
+      | ELambda (args,body) -> interpret env (ECall (e2,[e1]))
+      (* x |> .a === (x).a *)
+      | ERecordGetter name -> interpret env (ECall (e2,[e1]))
+      (* x |> f(a,b) === f(a,b,x) *)
+      | ECall (c1, c2) -> interpret env (ECall (c1, List.append c2 [e1]))
+      | _ -> interpret_fail ("TODO EPipeline: unsupported right side")
+    )
 
 and interpret_getter env wanted_field arg =
   match interpret env arg with

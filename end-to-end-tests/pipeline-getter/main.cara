@@ -1,0 +1,3 @@
+r = {a: 1}
+x = r |> .a
+IO.println!(x)
