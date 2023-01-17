@@ -84,12 +84,6 @@ WANTED:
 * Automatic hole driven development / expansion?
 
 TODO:
-* Monad syntax ("computation expressions")... should we default to the await, and give a special not-so-often-used syntax to _not_ await?
-* Consider Maybe[List[b]] instead of Maybe(List(b)) to distinguish fn annotations and fn headers a little?
-* It should be possible to infer holes just from the presence of _, instead of from the extra parentheses. We shall see?
-  * Seq.any(n % _ == 0)    // preferable to:
-  * Seq.any((n % _ == 0))  // or even:
-  * Seq.any(\(n % _ == 0))
 * check out OCaml modules
   * https://dev.realworldocaml.org/first-class-modules.html
   * https://www.reddit.com/r/adventofcode/comments/zvl018/comment/j1vhh48/?utm_source=reddit&utm_medium=web2x&context=3
@@ -140,6 +134,7 @@ TODO:
   * [1..3]   -> getAt(r: Range, coll: Seq(a)): Maybe(a) given ...
   * [1,3..8] -> -//-
   * [3..] ? do we want to allow infinite ranges?
+* collection API: https://doc.rust-lang.org/stable/std/iter/trait.Iterator.html
 * collection API: HandAxe? https://www.youtube.com/watch?v=YDq251FbmK4
 
 CURRENT THINKING:
