@@ -1,0 +1,83 @@
+/* inspired by:
+   "Optionals and errors in Haskell & Rust - Monads by example" by Context Free
+   https://www.youtube.com/watch?v=c_F1o_so2MQ
+*/
+
+type alias Doc =
+  { head: Maybe[Head]
+  , body: String
+  }
+
+type alias Head =
+  { title: Maybe[String]
+  , charset: String
+  }
+
+isTitleNonEmpty1(Doc): Maybe[Bool]
+isTitleNonEmpty1(doc) =
+  case doc.head of
+    Nothing -> Nothing
+    Just head ->
+      case head.title of
+        Nothing -> Nothing
+        Just title -> Just(!title.isEmpty())
+
+
+isTitleNonEmpty2(Doc): Maybe[Bool]
+isTitleNonEmpty2(doc) =
+  doc.head
+  |> Maybe.andThen(.title)
+  |> Maybe.map(\t -> !t.isEmpty())
+
+
+isTitleNonEmpty3(Doc): Maybe[Bool]
+isTitleNonEmpty3(doc) = Maybe {
+  head = doc.head!
+  title = head.title!
+  !title.isEmpty()
+}
+
+value1: Doc = {
+  head: Just({
+    title: Just("Example"),
+    charset: "utf-8",
+  }),
+  body: "Hello",
+}
+
+value2: Doc = {
+  head: Just({
+    title: Just(""),
+    charset: "utf-8",
+  }),
+  body: "Hello",
+}
+
+value3: Doc = {
+  head: Just({
+    title: Nothing,
+    charset: "utf-8",
+  }),
+  body: "Hello",
+}
+
+value4: Doc = {
+  head: Nothing,
+  body: "Hello",
+}
+
+IO.println!(isTitleNonEmpty1(value1))
+IO.println!(isTitleNonEmpty2(value1))
+IO.println!(isTitleNonEmpty3(value1))
+
+IO.println!(isTitleNonEmpty1(value2))
+IO.println!(isTitleNonEmpty2(value2))
+IO.println!(isTitleNonEmpty3(value2))
+
+IO.println!(isTitleNonEmpty1(value3))
+IO.println!(isTitleNonEmpty2(value3))
+IO.println!(isTitleNonEmpty1(value3))
+
+IO.println!(isTitleNonEmpty2(value4))
+IO.println!(isTitleNonEmpty3(value4))
+IO.println!(isTitleNonEmpty3(value4))

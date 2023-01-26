@@ -1,0 +1,7 @@
+foo = IO {
+  x = 1
+  y = 1 + x
+  IO.println!(y)
+}
+
+IO.println!(foo)

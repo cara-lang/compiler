@@ -1,0 +1,9 @@
+foo(a) = {
+  x = 1
+  y = 1 + x
+  y + a
+}
+
+ret = foo(5)
+IO.println!(ret)
+

@@ -1,0 +1,13 @@
+E0027: Bang used outside effect block
+
+A bang was used outside an effect block. Either remove the bang or convert its
+block to an effect block:
+
+  foo = IO {
+    // ...
+  }
+
+main.cara:4:3
+━━┓
+4 ┃   IO.println!(y)
+  ┃   ^

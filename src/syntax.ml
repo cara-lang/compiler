@@ -142,6 +142,13 @@ type decl =
   | DStatement of stmt
   | DModule of module_modifier * string * decl list
   | DExtendModule of Identifier.t * decl list
+
+  (* blocks and effect blocks *)
+  | DBlock               of string *                          block (* x      =       { ... } *)
+  | DEffectBlock         of string *            string list * block (* x      = My.IO { ... } *)
+  | DBlockFunction       of string * arg_list *               block (* x(a,b) =       { ... } *)
+  | DEffectBlockFunction of string * arg_list * string list * block (* x(a,b) = My.IO { ... } *)
+
   | DValueAnnotation of string * type_
   (* TODO if we want to allow type annotations inside statements, it will make
      sense to move DValueAnnotation into DStatement *)

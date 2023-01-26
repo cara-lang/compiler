@@ -260,6 +260,13 @@ let interpret_dtype env modifier typename typevars constructors =
   (* TODO remember the type for the typechecker! *)
   List.fold constructors ~init:env ~f:interpret_adt_constructor
 
+let interpret_block env name (stmts,return_expr) =
+  let env1 = List.fold stmts ~init:env ~f:interpret_stmt in
+  let final_expr = (match return_expr with
+    | None -> EUnit
+    | Some expr -> interpret env1 expr
+  ) in
+  add env1 ([],name) final_expr
 
 let interpret_decl env decl =
   match decl with
@@ -275,6 +282,10 @@ let interpret_decl env decl =
     | DModule (modifier,name,decls) -> interpret_fail "TODO: interpret_decl: DModule"
     | DExtendModule (id,decls) -> interpret_fail "TODO: interpret_decl: DExtendModule"
     | DValueAnnotation _ -> (* TODO actually use this information *) env
+    | DBlock (name,block)    -> interpret_block env name block
+    | DEffectBlock _         -> interpret_fail "TODO: interpret_decl: DEffectBlock"
+    | DBlockFunction _       -> interpret_fail "TODO: interpret_decl: DBlockFunction"
+    | DEffectBlockFunction _ -> interpret_fail "TODO: interpret_decl: DEffectBlockFunction"
 
 let interpret_decl_list env decls =
   List.fold decls ~init:env ~f:interpret_decl
@@ -330,8 +341,8 @@ let _ =
     Caml.exit 2
   )
   else
-      (* Parser.pp_exceptions (); (* enable pretty error messages *)
-      *)
+      Parser.pp_exceptions (); (* enable pretty error messages *)
+      
       let init_env = Map.empty (module Identifier) in
       (*printf("Interpreted env:\n%s\n") 
         (interpret_file argv.(1) init_env
@@ -339,13 +350,14 @@ let _ =
           |> Sexp.to_string_hum
         );
       *)
-      try 
+      (*try
+      *)
         let _ =
           init_env
           (*|> interpret_string [%blob "stdlib.cara"]*)
           |> interpret_file argv.(1)
         in
-        ()
+      (*  ()
       with
       (* TODO the columns aren't completely correct *)
       | Parser.LexError {msg;loc} ->
@@ -375,4 +387,5 @@ let _ =
           eprintf("\n")
         )
       ;
+      *)
       Stdio.Out_channel.flush Stdio.stdout

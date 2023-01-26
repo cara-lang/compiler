@@ -1,0 +1,12 @@
+Just(True)
+Just(True)
+Just(True)
+Just(False))
+Just(False))
+Just(False))
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
