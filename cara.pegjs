@@ -36,15 +36,32 @@ Bang = id:Identifier "!" args:Args? { return { type: 'bang', id, args } }
 Args = "(" _ h:Expr? t:(_ "," _ e:Expr {return e})* _ ")" { return [h,...t].filter(x=>x) }
 
 Expr
-    = int:Int   { return { type: 'expr', exprType: 'int', int } }
+    = n:Float   { return { type: 'expr', exprType: 'float', float: n } }
+    / n:Int     { return { type: 'expr', exprType: 'int',   int: n } }
     / "(" _ ")" { return { type: 'expr', exprType: 'unit' } }
     // TODO
 
-Int = neg:'-'?
+Int
+    = neg:'-'?
       n:( ("0x" h:[0-9a-f]i t:[0-9a-f_]i* { return parseInt(h + t.filter(c => c != '_').join(''), 16) })
         / ("0b" h:[01]      t:[01_]*      { return parseInt(h + t.filter(c => c != '_').join(''), 2)  })
         / ("0o" h:[0-7]     t:[0-7_]*     { return parseInt(h + t.filter(c => c != '_').join(''), 8)  })
         / (     h:[0-9]     t:[0-9_]*     { return parseInt(h + t.filter(c => c != '_').join(''), 10) })
+        )
+      { return (!!neg ? -n : n) }
+      
+BoringInt
+    = neg:'-'?
+      n:(x:[0-9]+ { return parseInt(x, 10) })
+      { return (!!neg ? -n : n) }
+
+Float
+    = neg:'-'?
+      n:(ih:[0-9] it:[0-9_]*
+         '.'
+         dh:[0-9] dt:[0-9_]*
+         e:([eE] x:BoringInt { return x })?
+         { return parseFloat(`${ih}${it.join('')}.${dh}${dt.join('')}e${e}`.replace(/_/g,'')) }
         )
       { return (!!neg ? -n : n) }
 
