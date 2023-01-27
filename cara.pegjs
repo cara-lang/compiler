@@ -12,18 +12,8 @@ Main
       }
     }
 
-Shebang
-  = "#!" (!EOL .)* { return true }
-
 Decl
-    = stmt:Stmt
-      {
-        return {
-          type: 'declaration',
-          declType: 'statement',
-          stmt,
-        }
-      }
+    = stmt:Stmt { return { type: 'declaration', declType: 'statement', stmt, } }
     // TODO
     
 Stmt
@@ -33,7 +23,7 @@ Stmt
 
 Bang = id:Identifier "!" args:Args? { return { type: 'bang', id, args } }
 
-Args = "(" _ h:Expr? t:(_ "," _ e:Expr {return e})* _ ")" { return [h,...t].filter(x=>x) }
+Args = "(" _* h:Expr? t:(_* "," _* e:Expr {return e})* _* ")" { return [h,...t].filter(x=>x) }
 
 Expr
     = n:Float   { return { type: 'expr', exprType: 'float', float: n } }
@@ -76,5 +66,10 @@ Name = UpperName / LowerName
 UpperName = h:[A-Z] t:[a-zA-Z0-9_]*  { return h + t.join('') }
 LowerName = h:[a-z] t:[a-zA-Z0-9_']* { return h + t.join('') }
 
-EOL "end of line" = ("\n" / "\r\n" / "\r") { return null }
-_ "whitespace"    = [ \t]*                 { return null }
+EOLSequence = ("\n" / "\r\n" / "\r") { return null }
+EOL         = __* EOLSequence        { return null }
+WS "whitespace" = [ \t]              { return null }
+Shebang         = "#!" (!EOL .)*     { return true } // truthiness is used in Main
+LineComment     = "//" (!EOL .)*     { return null }
+_  = WS
+__ = WS / LineComment

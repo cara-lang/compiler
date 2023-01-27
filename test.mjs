@@ -15,9 +15,9 @@ const loc = (l) => `${l.start.line}:${l.start.column}-${l.end.line}:${l.end.colu
 const test = async (test) => {
   try {
     const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
-    console.log(parse(source));
+    parse(source);
   }
-  catch (e) { return {test, loc: loc(e.location), err: e.message}; }
+  catch (e) { return {test, loc: loc(e.location), found: e.found}; }
 };
 
 const fails = await Promise.all(dirs.map(dir => test(dir)));
