@@ -27,9 +27,9 @@ Decl
     // TODO FunctionAnnotation
     
 Stmt
-    = bang:Bang                             { return { type: 'statement', stmtType: 'bang',         bang } }
-    / id:UnqualifiedLower _ "=" _ bang:Bang { return { type: 'statement', stmtType: 'let-bang', id, bang } }
-    / id:UnqualifiedLower _ "=" _ expr:Expr { return { type: 'statement', stmtType: 'let-expr', id, expr } }
+    = bang:Bang                               { return { type: 'statement', stmtType: 'bang',         bang } }
+    / id:UnqualifiedLower _* "=" _* bang:Bang { return { type: 'statement', stmtType: 'let-bang', id, bang } }
+    / id:UnqualifiedLower _* "=" _* expr:Expr { return { type: 'statement', stmtType: 'let-expr', id, expr } }
 
 Bang = id:Identifier "!" args:Args? { return { type: 'bang', id, args } }
 
