@@ -13,8 +13,18 @@ Main
     }
 
 Decl
-    = stmt:Stmt { return { type: 'declaration', declType: 'statement', stmt, } }
-    // TODO
+    = stmt:Stmt { return { type: 'declaration', declType: 'statement', stmt } }
+    // TODO Function
+    // TODO TypeAlias
+    // TODO Type
+    // TODO Module
+    // TODO ExtendModule
+    // TODO Block
+    // TODO EffectBlock
+    // TODO BlockFunction
+    // TODO EffectBlockFunction
+    // TODO Annotation
+    // TODO FunctionAnnotation
     
 Stmt
     = bang:Bang                             { return { type: 'statement', stmtType: 'bang',         bang } }
@@ -29,7 +39,22 @@ Expr
     = n:Float   { return { type: 'expr', exprType: 'float', float: n } }
     / n:Int     { return { type: 'expr', exprType: 'int',   int: n } }
     / "(" _ ")" { return { type: 'expr', exprType: 'unit' } }
-    // TODO
+    // TODO Char
+    // TODO String
+    // TODO Bool
+    // TODO Tuple
+    // TODO List
+    // TODO Record
+    // TODO Constructor
+    // TODO UnaryOp
+    // TODO BinaryOp
+    // TODO Call
+    // TODO RecordGet
+    // TODO Pipeline
+    // TODO Identifier
+    // TODO Lambda
+    // TODO RecordGetter
+    // TODO If
 
 Int
     = neg:'-'?
