@@ -6,6 +6,7 @@ export type Loc = { row: number, col: number };
 
 export type CaraError = {
     stage: Stage,
+    code: string,
     message: string,
     loc: Loc,
 };
