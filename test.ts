@@ -21,7 +21,7 @@ const test = async (test:string) => {
     if (isCaraError(e)) {
       if (test.includes('-err')) {
         const errFileContent: string = await fs.readFile(`${testsDir}/${test}/stderr.txt`, 'utf-8');
-        const expectedError = errFileContent.substring(0,6);
+        const expectedError = errFileContent.substring(0,5);
         if (expectedError == e.code) return null;
       }
       return {test, loc:loc(e.loc), stage:e.stage, msg:e.message};

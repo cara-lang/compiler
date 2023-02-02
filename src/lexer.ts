@@ -338,10 +338,17 @@ function char(state: State): {token: Token, state: State} {
                     // TODO \x{..}
                     default: throw err('E0028', 'Unexpected escaped character in a character', state);
                 }
-            // TODO handle \n \r \r\n and state.col/row
-            // TODO handle anything else
-            // TODO handle EOF
-            default: throw err('EXXXX', `TODO char ${nextChar}`, state);
+            case '\r':
+                // optionally read '\n' as well
+                if (state.source[state.i] == '\n') state.i++;
+            case '\n':
+                state.row++;
+                state.col = 1;
+                throw err('E0017', 'Unescaped newline in a character', state);
+            default: 
+                // any other char needs to be saved!
+                content += nextChar;
         }
     }
+    throw err('EXXXX', 'Unterminated char at EOF', state);
 }
