@@ -215,7 +215,7 @@ function nextToken(state: State): { token: Token, state: State } {
 
         default:
             const c = nextChar.charCodeAt(0);
-            if (c >= 97 && c <= 122 /*a-z*/) {
+            if (nextChar.match(/[a-z]/)) {
                 state.i--;
                 state.col--;
                 const result = lowerName(state);
@@ -282,8 +282,8 @@ function skipUntilNewline(state: State): State {
 function simpleInt(state: State): { match: number | null, state: State } {
     let origI = state.i;
     while (!isAtEnd(state)) {
-        const nextCharOrd = state.source.charCodeAt(state.i);
-        if (nextCharOrd < 48 /* '0' */ || nextCharOrd > 57 /* '9' */) break;
+        const nextChar = state.source[state.i];
+        if (!nextChar.match(/[0-9]/)) break;
         state.i++;
         state.col++;
     }
@@ -296,14 +296,14 @@ function simpleInt(state: State): { match: number | null, state: State } {
 function lowerName(state: State): { match: string | null, state: State } {
     let origI = state.i;
     // 1st can be [a-z] only
-    const firstCharOrd = state.source.charCodeAt(state.i);
-    if (firstCharOrd < 97 /* 'a' */ || firstCharOrd > 122 /* 'z' */) return { match: null, state };
+    const firstChar = state.source[state.i];
+    if (!firstChar.match(/[a-z]/)) return { match: null, state };
     state.i++;
     state.col++;
     while (!isAtEnd(state)) {
         // 2nd+ can be [a-zA-Z0-9_']
-        const c = state.source.charCodeAt(state.i);
-        if (!((c >= 97 && c <= 122/*a-z*/) || (c >= 65 && c <= 90/*A-Z*/) || (c >= 48 && c <= 57/*0-9*/) || c == 95/*_*/ || c == 39/*'*/)) break;
+        const c = state.source[state.i];
+        if (!c.match(/[a-zA-Z0-9_']/)) break;
         state.i++;
         state.col++;
     }
