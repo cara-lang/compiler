@@ -235,13 +235,24 @@ function nextToken(state: State): { token: Token, state: State } {
                         return { token: { type: { type: 'LOWER_NAME', name: result.match }, row, col }, state: result.state };
                     }
                 }
+            } else if (nextChar.match(/[A-Z]/)) {
+                state.i--;
+                state.col--;
+                const result = upperName(state);
+                state = result.state;
+                if (state.source[state.i] == '.') {
+                    state.i++;
+                    state.col++;
+                    const { row, col } = state;
+                    return { token: { type: { type: 'QUALIFIER', name: result.match }, row, col }, state };
+                }
+                const { row, col } = state;
+                return { token: { type: { type: 'UPPER_NAME', name: result.match }, row, col }, state };
             }
             // TODO Int(number)
             // TODO Float(number)
-            // TODO UpperName(string)
             // ... 'TRUE'
             // ... 'FALSE'
-            // ... Qualifier(string) = UPPER_NAME '.'
             throw err("EXXXX", `Unexpected character '${nextChar}'`, state);
     }
     throw err("EXXXX", `Bug: Didn't handle '${nextChar}' for some reason`, state);
@@ -298,6 +309,24 @@ function lowerName(state: State): { match: string | null, state: State } {
     // 1st can be [a-z] only
     const firstChar = state.source[state.i];
     if (!firstChar.match(/[a-z]/)) return { match: null, state };
+    state.i++;
+    state.col++;
+    while (!isAtEnd(state)) {
+        // 2nd+ can be [a-zA-Z0-9_']
+        const c = state.source[state.i];
+        if (!c.match(/[a-zA-Z0-9_']/)) break;
+        state.i++;
+        state.col++;
+    }
+    const match = state.source.substring(origI, state.i);
+    return { match, state };
+}
+
+function upperName(state: State): { match: string | null, state: State } {
+    let origI = state.i;
+    // 1st can be [A-Z] only
+    const firstChar = state.source[state.i];
+    if (!firstChar.match(/[A-Z]/)) return { match: null, state };
     state.i++;
     state.col++;
     while (!isAtEnd(state)) {
