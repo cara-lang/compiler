@@ -26,3 +26,4 @@ E0024,Hexadecimal integer started with 0X
 E0025,If expression with a non-bool condition
 E0026,Integer literal is too large for the declared type
 E0027,Bang used outside effect block
+E0028,Unexpected escaped character in a character

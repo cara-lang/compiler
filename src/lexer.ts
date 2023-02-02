@@ -207,7 +207,7 @@ function nextToken(state: State): { token: Token, state: State } {
             return { token: { type: { type: 'GETTER', field: lower.match }, row, col }, state: lower.state };
         }
 
-        case '\'': throw err("TODO: '", state); // TODO Char(string)
+        case '\'': return char(state);
         case '"':  throw err('TODO: "', state); // TODO String(string)
 
         case ' ':  return nextToken(state);
@@ -244,6 +244,7 @@ function nextToken(state: State): { token: Token, state: State } {
             // ... Qualifier(string) = UPPER_NAME '.'
             throw err(`Unexpected character '${nextChar}'`, state);
     }
+    throw err(`Bug: Didn't handle '${nextChar}' for some reason`, state);
 }
 
 function lineComment(state: State): { token: Token, state: State } {
@@ -252,7 +253,7 @@ function lineComment(state: State): { token: Token, state: State } {
 }
 
 function shebang(state: State): { token: Token, state: State } {
-    if (state.i != 2) throw err('Shebang not at beginning of file', state);
+    if (state.i != 2) throw err('E0015: Shebang comment is not first', state);
     const newState = skipUntilNewline(state);
     return simple('SHEBANG', newState);
 }
@@ -308,4 +309,39 @@ function lowerName(state: State): { match: string | null, state: State } {
     }
     const match = state.source.substring(origI, state.i);
     return { match, state };
+}
+
+function char(state: State): {token: Token, state: State} {
+    let content = "";
+    while (!isAtEnd(state)) {
+        const nextChar = state.source[state.i++];
+        state.col++;
+        switch (nextChar) {
+            case "'":
+                if (content.length == 0) {
+                    throw err('E0019: Empty character', state);
+                } else {
+                    const {row,col} = state;
+                    return {token:{type:{type:'CHAR',char:content},row,col},state};
+                }
+            case '\t':
+                throw err('E0018: Unescaped tab in a char', state);
+            case '\\':
+                const second = state.source[state.i++];
+                state.col++;
+                switch (second) {
+                    case '\\': content += '\\';
+                    case 'n':  content += '\n';
+                    case 'r':  content += '\r';
+                    case 't':  content += '\t';
+                    // TODO \u{....}
+                    // TODO \x{..}
+                    default: throw err('E0028: Unexpected escaped character in a character', state);
+                }
+            // TODO handle \n \r \r\n and state.col/row
+            // TODO handle anything else
+            // TODO handle EOF
+            default: throw err(`TODO char ${nextChar}`, state);
+        }
+    }
 }

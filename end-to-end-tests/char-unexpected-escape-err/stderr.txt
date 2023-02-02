@@ -1,0 +1,10 @@
+E0028: Unexpected escaped character in a character
+
+The character contains an unexpected escape.
+
+Hint: The supported escapes are: \\, \n, \r, \t, \u{....}, \x{..} 
+
+main.cara:1:14
+━━┓
+1 ┃ IO.println!('\e')
+  ┃              ^
