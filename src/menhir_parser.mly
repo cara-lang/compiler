@@ -70,29 +70,60 @@ decl_with_eols:
     | decl EOL+ { $1 }
     ;
 
+stmt_with_eols:
+    | stmt EOL+ { $1 }
+
 decl:
     | PRIVATE private_decl       { $2 }
     | OPAQUE  opaque_type_decl   { $2 }
     | type_decl_without_modifier { $1 }
     | MODULE        UPPER_NAME LBRACE EOL* decl_with_eols+ RBRACE { DModule (MNoModifier, $2,$5) }
     | EXTEND MODULE identifier LBRACE EOL* decl_with_eols+ RBRACE { DExtendModule ($3,$6) }
-    | LOWER_NAME           decl_after_lower_name { $2($1) }
-    | qualified_identifier decl_after_qualified  { $2($1) }
+    | stmt { DStatement $1 }
+    | LOWER_NAME decl_after_lower_name { $2($1) }
     ;
-
 
 decl_after_lower_name:
-    | COLON type_                                   { fun name -> DValueAnnotation (name, $2) }
-    | BANG                                          { fun name -> DStatement (SBang (BValue (EIdentifier ([],name)))) }
-    | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall  (EIdentifier ([],name), $3))) }
-    | EQUALS bang                                   { fun name -> DStatement (SLetBang (             name, $2)) }
-    | EQUALS expr                                   { fun name -> DStatement (SLet     (LNoModifier, name, $2)) }
-    | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN EQUALS expr { fun name -> DFunction (name, $2, $5) }
+    | COLON type_            { fun name -> DValueAnnotation (name, $2) }
+    | fun_parens EQUALS expr { fun name -> DFunction (name, $1, $3) }
+
+    (* blocks and effect blocks *)
+    |            EQUALS             block { fun name -> DBlock               (name,         $2) }
+    | fun_parens EQUALS             block { fun name -> DBlockFunction       (name, $1,     $3) }
+    |            EQUALS module_name block { fun name -> DEffectBlock         (name,     $2, $3) }
+    | fun_parens EQUALS module_name block { fun name -> DEffectBlockFunction (name, $1, $3, $4) }
     ;
 
-decl_after_qualified:
-    | BANG                                          { fun name -> DStatement (SBang (BValue name)) }
-    | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> DStatement (SBang (BCall (name, $3))) }
+stmt:
+    | LOWER_NAME           stmt_after_lower_name { $2($1) }
+    | qualified_identifier stmt_after_qualified  { $2($1) }
+    ;
+
+%inline stmt_after_lower_name:
+    | BANG                                          { fun name -> SBang (BValue (EIdentifier ([],name))) }
+    | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> SBang (BCall  (EIdentifier ([],name), $3)) }
+    | EQUALS bang                                   { fun name -> SLetBang (             name, $2) }
+    | EQUALS expr                                   { fun name -> SLet     (LNoModifier, name, $2) }
+    ;
+
+%inline stmt_after_qualified:
+    | BANG                                          { fun name -> SBang (BValue name) }
+    | BANG LPAREN separated_list(COMMA,expr) RPAREN { fun name -> SBang (BCall (name, $3)) }
+    ;
+
+fun_parens:
+    | LPAREN separated_list(COMMA,LOWER_NAME) RPAREN { $2 }
+    ;
+
+block:
+    | LBRACE EOL* block_body { $3([]) }
+    ;
+
+block_body:
+    | identifier block_item_after_identifier { $2($1) }
+    | non_identifier_expr {}
+    (* TODO START HERE --- we need to make this kinda tail-recursive; if block_item_after_identifier is an expr, end and wrap up; otherwise add the new stmt to the list and go for another item! We might also need to split `expr` to identifier stuff and non-identifier stuff. *)
+    | EOL* RBRACE { fun acc -> acc }
     ;
 
 constructor_list:
@@ -160,6 +191,11 @@ bang:
     ;
 
 %inline common_expr(e):
+    | non_identifier_expr(e) and_then_expr(e) { $2($1) }
+    | eidentifier            and_then_expr(e) { $2($1) }
+    ;
+
+%inline non_identifier_expr(e):
     | INT    { EInt $1 }
     | FLOAT  { EFloat $1 }
     | CHAR   { EChar $1 } (* TODO we're guaranteed by lexer it's >0 bytes, but we still need to validate it's just one Unicode "extended grapheme cluster"! *)
@@ -173,43 +209,46 @@ bang:
             | _ -> ETuple $2  (* (1,2), (1,2,3,4,5,6,7,8) *)
     }
     | IF e THEN e ELSE e { EIf ($2,$4,$6) }
-    | eidentifier { $1 }
-    | e LPAREN separated_list(COMMA,e) RPAREN { ECall ($1, $3) }  (* f(1,2,3) *)
     | LBRACKET separated_list(COMMA,e) RBRACKET { EList $2 }      (* [1,2,3] *)
     | LBRACE separated_list(COMMA,field) RBRACE { record($2) }    (* {x:1,y:True} *)
-    | e PLUS e     { EBinOp ($1, OpPlus, $3) }     (* 1 + 3   *)
-    | e MINUS e    { EBinOp ($1, OpMinus, $3) }    (* 1 - 3   *)
-    | e TIMES e    { EBinOp ($1, OpTimes, $3) }    (* 1 * 3   *)
-    | e DIV e      { EBinOp ($1, OpDiv, $3) }      (* 1 / 3   *)
-    | e POWER e    { EBinOp ($1, OpPow, $3) }      (* 1 ** 3  *)
-    | e PERCENT e  { EBinOp ($1, OpMod, $3) }      (* 1 % 3   *)
-    | e PLUSPLUS e { EBinOp ($1, OpAppend, $3) }   (* 1 ++ 3  *)
-    | e LTE e      { EBinOp ($1, OpLte, $3) }      (* 1 <= 3  *)
-    | e LT  e      { EBinOp ($1, OpLt,  $3) }      (* 1 < 3   *)
-    | e EQ  e      { EBinOp ($1, OpEq,  $3) }      (* 1 == 3  *)
-    | e NEQ e      { EBinOp ($1, OpNeq, $3) }      (* 1 != 3  *)
-    | e GT  e      { EBinOp ($1, OpGt,  $3) }      (* 1 > 3   *)
-    | e GTE e      { EBinOp ($1, OpGte, $3) }      (* 1 >= 3  *)
-    | e ANDAND e   { EBinOp ($1, OpAndBool, $3) }  (* 1 && 3  *)
-    | e OROR e     { EBinOp ($1, OpOrBool,  $3) }  (* 1 || 3  *)
-    | e AND e      { EBinOp ($1, OpAndBin,  $3) }  (* 1 & 3   *)
-    | e PIPE e     { EBinOp ($1, OpOrBin,   $3) }  (* 1 | 3   *)
-    | e CARET e    { EBinOp ($1, OpXorBin,  $3) }  (* 1 ^ 3   *)
-    | e SHL e      { EBinOp ($1, OpShiftL,  $3) }  (* 1 << 3  *)
-    | e SHR e      { EBinOp ($1, OpShiftR,  $3) }  (* 1 >> 3  *)
-    | e SHRU e     { EBinOp ($1, OpShiftRU, $3) }  (* 1 >>> 3 *)
-    | e RANGE_I e  { EBinOp ($1, OpRangeInclusive, $3) } (* 1..3  *)
-    | e RANGE_E e  { EBinOp ($1, OpRangeExclusive, $3) } (* 1...3 *)
-    | e PIPELINE e { EPipeline ($1, $3) } (* a |> b *)
     | MINUS e %prec UMINUS { EUnOp (OpNegateNum,  $2) } (* -123 *)
     | BANG  e %prec UNEGAT { EUnOp (OpNegateBool, $2) } (* !foo *)
     | TILDE e %prec UNEGAT { EUnOp (OpNegateBin,  $2) } (* ~123 *)
     | GETTER { ERecordGetter $1 }                (* .foo *)
-    | e GETTER  { ERecordGet ($1, $2) } (* abc.foo *)
 
     (* TODO replace `LOWER_NAME` with `pattern` *)
     | BACKSLASH separated_list(COMMA,LOWER_NAME) ARROW e { ELambda ($2, $4) }  (* \x -> 123, \x,y -> 123 *)
     | LHOLE holey_expr RPAREN { lambda_with_holes($2) }                        (* #(1 + _) *)
+    ;
+
+%inline and_then_expr(e):
+    | { fun l -> l }
+    | LPAREN separated_list(COMMA,e) RPAREN { fun l -> ECall (l, $2) }  (* f(1,2)  *)
+    | PLUS e     { fun l -> EBinOp (l, OpPlus, $2) }                    (* 1 + 3   *)
+    | MINUS e    { fun l -> EBinOp (l, OpMinus, $2) }                   (* 1 - 3   *)
+    | TIMES e    { fun l -> EBinOp (l, OpTimes, $2) }                   (* 1 * 3   *)
+    | DIV e      { fun l -> EBinOp (l, OpDiv, $2) }                     (* 1 / 3   *)
+    | POWER e    { fun l -> EBinOp (l, OpPow, $2) }                     (* 1 ** 3  *)
+    | PERCENT e  { fun l -> EBinOp (l, OpMod, $2) }                     (* 1 % 3   *)
+    | PLUSPLUS e { fun l -> EBinOp (l, OpAppend, $2) }                  (* 1 ++ 3  *)
+    | LTE e      { fun l -> EBinOp (l, OpLte, $2) }                     (* 1 <= 3  *)
+    | LT  e      { fun l -> EBinOp (l, OpLt,  $2) }                     (* 1 < 3   *)
+    | EQ  e      { fun l -> EBinOp (l, OpEq,  $2) }                     (* 1 == 3  *)
+    | NEQ e      { fun l -> EBinOp (l, OpNeq, $2) }                     (* 1 != 3  *)
+    | GT  e      { fun l -> EBinOp (l, OpGt,  $2) }                     (* 1 > 3   *)
+    | GTE e      { fun l -> EBinOp (l, OpGte, $2) }                     (* 1 >= 3  *)
+    | ANDAND e   { fun l -> EBinOp (l, OpAndBool, $2) }                 (* 1 && 3  *)
+    | OROR e     { fun l -> EBinOp (l, OpOrBool,  $2) }                 (* 1 || 3  *)
+    | AND e      { fun l -> EBinOp (l, OpAndBin,  $2) }                 (* 1 & 3   *)
+    | PIPE e     { fun l -> EBinOp (l, OpOrBin,   $2) }                 (* 1 | 3   *)
+    | CARET e    { fun l -> EBinOp (l, OpXorBin,  $2) }                 (* 1 ^ 3   *)
+    | SHL e      { fun l -> EBinOp (l, OpShiftL,  $2) }                 (* 1 << 3  *)
+    | SHR e      { fun l -> EBinOp (l, OpShiftR,  $2) }                 (* 1 >> 3  *)
+    | SHRU e     { fun l -> EBinOp (l, OpShiftRU, $2) }                 (* 1 >>> 3 *)
+    | RANGE_I e  { fun l -> EBinOp (l, OpRangeInclusive, $2) }          (* 1..3    *)
+    | RANGE_E e  { fun l -> EBinOp (l, OpRangeExclusive, $2) }          (* 1...3   *)
+    | PIPELINE e { fun l -> EPipeline (l, $2) }                         (* a |> b  *)
+    | GETTER     { fun l -> ERecordGet (l, $1) }                        (* abc.foo *)
     ;
 
 expr:
@@ -228,6 +267,9 @@ eidentifier:
 identifier:
     | QUALIFIER* name { ($1, $2) }
     ;
+
+module_name:
+    | QUALIFIER* UPPER_NAME { List.append $1 [$2] }
 
 qualified_identifier:
      (* TODO I believe we're using this in bang patterns; UPPER_NAMES don't make

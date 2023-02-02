@@ -26,10 +26,10 @@ dstHandle = FS.open!(src, FS.Write)
 
 timestampFmt = "hh:mm:ss.fff"
 
-(1..10).each(\i -> 
+(1..10).each(\i -> IO {
   time = Time.now!()
   dstHandle |> FS.write!("[${Time.format(timestampFmt, time)}] Hello number $i\n")
-)
+})
 ```
 
 ```cara

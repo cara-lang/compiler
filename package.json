@@ -1,8 +1,5 @@
 {
   "devDependencies": {
-    "pegjs": "^0.10.0"
   },
-  "scripts": {
-    "gen:parser": "pegjs -o cara-parser.js cara.pegjs"
-  }
+  "scripts": {}
 }

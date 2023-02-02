@@ -3,3 +3,4 @@
 cara-parser.js
 /node_modules/
 /yarn.lock
+/.vscode/

@@ -36,7 +36,6 @@ WANTED (but doesn't yet have tests):
 * allow ' in var names
 
 * Extending others' modules with new functions and constants
-* `pub` for sharing that with everybody, without `pub` for just this module?
 
 
 WANTED:
@@ -47,13 +46,11 @@ WANTED:
       | Z ghi -> 234
   as "or-patterns"
 
-* type _aliases_
-* general purpose rather than HTML/JS (at least as first priority)
-* no currying?
-* give users access to the whole syntax (operators, implementing core typeclasses etc.)
+* if ... then ... without else implicitly returns () from the else, which means the then... also needs to return ().
+  * automatic monad-wrapping of the ()? That's probably the only place where this would make sense.
+
 * deep record updates: {...old.x, foo: old.x.foo + 1}
 * compile to HVM -> by proxy to native, parallel
-* no \case, we don't have currying?
 * ranges: `1..5, 1...5, 1,3..8, 5..1, 5...1, 5,3..-8` = list-like things. Likely a Sequence protocol like Clojure has, and majority of stdlib working on sequences rather than lists?
 * implements LSP(?) and Debug Adapter Protocol (to have VSCode/... debugger out of box)
   * https://microsoft.github.io/debug-adapter-protocol/
