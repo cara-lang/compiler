@@ -85,38 +85,38 @@ function nextToken(state: State): { token: Token, state: State } {
         case '+':
             return variants(
                 [{ c: '+', t: 'PLUSPLUS' }], // ++
-                'PLUS',                 // +
+                'PLUS',                      // +
                 state
             );
         case '-':
             return variants(
                 [{ c: '>', t: 'ARROW' }], // ->
-                'MINUS',             // -
+                'MINUS',                  // -
                 state
             );
         case '*':
             return variants(
                 [{ c: '*', t: 'POWER' }], // **
-                'TIMES',             // *
+                'TIMES',                  // *
                 state
             );
         case '%':
             return simple('PERCENT', state);
         case '<':
             return variants(
-                [{ c: '<', t: 'SHL' } // <<
-                    , { c: '=', t: 'LTE' } // <=
+                [ { c: '<', t: 'SHL' } // <<
+                , { c: '=', t: 'LTE' } // <=
                 ],
-                'LT',            // <
+                'LT',                  // <
                 state
             );
         case '>':
             return variants(
-                [{ c: '>>', t: 'SHRU' } // >>>
-                    , { c: '>', t: 'SHR' }  // >>
-                    , { c: '=', t: 'GTE' }  // >=
+                [ { c: '>>', t: 'SHRU' } // >>>
+                , { c: '>', t: 'SHR' }   // >>
+                , { c: '=', t: 'GTE' }   // >=
                 ],
-                'GT',              // >
+                'GT',                   // >
                 state
             );
         case '^':
@@ -124,27 +124,27 @@ function nextToken(state: State): { token: Token, state: State } {
         case '&':
             return variants(
                 [{ c: '&', t: 'ANDAND' }], // &&
-                'AND',                // &
+                'AND',                     // &
                 state
             );
         case '|':
             return variants(
-                [{ c: '|', t: 'OROR' }     // ||
-                    , { c: '>', t: 'PIPELINE' } // |>
+                [ { c: '|', t: 'OROR' }     // ||
+                , { c: '>', t: 'PIPELINE' } // |>
                 ],
-                'PIPE',               // |
+                'PIPE',                     // |
                 state
             );
         case '=':
             return variants(
                 [{ c: '=', t: 'EQEQ' }], // ==
-                'EQ',               // =
+                'EQ',                    // =
                 state
             );
         case '!':
             return variants(
                 [{ c: '=', t: 'NEQ' }], // !=
-                'BANG',            // !
+                'BANG',                 // !
                 state
             );
         case '~':
@@ -187,7 +187,7 @@ function nextToken(state: State): { token: Token, state: State } {
             return eol(state);
         case '\r':
             state = match('\n', state).state; // \r\n
-            return eol(state);               // \r
+            return eol(state);                // \r
         case '_': {
             const result = simpleInt(state);
             if (result.match == null) return simple('UNDERSCORE', result.state);
@@ -202,13 +202,16 @@ function nextToken(state: State): { token: Token, state: State } {
                 return simple('RANGE_I', first.state) // ..
             }
             let lower = lowerName(state);
-            if (lower.match == null) throw err("unespected character: '.'", lower.state);
+            if (lower.match == null) throw err("Unexpected character: '.'", lower.state);
             const { row, col } = lower.state;
             return { token: { type: { type: 'GETTER', field: lower.match }, row, col }, state: lower.state };
         }
 
-        case '\'': throw err("'", state); // TODO Char(string)
-        case '"': throw err('"', state); // TODO String(string)
+        case '\'': throw err("TODO: '", state); // TODO Char(string)
+        case '"':  throw err('TODO: "', state); // TODO String(string)
+
+        case ' ':  return nextToken(state);
+        case '\t': return nextToken(state);
 
         default:
             const c = nextChar.charCodeAt(0);
