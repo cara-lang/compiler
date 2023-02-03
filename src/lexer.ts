@@ -208,7 +208,8 @@ function nextToken(state: State): { token: Token, state: State } {
         }
 
         case '\'': return char(state);
-        case '"':  throw err("EXXXX", 'TODO: "', state); // TODO String(string)
+        case '"':  return string(state);
+        case '`':  return multilineString(state);
 
         case ' ':  return nextToken(state);
         case '\t': return nextToken(state);
@@ -384,6 +385,14 @@ function char(state: State): {token: Token, state: State} {
         }
     }
     throw err('EXXXX', 'Unterminated char at EOF', state);
+}
+
+function string(state: State): {token: Token, state: State} {
+    throw err('EXXXX', 'TODO String', state);
+}
+
+function multilineString(state: State): {token: Token, state: State} {
+    throw err('EXXXX', 'TODO Multiline String', state);
 }
 
 function number(state: State): {token: Token, state: State} {
