@@ -12,6 +12,21 @@ let[@inline] illegal c =
 
 let exponent = ['e' 'E']
 
+let bin_digit = ['0'-'1']
+let oct_digit = ['0'-'7']
+let dec_digit = ['0'-'9']
+let hex_digit = ['0'-'9' 'a'-'f' 'A'-'F']
+
+let int = '-'? ( ("0b" bin_digit (bin_digit | '_')*)
+               | ("0o" oct_digit (oct_digit | '_')*)
+               | ("0x" hex_digit (hex_digit | '_')*)
+               | (     dec_digit (dec_digit | '_')*)
+               )
+
+let bad_bin_int = '-'? "0B" bin_digit (bin_digit | '_')*
+let bad_oct_int = '-'? "0O" oct_digit (oct_digit | '_')*
+let bad_hex_int = '-'? "0X" hex_digit (hex_digit | '_')*
+
 let float = '-'? dec_digit (dec_digit | '_')* '.' dec_digit (dec_digit | '_')* (exponent '-'? dec_digit+)?
 
 let newline = "\r\n" | '\r' | '\n'

@@ -79,9 +79,9 @@ function variants(variants: { c: string, t: SimpleTokenType }[], defaultType: Si
 }
 
 function nextToken(state: State): { token: Token, state: State } {
-    const nextChar = state.source[state.i++];
+    const c = state.source[state.i++];
     state.col++;
-    switch (nextChar) {
+    switch (c) {
         case '+':
             return variants(
                 [{ c: '+', t: 'PLUSPLUS' }], // ++
@@ -214,8 +214,7 @@ function nextToken(state: State): { token: Token, state: State } {
         case '\t': return nextToken(state);
 
         default:
-            const c = nextChar.charCodeAt(0);
-            if (nextChar.match(/[a-z]/)) {
+            if (c.match(/[a-z]/)) {
                 state.i--;
                 state.col--;
                 const result = lowerName(state);
@@ -235,7 +234,7 @@ function nextToken(state: State): { token: Token, state: State } {
                         return { token: { type: { type: 'LOWER_NAME', name: result.match }, row, col }, state: result.state };
                     }
                 }
-            } else if (nextChar.match(/[A-Z]/)) {
+            } else if (c.match(/[A-Z]/)) {
                 state.i--;
                 state.col--;
                 const result = upperName(state);
@@ -246,16 +245,21 @@ function nextToken(state: State): { token: Token, state: State } {
                     const { row, col } = state;
                     return { token: { type: { type: 'QUALIFIER', name: result.match }, row, col }, state };
                 }
-                const { row, col } = state;
-                return { token: { type: { type: 'UPPER_NAME', name: result.match }, row, col }, state };
+                switch (result.match) {
+                    case 'True':  return simple('TRUE',  state);
+                    case 'False': return simple('FALSE', state);
+                    default: 
+                        const { row, col } = state;
+                        return { token: { type: { type: 'UPPER_NAME', name: result.match }, row, col }, state };
+                }
+            } else if (c.match(/[0-9]/)) {
+                state.i--;
+                state.col--;
+                return number(state);
             }
-            // TODO Int(number)
-            // TODO Float(number)
-            // ... 'TRUE'
-            // ... 'FALSE'
-            throw err("EXXXX", `Unexpected character '${nextChar}'`, state);
+            throw err("EXXXX", `Unexpected character '${c}'`, state);
     }
-    throw err("EXXXX", `Bug: Didn't handle '${nextChar}' for some reason`, state);
+    throw err("EXXXX", `Bug: Didn't handle '${c}' for some reason`, state);
 }
 
 function lineComment(state: State): { token: Token, state: State } {
@@ -380,4 +384,84 @@ function char(state: State): {token: Token, state: State} {
         }
     }
     throw err('EXXXX', 'Unterminated char at EOF', state);
+}
+
+function number(state: State): {token: Token, state: State} {
+    const c = state.source[state.i++];
+    state.i++;
+    state.col++;
+    const next = state.source[state.i];
+    if (c == '0' && next == 'X') {
+        state.i++;
+        state.col++;
+        throw err('E0024', 'Hexadecimal integer started with 0X', state);
+    } 
+    if (c == '0' && next == 'B') {
+        state.i++;
+        state.col++;
+        throw err('E0025', 'Binary integer started with 0B', state);
+    } 
+    if (c == '0' && next == 'O') {
+        state.i++;
+        state.col++;
+        throw err('E0026', 'Octal integer started with 0O', state);
+    } 
+    if (c == '0' && next == 'x') {
+        state.i++;
+        state.col++;
+        const first = state.source[state.i];
+        if (first.match(/[0-9a-fA-F]/)) {
+            state.i++;
+            state.col++;
+            const regex = /[0-9a-fA-F_]/y;
+            regex.lastIndex = state.i;
+            const rest = state.source.match(regex);
+            const int = parseInt(rest[0].replace('_',''),16);
+            const { row, col } = state;
+            state.col += regex.lastIndex - state.i;
+            state.i = regex.lastIndex;
+            return { token: { type: { type: 'INT', int }, row, col }, state };
+        } else {
+            throw err('EXXXX', `Hexadecimal integer: unexpected character ${first}`, state);
+        }
+    } 
+    if (c == '0' && next == 'o') {
+        state.i++;
+        state.col++;
+        const first = state.source[state.i];
+        if (first.match(/[0-7]/)) {
+            state.i++;
+            state.col++;
+            const regex = /[0-7_]/y;
+            regex.lastIndex = state.i;
+            const rest = state.source.match(regex);
+            const int = parseInt(rest[0].replace('_',''),8);
+            const { row, col } = state;
+            state.col += regex.lastIndex - state.i;
+            state.i = regex.lastIndex;
+            return { token: { type: { type: 'INT', int }, row, col }, state };
+        } else {
+            throw err('EXXXX', `Octal integer: unexpected character ${first}`, state);
+        }
+    } 
+    if (c == '0' && next == 'b') {
+        state.i++;
+        state.col++;
+        const first = state.source[state.i];
+        if (first.match(/[0-1]/)) {
+            state.i++;
+            state.col++;
+            const regex = /[0-1_]/y;
+            regex.lastIndex = state.i;
+            const rest = state.source.match(regex);
+            const int = parseInt(rest[0].replace('_',''),2);
+            const { row, col } = state;
+            state.col += regex.lastIndex - state.i;
+            state.i = regex.lastIndex;
+            return { token: { type: { type: 'INT', int }, row, col }, state };
+        } else {
+            throw err('EXXXX', `Binary integer: unexpected character ${first}`, state);
+        }
+    } 
+    // TODO Float(number)
 }
