@@ -244,14 +244,14 @@ function nextToken(state: State): { token: Token, state: State } {
                     state.i++;
                     state.col++;
                     const { row, col } = state;
-                    return { token: { type: { type: 'QUALIFIER', name: result.match }, row, col }, state };
+                    return { token: { type: { type: 'QUALIFIER', name: result.match! }, row, col }, state };
                 }
                 switch (result.match) {
                     case 'True':  return simple('TRUE',  state);
                     case 'False': return simple('FALSE', state);
                     default: 
                         const { row, col } = state;
-                        return { token: { type: { type: 'UPPER_NAME', name: result.match }, row, col }, state };
+                        return { token: { type: { type: 'UPPER_NAME', name: result.match! }, row, col }, state };
                 }
             } else if (c.match(/[0-9]/)) {
                 state.i--;
@@ -364,14 +364,16 @@ function char(state: State): {token: Token, state: State} {
                 const second = state.source[state.i++];
                 state.col++;
                 switch (second) {
-                    case '\\': content += '\\';
-                    case 'n':  content += '\n';
-                    case 'r':  content += '\r';
-                    case 't':  content += '\t';
+                    case '\\': content += '\\'; break;
+                    case 'n':  content += '\n'; break;
+                    case 'r':  content += '\r'; break;
+                    case 't':  content += '\t'; break;
+                    case "'":  content += "'";  break;
                     // TODO \u{....}
                     // TODO \x{..}
                     default: throw err('E0028', 'Unexpected escaped character in a character', state);
                 }
+                break;
             case '\r':
                 // optionally read '\n' as well
                 if (state.source[state.i] == '\n') state.i++;
@@ -388,11 +390,80 @@ function char(state: State): {token: Token, state: State} {
 }
 
 function string(state: State): {token: Token, state: State} {
-    throw err('EXXXX', 'TODO String', state);
+    let content = "";
+    while (!isAtEnd(state)) {
+        const nextChar = state.source[state.i++];
+        state.col++;
+        switch (nextChar) {
+            case '"':
+                const {row,col} = state;
+                return {token:{type:{type:'STRING',string:content},row,col},state};
+            case '\\':
+                const second = state.source[state.i++];
+                state.col++;
+                switch (second) {
+                    case '\\': content += '\\'; break;
+                    case 'n':  content += '\n'; break;
+                    case 'r':  content += '\r'; break;
+                    case 't':  content += '\t'; break;
+                    case '"':  content += '"';  break;
+                    // TODO \u{....}
+                    // TODO \x{..}
+                    default: throw err('E0014', 'Unexpected escaped character in a single-line string', state);
+                }
+                break;
+            case '\r':
+                // optionally read '\n' as well
+                if (state.source[state.i] == '\n') state.i++;
+            case '\n':
+                state.row++;
+                state.col = 1;
+                throw err('E0012', 'Unescaped newline in a single-line string', state);
+            default: 
+                // any other char needs to be saved!
+                content += nextChar;
+        }
+    }
+    throw err('EXXXX', 'Unterminated single-line string at EOF', state);
 }
 
 function multilineString(state: State): {token: Token, state: State} {
-    throw err('EXXXX', 'TODO Multiline String', state);
+    let content = "";
+    while (!isAtEnd(state)) {
+        const nextChar = state.source[state.i++];
+        state.col++;
+        switch (nextChar) {
+            case '`':
+                const {row,col} = state;
+                return {token:{type:{type:'STRING',string:content},row,col},state};
+            case '\\':
+                const second = state.source[state.i++];
+                state.col++;
+                switch (second) {
+                    case '\\': content += '\\'; break;
+                    case 'n':  content += '\n'; break;
+                    case 'r':  content += '\r'; break;
+                    case 't':  content += '\t'; break;
+                    case '`':  content += '`';  break;
+                    // TODO \u{....}
+                    // TODO \x{..}
+                    default: throw err('E0029', 'Unexpected escaped character in a multi-line string', state);
+                }
+                break;
+            case '\r':
+                // optionally read '\n' as well
+                if (state.source[state.i] == '\n') state.i++;
+            case '\n':
+                state.row++;
+                state.col = 1;
+                content += "\n"
+                break;
+            default: 
+                // any other char needs to be saved!
+                content += nextChar;
+        }
+    }
+    throw err('EXXXX', 'Unterminated multi-line string at EOF', state);
 }
 
 function number(state: State): {token: Token, state: State} {
@@ -424,7 +495,7 @@ function number(state: State): {token: Token, state: State} {
             state.col++;
             const regex = /[0-9a-fA-F_]/y;
             regex.lastIndex = state.i;
-            const rest = state.source.match(regex);
+            const rest = state.source.match(regex)!;
             const int = parseInt(rest[0].replace('_',''),16);
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
@@ -443,7 +514,7 @@ function number(state: State): {token: Token, state: State} {
             state.col++;
             const regex = /[0-7_]/y;
             regex.lastIndex = state.i;
-            const rest = state.source.match(regex);
+            const rest = state.source.match(regex)!;
             const int = parseInt(rest[0].replace('_',''),8);
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
@@ -462,7 +533,7 @@ function number(state: State): {token: Token, state: State} {
             state.col++;
             const regex = /[0-1_]/y;
             regex.lastIndex = state.i;
-            const rest = state.source.match(regex);
+            const rest = state.source.match(regex)!;
             const int = parseInt(rest[0].replace('_',''),2);
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
@@ -477,7 +548,7 @@ function number(state: State): {token: Token, state: State} {
     state.col--;
     const regex = /[0-9_]/y; // by being in this function we're guaranteed the first char isn't an _
     regex.lastIndex = state.i;
-    const intMatch = state.source.match(regex)[0].replace('_','');
+    const intMatch = state.source.match(regex)![0].replace('_','');
     state.col += regex.lastIndex - state.i;
     state.i = regex.lastIndex;
     if (state.source[state.i] == '.') {

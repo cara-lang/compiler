@@ -12,7 +12,7 @@ E0010,Non-exhaustive anonymous function argument
 E0011,Unused expression
 E0012,Unescaped newline in a single-line string
 E0013,Assignment to underscore
-E0014,Unescaped tab in a single-line string
+E0014,Unexpected escaped character in a single-line string
 E0015,Shebang comment is not first
 E0016,Character contains multiple visible characters
 E0017,Unescaped newline in a character
@@ -27,3 +27,4 @@ E0025,If expression with a non-bool condition
 E0026,Integer literal is too large for the declared type
 E0027,Bang used outside effect block
 E0028,Unexpected escaped character in a character
+E0029,Unexpected escaped character in a multi-line string

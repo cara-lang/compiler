@@ -16,7 +16,10 @@ const loc = (l:Loc): number[] => [l.row,l.col];
 const test = async (test:string) => {
   if (test.startsWith('test-')) return null; // TODO handle test tests
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
-  try { const tokens = lex(source); }
+  try {
+    //console.log(`---------- ${test}`);
+    const tokens = lex(source);
+  }
   catch (e) {
     if (isCaraError(e)) {
       if (test.includes('-err')) {
