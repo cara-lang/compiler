@@ -168,11 +168,16 @@ function nextToken(state: State): { token: Token, state: State } {
         case ':':
             return simple('COLON', state);
         case '/': {
-            const result = match('/', state); // //
+            let result = match('/', state); // //
             if (result.matches) {
                 return lineComment(result.state);
             }
-            else return simple('DIV', result.state); // /
+            result = match('*', state); // /*
+            if (result.matches) {
+                const state = blockComment(result.state);
+                return nextToken(state);
+            }
+            return simple('DIV', result.state); // /
         }
         case '#': {
             let result = match('!', state); // #!
@@ -266,6 +271,47 @@ function nextToken(state: State): { token: Token, state: State } {
 function lineComment(state: State): { token: Token, state: State } {
     const newState = skipUntilNewline(state);
     return simple('EOL', newState);
+}
+
+function blockComment(state: State): State {
+    let nesting = 0;
+    while (!isAtEnd(state)) {
+        const nextChar = state.source[state.i++];
+        state.col++;
+        switch (nextChar) {
+            case '/': {
+                const second = state.source[state.i];
+                if (second == '*') {
+                    state.i++;
+                    state.col++;
+                    nesting++;
+                }
+                break;
+            }
+            case '*': {
+                const second = state.source[state.i];
+                if (second == '/') {
+                    state.i++;
+                    state.col++;
+                    if (nesting > 0) {
+                        nesting--;
+                    } else {
+                        return state;
+                    }
+                }
+                break;
+            }
+            case '\r':
+                // optionally read '\n' as well
+                if (state.source[state.i] == '\n') state.i++;
+            case '\n':
+                state.row++;
+                state.col = 1;
+                break;
+            // default: just continue
+        }
+    }
+    throw err('E0009','Unfinished block comment',state);
 }
 
 function shebang(state: State): { token: Token, state: State } {

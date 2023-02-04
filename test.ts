@@ -3,6 +3,7 @@
 import fs from 'node:fs/promises';
 import {lex} from './src/lexer.ts';
 import {isCaraError, Loc} from './src/error.ts';
+import {Token} from './src/token.ts';
 
 const testsDir = 'end-to-end-tests';
 
@@ -17,7 +18,6 @@ const test = async (test:string) => {
   if (test.startsWith('test-')) return null; // TODO handle test tests
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
   try {
-    //console.log(`---------- ${test}`);
     const tokens = lex(source);
   }
   catch (e) {
