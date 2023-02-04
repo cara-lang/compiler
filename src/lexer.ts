@@ -529,8 +529,6 @@ function number(state: State): {token: Token, state: State} {
         state.col++;
         const first = state.source[state.i];
         if (first.match(/[0-1]/)) {
-            state.i++;
-            state.col++;
             const regex = /[0-1_]/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
@@ -548,22 +546,26 @@ function number(state: State): {token: Token, state: State} {
     state.col--;
     const regex = /[0-9_]+/y; // by being in this function we're guaranteed the first char isn't an _
     regex.lastIndex = state.i;
-    const intMatch = state.source.match(regex)![0].replace('_','');
+    const intString = state.source.match(regex)![0].replace('_','');
     state.col += regex.lastIndex - state.i;
     state.i = regex.lastIndex;
     if (state.source[state.i] == '.') {
         state.i++;
         state.col++;
-        let regex = /[0-9][0-9_]*[eE]-?[0-9]+/y;
+        const regex = /[0-9][0-9_]*([eE]-?[0-9]+)?/y;
         regex.lastIndex = state.i;
-        const restMatch = state.source.match(regex)![9].replace('_','');
+        const restMatch = state.source.match(regex);
+        if (restMatch == null) {
+            throw err('EXXXX','Float: expected numbers after decimal dot',state);
+        }
+        const restString = restMatch[0].replace('_','');
         state.col += regex.lastIndex - state.i;
         state.i = regex.lastIndex;
-        const float = parseFloat(`${intMatch}.${restMatch}`);
+        const float = parseFloat(`${intString}.${restString}`);
         const { row, col } = state;
         return {token: {type: {type: 'FLOAT', float},row,col},state};
     } else {
-        const int = parseInt(intMatch,10);
+        const int = parseInt(intString,10);
         const { row, col } = state;
         return {token: {type: {type: 'INT', int},row,col},state};
     }
