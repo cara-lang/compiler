@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import {lex} from './src/lexer.ts';
+import {parse} from './src/parser.ts';
 import {isCaraError, Loc} from './src/error.ts';
 import {Token} from './src/token.ts';
 
@@ -19,6 +20,7 @@ const test = async (test:string) => {
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
   try {
     const tokens = lex(source);
+    const ast = parse(tokens);
   }
   catch (e) {
     if (isCaraError(e)) {

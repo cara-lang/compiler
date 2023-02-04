@@ -27,7 +27,7 @@ export type Expr =
     | {expr:'record-getter', field:string} // .a
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
 
-type Type =
+export type Type =
     | {type:'named',  name:string}              // Int
     | {type:'var',    var:string}               // a
     | {type:'call',   name:string, args:Type[]} // List[a]
@@ -36,20 +36,20 @@ type Type =
     | {type:'record', fields:TypeRecordField[]} // {a:Int,b:Bool}
     | {type:'unit'}                             // ()
 
-type Pattern =
+export type Pattern =
     | {pattern:'var', var:string}
     // TODO other patterns
 
-type Bang =
+export type Bang =
     | {bang:'value', val:Expr}             // foo!
     | {bang:'call',  fn:Expr, args:Expr[]} // foo!(123,456)
 
-type Stmt =
+export type Stmt =
     | {stmt:'let',      mod:LetModifier, name:string, body:Expr} // x = 123
     | {stmt:'let-bang', mod:LetModifier, name:string, body:Bang} // x = foo!(123)
     | {stmt:'bang',     bang:Bang}                               // foo!(123)
 
-type Decl =
+export type Decl =
     | {decl:'type-alias',       mod:TypeAliasModifier, name:string, vars:string[], body:Type}
     | {decl:'type',             mod:TypeModifier,      name:string, vars:string[], constructors:Constructor[]}
     | {decl:'module',           mod:ModuleModifier, name:string, decls:Decl[]}
@@ -63,35 +63,35 @@ type Decl =
     | {decl:'value-annotation', name:string, type:Type} // TODO move this into Stmt?
     // TODO Function annotation: x(y: Int): Bool
 
-type Block =           {stmts:Stmt[], ret?:Expr} // TODO does this do what we want? Maybe<Expr>?
-type Identifier =      {qualifiers:string[], name:string} // x, IO.println
-type RecordField =     {field:string, value:Expr} // a:123
-type TypeRecordField = {field:string, type:Type}  // a:Int
-type Constructor =     {name:string, args:Type[]} // TODO arg names?
+export type Block =           {stmts:Stmt[], ret?:Expr} // TODO does this do what we want? Maybe<Expr>?
+export type Identifier =      {qualifiers:string[], name:string} // x, IO.println
+export type RecordField =     {field:string, value:Expr} // a:123
+export type TypeRecordField = {field:string, type:Type}  // a:Int
+export type Constructor =     {name:string, args:Type[]} // TODO arg names?
 
-type LetModifier =
+export type LetModifier =
     | 'NoModifier'
     | 'Private'
 
-type TypeAliasModifier =
+export type TypeAliasModifier =
     | 'NoModifier'
     | 'Private'
 
-type TypeModifier =
+export type TypeModifier =
     | 'NoModifier'
     | 'Private'
     | 'Opaque'
 
-type ModuleModifier =
+export type ModuleModifier =
     | 'NoModifier'
     | 'Private'
 
-type UnaryOp =
+export type UnaryOp =
     | 'NegateNum'  // -
     | 'NegateBool' // !
     | 'NegateBin'  // ~
 
-type BinaryOp =
+export type BinaryOp =
     // arithmetic
     | 'Plus'  // +
     | 'Minus' // -

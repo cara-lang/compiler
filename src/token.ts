@@ -1,4 +1,6 @@
-export type Token = {type:TokenType, row:number, col:number}
+import {Loc} from './loc.ts';
+
+export type Token = {type:TokenType, loc: Loc}
 
 export type TokenType =
     | {type:'INT',int:number}

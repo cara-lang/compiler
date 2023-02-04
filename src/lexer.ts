@@ -33,14 +33,14 @@ function err(code: string, message: string, state: State): CaraError {
 
 function simple(type: SimpleTokenType, state: State): { token: Token, state: State } {
     const { row, col } = state;
-    return { token: { type: { type }, row, col }, state };
+    return { token: { type: { type }, loc: {row, col} }, state };
 }
 
 function eol(state: State): { token: Token, state: State } {
     let { row, col } = state;
     state.row++;
     state.col = 1;
-    return { token: { type: { type: 'EOL' }, row, col }, state };
+    return { token: { type: { type: 'EOL' }, loc: {row, col} }, state };
 }
 
 function isAtEnd(state: State) {
@@ -197,7 +197,7 @@ function nextToken(state: State): { token: Token, state: State } {
             const result = simpleInt(state);
             if (result.match == null) return simple('UNDERSCORE', result.state);
             const { row, col } = result.state;
-            return { token: { type: { type: 'HOLE', n: result.match }, row, col }, state: result.state };
+            return { token: { type: { type: 'HOLE', n: result.match }, loc: {row, col} }, state: result.state };
         }
         case '.': {
             let first = match('.', state);
@@ -209,7 +209,7 @@ function nextToken(state: State): { token: Token, state: State } {
             let lower = lowerName(state);
             if (lower.match == null) throw err("EXXXX", "Unexpected character: '.'", lower.state);
             const { row, col } = lower.state;
-            return { token: { type: { type: 'GETTER', field: lower.match }, row, col }, state: lower.state };
+            return { token: { type: { type: 'GETTER', field: lower.match }, loc: {row, col} }, state: lower.state };
         }
 
         case '\'': return char(state);
@@ -237,7 +237,7 @@ function nextToken(state: State): { token: Token, state: State } {
                     case null: throw err("EXXXX", "Bug: we definitely should have got a LOWER_NAME", result.state);
                     default: {
                         const { row, col } = result.state;
-                        return { token: { type: { type: 'LOWER_NAME', name: result.match }, row, col }, state: result.state };
+                        return { token: { type: { type: 'LOWER_NAME', name: result.match }, loc: {row, col} }, state: result.state };
                     }
                 }
             } else if (c.match(/[A-Z]/)) {
@@ -249,14 +249,14 @@ function nextToken(state: State): { token: Token, state: State } {
                     state.i++;
                     state.col++;
                     const { row, col } = state;
-                    return { token: { type: { type: 'QUALIFIER', name: result.match! }, row, col }, state };
+                    return { token: { type: { type: 'QUALIFIER', name: result.match! }, loc: {row, col} }, state };
                 }
                 switch (result.match) {
                     case 'True':  return simple('TRUE',  state);
                     case 'False': return simple('FALSE', state);
                     default: 
                         const { row, col } = state;
-                        return { token: { type: { type: 'UPPER_NAME', name: result.match! }, row, col }, state };
+                        return { token: { type: { type: 'UPPER_NAME', name: result.match! }, loc: {row, col} }, state };
                 }
             } else if (c.match(/[0-9]/)) {
                 state.i--;
@@ -402,7 +402,7 @@ function char(state: State): {token: Token, state: State} {
                     throw err('E0019', 'Empty character', state);
                 } else {
                     const {row,col} = state;
-                    return {token:{type:{type:'CHAR',char:content},row,col},state};
+                    return {token:{type:{type:'CHAR',char:content},loc:{row,col}},state};
                 }
             case '\t':
                 throw err('E0018', 'Unescaped tab in a char', state);
@@ -443,7 +443,7 @@ function string(state: State): {token: Token, state: State} {
         switch (nextChar) {
             case '"':
                 const {row,col} = state;
-                return {token:{type:{type:'STRING',string:content},row,col},state};
+                return {token:{type:{type:'STRING',string:content},loc:{row,col}},state};
             case '\\':
                 const second = state.source[state.i++];
                 state.col++;
@@ -481,7 +481,7 @@ function multilineString(state: State): {token: Token, state: State} {
         switch (nextChar) {
             case '`':
                 const {row,col} = state;
-                return {token:{type:{type:'STRING',string:content},row,col},state};
+                return {token:{type:{type:'STRING',string:content},loc:{row,col}},state};
             case '\\':
                 const second = state.source[state.i++];
                 state.col++;
@@ -546,7 +546,7 @@ function number(state: State): {token: Token, state: State} {
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
-            return { token: { type: { type: 'INT', int }, row, col }, state };
+            return { token: { type: { type: 'INT', int }, loc: {row, col} }, state };
         } else {
             throw err('EXXXX', `Hexadecimal integer: unexpected character ${first}`, state);
         }
@@ -565,7 +565,7 @@ function number(state: State): {token: Token, state: State} {
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
-            return { token: { type: { type: 'INT', int }, row, col }, state };
+            return { token: { type: { type: 'INT', int }, loc: {row, col} }, state };
         } else {
             throw err('EXXXX', `Octal integer: unexpected character ${first}`, state);
         }
@@ -582,7 +582,7 @@ function number(state: State): {token: Token, state: State} {
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
-            return { token: { type: { type: 'INT', int }, row, col }, state };
+            return { token: { type: { type: 'INT', int }, loc: {row, col} }, state };
         } else {
             throw err('EXXXX', `Binary integer: unexpected character ${first}`, state);
         }
@@ -609,10 +609,10 @@ function number(state: State): {token: Token, state: State} {
         state.i = regex.lastIndex;
         const float = parseFloat(`${intString}.${restString}`);
         const { row, col } = state;
-        return {token: {type: {type: 'FLOAT', float},row,col},state};
+        return {token: {type: {type: 'FLOAT', float},loc:{row,col}},state};
     } else {
         const int = parseInt(intString,10);
         const { row, col } = state;
-        return {token: {type: {type: 'INT', int},row,col},state};
+        return {token: {type: {type: 'INT', int},loc:{row,col}},state};
     }
 }
