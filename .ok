@@ -1,2 +1,2 @@
-check: deno check src/*.ts 2>&1
-test:  ./test.ts | less
+check: deno check test.ts src/*.ts 2>&1
+test:  ./test.ts 2>&1 | less

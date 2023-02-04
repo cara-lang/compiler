@@ -514,7 +514,6 @@ function multilineString(state: State): {token: Token, state: State} {
 
 function number(state: State): {token: Token, state: State} {
     const c = state.source[state.i++];
-    state.i++;
     state.col++;
     const next = state.source[state.i];
     if (c == '0' && next == 'X') {
@@ -595,7 +594,9 @@ function number(state: State): {token: Token, state: State} {
     const intString = state.source.match(regex)![0].replace('_','');
     state.col += regex.lastIndex - state.i;
     state.i = regex.lastIndex;
-    if (state.source[state.i] == '.') {
+
+    // we also could have had 1..20, hence the check for [0-9] here:
+    if (state.source[state.i] == '.' && state.source[state.i+1].match(/[0-9]/)) {
         state.i++;
         state.col++;
         const regex = /[0-9][0-9_]*([eE]-?[0-9]+)?/y;
