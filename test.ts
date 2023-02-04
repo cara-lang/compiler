@@ -36,8 +36,9 @@ const test = async (test:string): Promise<TestResult> => {
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
   try {
     const tokens: Token[] = lex(source);
-    //const ast: Decl[] = parse(tokens);
+    const ast: Decl[] = parse(tokens);
     // console.log({ast});
+    return {status:'pass',test};
   }
   catch (e) {
     if (isCaraError(e)) {
@@ -53,7 +54,6 @@ const test = async (test:string): Promise<TestResult> => {
     }
     throw e;
   }
-  return {status:'pass',test};
 };
 
 function sort(results: TestResult[]): TestResult[] {
@@ -73,4 +73,5 @@ console.table({
   pass: passed.length,
   fail: failed.length,
 });
+//console.table(passed);
 console.table(failed);
