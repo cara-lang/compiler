@@ -543,17 +543,25 @@ function number(state: State): {token: Token, state: State} {
             throw err('EXXXX', `Binary integer: unexpected character ${first}`, state);
         }
     } 
-    // Decimal!
+    // Base 10!
     state.i--;
     state.col--;
-    const regex = /[0-9_]/y; // by being in this function we're guaranteed the first char isn't an _
+    const regex = /[0-9_]+/y; // by being in this function we're guaranteed the first char isn't an _
     regex.lastIndex = state.i;
     const intMatch = state.source.match(regex)![0].replace('_','');
     state.col += regex.lastIndex - state.i;
     state.i = regex.lastIndex;
     if (state.source[state.i] == '.') {
-        // TODO Float(number)
-        throw err('EXXXX', 'TODO Float', state);
+        state.i++;
+        state.col++;
+        let regex = /[0-9][0-9_]*[eE]-?[0-9]+/y;
+        regex.lastIndex = state.i;
+        const restMatch = state.source.match(regex)![9].replace('_','');
+        state.col += regex.lastIndex - state.i;
+        state.i = regex.lastIndex;
+        const float = parseFloat(`${intMatch}.${restMatch}`);
+        const { row, col } = state;
+        return {token: {type: {type: 'FLOAT', float},row,col},state};
     } else {
         const int = parseInt(intMatch,10);
         const { row, col } = state;
