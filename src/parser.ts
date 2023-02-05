@@ -52,26 +52,27 @@ function declaration(state: State): {i: number, decl: Decl} {
     );
 }
 
+//: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ type
 function typeAliasDecl(state: State): {i: number, decl: Decl} {
     // we already skipped EOLs in declaration()
     let {i} = state;
     let isPrivate = false;
-    // PRIVATE?
+    //: PRIVATE?
     if (tagIs('PRIVATE',i,state.tokens)) {
         isPrivate = true;
         i++;
     }
-    // TYPE ALIAS
+    //: TYPE ALIAS
     i = expect('TYPE', 'type alias',i,state.tokens);
     i = expect('ALIAS','type alias',i,state.tokens);
-    // UPPER_NAME
+    //: UPPER_NAME
     const nameToken = state.tokens[i];
     if (nameToken.type.type !== 'UPPER_NAME') {
         throw err('EXXXX','Expected UPPER_NAME for a `type alias`',state.tokens[i].loc);
     }
     const name = nameToken.type.name;
     i++;
-    // LBRACKET typevar (COMMA typevar)* RBRACKET
+    //: (LBRACKET typevar (COMMA typevar)* RBRACKET)?
     let vars = [];
     if (tagIs('LBRACKET',i,state.tokens)) {
         i++;
@@ -97,9 +98,9 @@ function typeAliasDecl(state: State): {i: number, decl: Decl} {
             throw err('EXXXX','Unterminated typevar list in type alias',state.tokens[i].loc);
         }
     }
-    // EQ
+    //: EQ
     i = expect('EQ','type alias',i,state.tokens);
-    // type
+    //: type
     const typeResult = type({...state, i});
     i = typeResult.i;
     // Done!
@@ -130,15 +131,13 @@ function type(state: State): {i: number, type: Type} {
     return oneOf(
         [
             {prefix: ['LPAREN','RPAREN'], parser: unitType},
-            {prefix: ['LPAREN'],          parser: tupleType},
+            {prefix: ['LPAREN'],          parser: tupleOrParenthesizedType},
             /*
             | {type:'named',  name:string}              // Int
             | {type:'var',    var:string}               // a
             | {type:'call',   name:string, args:Type[]} // List[a]
             | {type:'fn',     from:Type, to:Type}       // x -> y
-            | {type:'tuple',  elements:Type[]}          // (Int, Bool)
             | {type:'record', fields:TypeRecordField[]} // {a:Int,b:Bool}
-            | {type:'unit'}                             // ()
             */
         ],
         'type',
@@ -146,14 +145,40 @@ function type(state: State): {i: number, type: Type} {
     );
 }
 
+//: LPAREN RPAREN
 function unitType(state: State): {i: number, type: Type} {
-    return {i: state.i, type: {type: 'unit'}};
+    let {i} = state;
+    i = expect('LPAREN','unit type',i,state.tokens);
+    i = expect('RPAREN','unit type',i,state.tokens);
+    return {i, type: {type: 'unit'}};
 }
 
-function tupleType(state: State): {i: number, type: Type} {
-    throw err('EXXXX','TODO tuple type',{row:0,col:0});
+//: LPAREN type (COMMA type)* RPAREN
+function tupleOrParenthesizedType(state: State): {i: number, type: Type} {
+    let {i} = state;
+    i = expect('LPAREN','unit type',i,state.tokens);
+    const firstType = type({...state, i});
+    i = firstType.i;
+    const types: Type[] = [firstType.type];
+    while (!isAtEnd({...state,i})) {
+        if (tagIs('RPAREN',i,state.tokens)) {
+            i++;
+            if (types.length == 1) {
+                return {i, type: types[0]}; // parenthesized type: return the child
+            } else {
+                return {i, type: {type: 'tuple', elements: types}};
+            }
+        } else if (tagIs('COMMA',i,state.tokens)) {
+            i++;
+            const newType = type({...state, i});
+            i = newType.i;
+            types.push(newType.type);
+        }
+    }
+    throw err('EXXXX','Expected RPAREN or `COMMA type` for tuple type or parenthesized type',state.tokens[i].loc);
 }
 
+//: EOL*
 function skipEol(state: State): number {
     let {i} = state;
     while (tagIs('EOL',i,state.tokens)) {
@@ -184,7 +209,6 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
 function getTags(n: number, state: State): TokenTag[] {
     return state.tokens.slice(state.i,state.i+n).map(t => t.type.type);
 }
-
 
 function arrayEquals<T>(a: T[], b: T[]): boolean {
     return Array.isArray(a) &&
