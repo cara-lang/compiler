@@ -61,16 +61,9 @@ function typeAliasDecl(state: State): {i: number, decl: Decl} {
         isPrivate = true;
         i++;
     }
-    // TYPE
-    if (!tagIs('TYPE',i,state.tokens)) {
-        throw err('EXXXX','Expected `type` for a `type alias`',state.tokens[i].loc);
-    }
-    i++;
-    // ALIAS
-    if (!tagIs('ALIAS',i,state.tokens)) {
-        throw err('EXXXX','Expected `alias` for a `type alias`',state.tokens[i].loc);
-    }
-    i++;
+    // TYPE ALIAS
+    i = expect('TYPE', 'type alias',i,state.tokens);
+    i = expect('ALIAS','type alias',i,state.tokens);
     // UPPER_NAME
     const nameToken = state.tokens[i];
     if (nameToken.type.type !== 'UPPER_NAME') {
@@ -105,10 +98,7 @@ function typeAliasDecl(state: State): {i: number, decl: Decl} {
         }
     }
     // EQ
-    if (!tagIs('EQ',i,state.tokens)) {
-        throw err('EXXXX','Expected = for a `type alias`',state.tokens[i].loc);
-    }
-    i++;
+    i = expect('EQ','type alias',i,state.tokens);
     // type
     const typeResult = type({...state, i});
     i = typeResult.i;
@@ -123,6 +113,13 @@ function typeAliasDecl(state: State): {i: number, decl: Decl} {
             body: typeResult.type,
         }
     }
+}
+
+function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
+    if (!tagIs(tag,i,tokens)) {
+        throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,tokens[i].loc);
+    }
+    return i + 1;
 }
 
 function typevar(state: State): {i: number, typevar: string} {
