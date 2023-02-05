@@ -14,6 +14,8 @@ export type TokenType =
     | {type:'HOLE',n:number}
     | {type:SimpleTokenType}
 
+export type TokenTag = TokenType['type'];
+
 export type SimpleTokenType =
     | 'PLUS'
     | 'MINUS'
