@@ -50,8 +50,8 @@ export type Stmt =
     | {stmt:'bang',     bang:Bang}                               // foo!(123)
 
 export type Decl =
-    | {decl:'type-alias',       mod:TypeAliasModifier, name:string, vars:string[], body:Type}
-    | {decl:'type',             mod:TypeModifier,      name:string, vars:string[], constructors:Constructor[]}
+    | {decl:'type-alias',       mod:TypeAliasModifier, name:string, vars:Typevar[], body:Type}
+    | {decl:'type',             mod:TypeModifier,      name:string, vars:Typevar[], constructors:Constructor[]}
     | {decl:'module',           mod:ModuleModifier, name:string, decls:Decl[]}
     | {decl:'extend-module',    id:Identifier, decls:Decl[]}
     | {decl:'function',         name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
@@ -68,6 +68,7 @@ export type Identifier =      {qualifiers:string[], name:string} // x, IO.printl
 export type RecordField =     {field:string, value:Expr} // a:123
 export type TypeRecordField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:Type[]} // TODO arg names?
+export type Typevar =         string;
 
 export type LetModifier =
     | 'NoModifier'
