@@ -739,12 +739,18 @@ type Option<T> = {
 
 function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: number, match: T} {
     const iBefore = state.i;
+    let furthestI = state.i;
+    let furthestErr = null;
     for (const option of options) {
         if (option.prefix == null) {
             // try with backtracking #lazymode
             try {
                 return option.parser(state);
             } catch (e) {
+                if (furthestI < state.i) {
+                    furthestErr = e;
+                    furthestI = state.i;
+                }
                 state.i = iBefore;
             }
         } else {
@@ -754,7 +760,11 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
             }
         }
     }
-    throw err('EXXXX',`Expected ${parsedItem}`,state.tokens[state.i].loc);
+    if (furthestErr == null) {
+        throw err('EXXXX',`Expected ${parsedItem}`,state.tokens[state.i].loc);
+    } else {
+        throw furthestErr;
+    }
 }
 
 function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
