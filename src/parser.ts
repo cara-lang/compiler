@@ -426,7 +426,7 @@ function pipeFirstConstructorList(state: State): {i: number, match: Constructor[
     }
     // Done!
     if (constructors.length == 0) {
-        throw err('EXXXX','Expected non-empty list of constructors',state.tokens[i].loc);
+        throw err('EXXXX','Expected non-empty list of constructors',i,state.tokens);
     }
     return {i, match: constructors};
 }
@@ -721,7 +721,7 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                 items.push(nextItem.match);
                 i = skipEol({...c.state,i});
             } else {
-                throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
+                throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
             }
         }
     } catch (e) {
@@ -760,11 +760,11 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
             i = nextItem.i;
             items.push(nextItem.match);
         } else {
-            throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
+            throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
         }
     }
     if (!endedCorrectly) {
-        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,c.state.tokens[i].loc);
+        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,i,c.state.tokens);
     }
     return {i, match: items};
 }
@@ -793,7 +793,7 @@ function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} 
         }
     }
     if (!endedCorrectly) {
-        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,c.state.tokens[i].loc);
+        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,i,c.state.tokens);
     }
     return {i, match: items};
 }
@@ -827,7 +827,7 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
         }
     }
     if (furthestErr == null) {
-        throw err('EXXXX',`Expected ${parsedItem}`,state.tokens[state.i].loc);
+        throw err('EXXXX',`Expected ${parsedItem}`,state.i,state.tokens);
     } else {
         throw furthestErr;
     }
@@ -836,7 +836,7 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
 function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const nameToken = tokens[i];
     if (nameToken.type.type !== 'LOWER_NAME') {
-        throw err('EXXXX',`Expected LOWER_NAME for a ${parsedItem}`,tokens[i].loc);
+        throw err('EXXXX',`Expected LOWER_NAME for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -847,7 +847,7 @@ function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: numbe
 function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const nameToken = tokens[i];
     if (nameToken.type.type !== 'UPPER_NAME') {
-        throw err('EXXXX',`Expected UPPER_NAME for a ${parsedItem}`,tokens[i].loc);
+        throw err('EXXXX',`Expected UPPER_NAME for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -858,7 +858,7 @@ function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: numbe
 function getQualifier(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const qualifierToken = tokens[i];
     if (qualifierToken.type.type !== 'QUALIFIER') {
-        throw err('EXXXX',`Expected QUALIFIER for a ${parsedItem}`,tokens[i].loc);
+        throw err('EXXXX',`Expected QUALIFIER for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -878,12 +878,19 @@ function tagsAre(tags: TokenTag[], i:number, tokens: Token[]): boolean {
     return arrayEquals(tags,getTags(tags.length,{tokens,i}));
 }
 
-function err(code: string, message: string, loc: Loc): CaraError {
+function rawErr(code: string, message: string, loc: Loc): CaraError {
     return { stage: 'parser', code, message, loc };
 }
 
+function err(code: string, message: string, i: number, tokens: Token[]): CaraError {
+    const token = tokens[i];
+    const tokenTag = token.type.type;
+    const loc = token.loc;
+    return rawErr(code,`Unexpected ${tokenTag}. ${message}`,loc);
+}
+
 function todo(what: string, state: State): CaraError {
-    return err('E9999',`TODO ${what}`,state.tokens[state.i].loc);
+    return rawErr('E9999',`TODO ${what}`,state.tokens[state.i].loc);
 }
 
 function isAtEnd(state: State): boolean {
@@ -893,7 +900,7 @@ function isAtEnd(state: State): boolean {
 
 function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
     if (!tagIs(tag,i,tokens)) {
-        throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,tokens[i].loc);
+        throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,i,tokens);
     }
     return i + 1;
 }
