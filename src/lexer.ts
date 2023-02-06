@@ -12,17 +12,19 @@ export function lex(source: string): Token[] {
     let i = 0;
     let row = 1;
     let col = 1;
-    const length = source.length;
     const result: Token[] = [];
-    while (i < length) {
+    while (true) {
         const next = nextToken({ source, i, row, col });
         i = next.state.i;
+        /* TODO: return correct row,col from nextToken instead of fixing it here?
+           It would probably require all the smaller lexers to stop being
+           stateful (state.col++)...
+        */
+        result.push({...next.token, loc: {row,col}});
+        if (next.token.type.type == 'EOF') break;
         row = next.state.row;
         col = next.state.col;
-        result.push(next.token);
     }
-    const { token } = simple('EOF', { source, i, row, col }); // ignoring the final state
-    result.push(token);
     return result;
 }
 
@@ -79,6 +81,7 @@ function variants(variants: { c: string, t: SimpleTokenType }[], defaultType: Si
 }
 
 function nextToken(state: State): { token: Token, state: State } {
+    if (isAtEnd(state)) { return simple('EOF',state); }
     const c = state.source[state.i++];
     state.col++;
     switch (c) {

@@ -7,7 +7,6 @@ type State = { tokens: Token[], i: number };
 type Parser<T> = (state: State) => {i: number, match: T}; // Parser<Decl> = (state: State) => {i: number, match: Decl}
 
 export function parse(tokens: Token[]): Decl[] {
-    console.log(tokens);
     let state = {tokens, i: 0};
     const decls: Decl[] = [];
     while (!isAtEnd(state)) {
