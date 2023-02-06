@@ -171,11 +171,10 @@ function type(state: State): {i: number, match: Type} {
         [
             {prefix: ['LPAREN','RPAREN'],       parser: unitType},
             {prefix: ['LPAREN'],                parser: tupleOrParenthesizedType},
-            //{prefix: ['UPPER_NAME','LBRACKET'], parser: callType},
+            {prefix: ['UPPER_NAME','LBRACKET'], parser: callType},
             /*
             | {type:'named',  name:string}              //= Int
             | {type:'var',    var:string}               //= a
-            | {type:'call',   name:string, args:Type[]} //= List[a] //= Result[(),(Int,String)] //: UPPER_NAME LBRACKET type (COMMA type)* RBRACKET
             | {type:'fn',     from:Type, to:Type}       //= x -> y
             | {type:'record', fields:TypeRecordField[]} //= {a:Int,b:Bool}
             */
@@ -183,6 +182,35 @@ function type(state: State): {i: number, match: Type} {
         'type',
         state
     );
+}
+
+//: UPPER_NAME LBRACKET type (COMMA type)* RBRACKET
+//= List[a]
+//= Result[(),(Int,String)]
+function callType(state: State): {i: number, match: Type} {
+    let {i} = state;
+    const desc = 'call type';
+    //: UPPER_NAME
+    let nameResult = getUpperName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: LBRACKET type (COMMA type)* RBRACKET
+    const argsResult = nonemptyList({
+        left:  'LBRACKET',
+        right: 'RBRACKET',
+        sep:   'COMMA',
+        item:  type,
+        state: {...state, i},
+        parsedItem: `${desc} arg list`,
+    });
+    i = argsResult.i;
+    return {
+        i,
+        match: {
+            type:'call',
+            name: nameResult.match,
+            args: argsResult.match,
+        },
+    };
 }
 
 //: LPAREN RPAREN
@@ -207,7 +235,7 @@ function tupleOrParenthesizedType(state: State): {i: number, match: Type} {
         parsedItem: 'tuple type or parenthesized type',
     });
 
-    const match = listResult.match.length == 1
+    const match: Type = listResult.match.length == 1
         ?  listResult.match[0] // parenthesized type: return the child
         :  {type: 'tuple', elements: listResult.match};
 
