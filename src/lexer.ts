@@ -181,7 +181,9 @@ function nextToken(state: State): { token: Token, state: State } {
         }
         case '#': {
             let result = match('!', state); // #!
-            if (result.matches) return shebang(result.state);
+            if (result.matches) {
+                return shebang(result.state);
+            }
 
             result = match('(', state); // #(
             if (result.matches) return simple('LHOLE', result.state);
@@ -314,10 +316,10 @@ function blockComment(state: State): State {
     throw err('E0009','Unfinished block comment',state);
 }
 
-function shebang(state: State): { token: Token, state: State } {
+function shebang(state: State): {token: Token, state: State} {
     if (state.i != 2) throw err('E0015', 'Shebang comment is not first', state);
     const newState = skipUntilNewline(state);
-    return simple('SHEBANG', newState);
+    return simple('EOL', newState);
 }
 
 function skipUntilNewline(state: State): State {

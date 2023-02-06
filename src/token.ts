@@ -67,6 +67,5 @@ export type SimpleTokenType =
     | 'BANG'
     | 'EQ'
     | 'PIPE'
-    | 'SHEBANG'
     | 'EOL'
     | 'EOF'
