@@ -435,8 +435,9 @@ function constructorArg(state: State): {i: number, match: ConstructorArg} {
     let {i} = state;
     const desc = 'constructor argument';
     //: (LOWER_NAME COLON)?
+    // Note: if both are not present, the LOWER_NAME can still be a part of the `type` afterwards
     let name: string|null = null;
-    if (tagIs('LOWER_NAME',i,state.tokens)) {
+    if (tagsAre(['LOWER_NAME','COLON'],i,state.tokens)) {
         const nameResult = getLowerName(desc,i,state.tokens);
         i = nameResult.i;
         name = nameResult.match;
@@ -473,13 +474,22 @@ function type(state: State): {i: number, match: Type} {
             {prefix: ['LBRACE'],          parser: recordType},
             {prefix: ['UPPER_NAME'],      parser: namedType},
             {prefix: ['QUALIFIER'],       parser: namedType},
-            /*
-            | {type:'var',    var:string}               //= a
-            */
+            {prefix: ['LOWER_NAME'],      parser: varType},
         ],
         'type',
         state
     );
+}
+
+//: typevar
+//= a
+//= comparable123
+function varType(state: State): {i: number, match: Type} {
+    const varResult = typevar(state);
+    return {
+        i: varResult.i,
+        match: { type:'var', var: varResult.match },
+    };
 }
 
 //: QUALIFIER* UPPER_NAME (LBRACKET type (COMMA type)* RBRACKET)?
@@ -650,7 +660,6 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
         }
     } catch (e) {
         i = iBeforeItems;
-        // items = []; // TODO is this needed?
     }
     //: right
     i = expect(c.right,c.parsedItem,i,c.state.tokens);
@@ -740,7 +749,7 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
             }
         } else {
             // if the prefix agrees, commit!
-            if (arrayEquals(option.prefix,getTags(option.prefix.length,state))) {
+            if (tagsAre(option.prefix,state.i,state.tokens)) {
                 return option.parser(state);
             }
         }
@@ -787,6 +796,10 @@ function getTags(n: number, state: State): TokenTag[] {
 
 function tagIs(tag: TokenTag, i:number, tokens: Token[]): boolean {
     return tokens[i].type.type == tag;
+}
+
+function tagsAre(tags: TokenTag[], i:number, tokens: Token[]): boolean {
+    return arrayEquals(tags,getTags(tags.length,{tokens,i}));
 }
 
 function err(code: string, message: string, loc: Loc): CaraError {

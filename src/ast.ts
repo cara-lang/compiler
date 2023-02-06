@@ -29,7 +29,7 @@ export type Expr =
 
 export type Type =
     | {type:'named',  name:string}              // Int
-    | {type:'var',    var:string}               // a
+    | {type:'var',    var:Typevar}              // a
     | {type:'call',   name:string, args:Type[]} // List[a]
     | {type:'fn',     from:Type, to:Type}       // x -> y
     | {type:'tuple',  elements:Type[]}          // (Int, Bool)
