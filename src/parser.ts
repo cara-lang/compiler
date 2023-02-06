@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField} from './ast.ts';
+import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, Stmt, LetModifier, Bang, Expr, Identifier} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -24,9 +24,11 @@ function declaration(state: State): {i: number, match: Decl} {
         [
             {prefix: ['TYPE','ALIAS'], parser: typeAliasDecl},
             {prefix: ['TYPE'],         parser: typeDecl},
+            {prefix: ['EXTEND','MODULE'], parser: extendModuleDecl},
+            {prefix: null,                parser: statementDecl},
+            //{prefix: ['LOWER_NAME','EQ','LBRACE'], parser: blockDecl}, // TODO does this mean we'll have blockFnDecl, effectBlockDecl, effectBlockFnDecl?
             /*
             moduleDecl,
-            extendModuleDecl,
             functionDecl, // f(a,b) = expr
             statementDecl,
             blockDecl, // handles block, block fn, effect block, effect block fn
@@ -37,6 +39,158 @@ function declaration(state: State): {i: number, match: Decl} {
         'declaration',
         state
     );
+}
+
+//: EXTEND MODULE moduleName LBRACE declaration* RBRACE
+//= extend module Foo.Bar { x = 1 }
+function extendModuleDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'extend module declaration';
+    //: EXTEND MODULE
+    i = expect('EXTEND',desc,i,state.tokens);
+    i = expect('MODULE',desc,i,state.tokens);
+    //: moduleName
+    const moduleNameResult = moduleName({...state, i});
+    i = moduleNameResult.i;
+    //: LBRACE declaration* RBRACE
+    const declsResult = nonemptyList({
+        left:  'LBRACE',
+        right: 'RBRACE',
+        sep:   null,
+        item:  declaration,
+        state: {...state, i},
+        parsedItem: `${desc}`,
+        skipEol: true,
+    });
+    i = declsResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            decl: 'extend-module',
+            id: moduleNameResult.match,
+            decls: declsResult.match,
+        },
+    }
+}
+
+//: QUALIFIER* UPPER_NAME
+//= Foo
+//= Foo.Bar
+//= Foo.Bar.Baz
+function moduleName(state: State): {i: number, match: Identifier} {
+    throw todo('module name',state);
+}
+
+function statementDecl(state: State): {i: number, match: Decl} {
+    const stmtResult = statement(state);
+    return {
+        i: stmtResult.i,
+        match: {
+            decl: 'statement',
+            stmt: stmtResult.match,
+        },
+    }
+}
+
+//: LOWER_NAME EQ bang //= x = Foo.bar!(1,False)
+//: LOWER_NAME EQ expr //= x = 123
+//: bang               //= Foo.bar!(1,False)
+function statement(state: State): {i: number, match: Stmt} {
+    return oneOf(
+        [
+            {prefix: null, parser: letBangStatement},
+            {prefix: null, parser: letStatement},
+            {prefix: null, parser: bangStatement},
+        ],
+        'statement',
+        state
+    );
+}
+
+//: PRIVATE? LOWER_NAME EQ expr
+//= x = 123
+function letStatement(state: State): {i: number, match: Stmt} {
+    let {i} = state;
+    const desc = 'let statement';
+    //: PRIVATE?
+    let mod: LetModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
+    //: LOWER_NAME
+    const nameResult = getLowerName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: EQ
+    i = expect('EQ',desc,i,state.tokens);
+    //: expr
+    const exprResult = expr({...state, i});
+    i = exprResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            stmt: 'let',
+            mod,
+            name: nameResult.match,
+            body: exprResult.match,
+        }
+    };
+}
+
+//: PRIVATE? LOWER_NAME EQ bang
+//= x = Foo.bar!(1,False)
+function letBangStatement(state: State): {i: number, match: Stmt} {
+    let {i} = state;
+    const desc = 'let-bang statement';
+    //: PRIVATE?
+    let mod: LetModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
+    //: LOWER_NAME
+    const nameResult = getLowerName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: EQ
+    i = expect('EQ',desc,i,state.tokens);
+    //: bang
+    const bangResult = bang({...state, i});
+    i = bangResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            stmt: 'let-bang',
+            mod,
+            name: nameResult.match,
+            body: bangResult.match,
+        }
+    };
+}
+
+//: bang
+//= Foo.bar!(1,False)
+function bangStatement(state: State): {i: number, match: Stmt} {
+    //: bang
+    const bangResult = bang(state);
+    // Done!
+    return {
+        i: bangResult.i,
+        match: {
+            stmt: 'bang',
+            bang: bangResult.match,
+        }
+    };
+}
+
+function expr(state: State): {i: number, match: Expr} {
+    throw todo('expr', state);
+}
+
+function bang(state: State): {i: number, match: Bang} {
+    throw todo('bang', state);
 }
 
 //: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ type
@@ -270,7 +424,7 @@ function skipEol(state: State): number {
 type ListConfig<T> = {
     left:  TokenTag,
     right: TokenTag,
-    sep:   TokenTag,
+    sep:   TokenTag | null,
     item:  Parser<T>,
     state: State,
     parsedItem: string,
@@ -280,7 +434,20 @@ type ListConfig<T> = {
 
 //: left (item (sep item)*)? right
 function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
+    return (c.sep == null)
+        ? nonseparatedList(c)
+        : separatedList(c);
+}
+
+//: left item* right
+function nonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
+    throw todo('nonseparated list', c.state);
+}
+
+//: left (item (sep item)*)? right
+function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     let {i} = c.state;
+    const sep = c.sep!; // we're guaranteed this by the condition in list()
     //: left
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
     //: EOL*
@@ -296,7 +463,7 @@ function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
         while (!isAtEnd({...c.state,i})) {
             if (tagIs(c.right,i,c.state.tokens)) {
                 break; // we'll consume `right` outside this try{}catch{} block
-            } else if (tagIs(c.sep,i,c.state.tokens)) {
+            } else if (tagIs(sep,i,c.state.tokens)) {
                 i++;
                 i = skipEol({...c.state,i});
                 const nextItem = c.item({...c.state,i});
@@ -304,7 +471,7 @@ function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
                 items.push(nextItem.match);
                 i = skipEol({...c.state,i});
             } else {
-                throw err('EXXXX',`Expected ${c.right} or ${c.sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
+                throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
             }
         }
     } catch (e) {
@@ -316,9 +483,16 @@ function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
     return {i, match: items};
 }
 
-//: left item (sep item)* right
 function nonemptyList<T>(c: ListConfig<T>): {i: number, match: T[]} {
+    return (c.sep == null) 
+        ? nonemptyNonseparatedList(c) 
+        : nonemptySeparatedList(c);
+}
+
+//: left item (sep item)* right
+function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     let {i} = c.state;
+    const sep = c.sep!; // we're guaranteed this by the condition in nonemptyList()
     //: left
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
     //: item
@@ -331,17 +505,46 @@ function nonemptyList<T>(c: ListConfig<T>): {i: number, match: T[]} {
             endedCorrectly = true;
             i++;
             break;
-        } else if (tagIs(c.sep,i,c.state.tokens)) {
+        } else if (tagIs(sep,i,c.state.tokens)) {
             i++;
             const nextItem = c.item({...c.state,i});
             i = nextItem.i;
             items.push(nextItem.match);
         } else {
-            throw err('EXXXX',`Expected ${c.right} or ${c.sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
+            throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
         }
     }
     if (!endedCorrectly) {
-        throw err('EXXXX','Unterminated typevar list in type alias',c.state.tokens[i].loc);
+        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,c.state.tokens[i].loc);
+    }
+    return {i, match: items};
+}
+
+//: left item+ right
+function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
+    let {i} = c.state;
+    //: left
+    i = expect(c.left,c.parsedItem,i,c.state.tokens);
+    //: item
+    let firstItem = c.item({...c.state,i});
+    i = firstItem.i;
+    const items: T[] = [firstItem.match];
+    //: item*
+    let endedCorrectly = false;
+    while (!isAtEnd({...c.state,i})) {
+        //: right
+        if (tagIs(c.right,i,c.state.tokens)) {
+            endedCorrectly = true;
+            i++;
+            break;
+        } else {
+            const nextItem = c.item({...c.state,i});
+            i = nextItem.i;
+            items.push(nextItem.match);
+        }
+    }
+    if (!endedCorrectly) {
+        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,c.state.tokens[i].loc);
     }
     return {i, match: items};
 }
@@ -352,11 +555,17 @@ type Option<T> = {
 }
 
 function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: number, match: T} {
+    const iBefore = state.i;
     for (const option of options) {
         if (option.prefix == null) {
-            return option.parser(state);
-            // TODO should we try all non-prefix options instead? What error to report then?
+            // try with backtracking #lazymode
+            try {
+                return option.parser(state);
+            } catch (e) {
+                state.i = iBefore;
+            }
         } else {
+            // if the prefix agrees, commit!
             if (arrayEquals(option.prefix,getTags(option.prefix.length,state))) {
                 return option.parser(state);
             }
