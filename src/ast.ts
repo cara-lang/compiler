@@ -63,7 +63,7 @@ export type Decl =
     | {decl:'value-annotation', name:string, type:Type} // TODO move this into Stmt?
     // TODO Function annotation: x(y: Int): Bool
 
-export type Block =           {stmts:Stmt[], ret?:Expr} // TODO does this do what we want? Maybe<Expr>?
+export type Block =           {stmts:Stmt[], ret:Expr|null}
 export type Identifier =      {qualifiers:string[], name:string} // x, IO.println
 export type RecordField =     {field:string, value:Expr} // a:123
 export type RecordTypeField = {field:string, type:Type}  // a:Int
