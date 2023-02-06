@@ -198,27 +198,20 @@ function unitType(state: State): {i: number, match: Type} {
 //= (Int)
 //= (Int,Float,String)
 function tupleOrParenthesizedType(state: State): {i: number, match: Type} {
-    let {i} = state;
-    i = expect('LPAREN','unit type',i,state.tokens);
-    const firstType = type({...state, i});
-    i = firstType.i;
-    const types: Type[] = [firstType.match];
-    while (!isAtEnd({...state,i})) {
-        if (tagIs('RPAREN',i,state.tokens)) {
-            i++;
-            if (types.length == 1) {
-                return {i, match: types[0]}; // parenthesized type: return the child
-            } else {
-                return {i, match: {type: 'tuple', elements: types}};
-            }
-        } else if (tagIs('COMMA',i,state.tokens)) {
-            i++;
-            const newType = type({...state, i});
-            i = newType.i;
-            types.push(newType.match);
-        }
-    }
-    throw err('EXXXX','Expected RPAREN or `COMMA type` for tuple type or parenthesized type',state.tokens[i].loc);
+    const listResult = nonemptyList({
+        left:  'LPAREN',
+        right: 'RPAREN',
+        sep:   'COMMA',
+        item:  type,
+        state: state,
+        parsedItem: 'tuple type or parenthesized type',
+    });
+
+    const match = listResult.match.length == 1
+        ?  listResult.match[0] // parenthesized type: return the child
+        :  {type: 'tuple', elements: listResult.match};
+
+    return {i: listResult.i, match};
 }
 
 //: EOL*
