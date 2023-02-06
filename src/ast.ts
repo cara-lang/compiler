@@ -33,7 +33,7 @@ export type Type =
     | {type:'call',   name:string, args:Type[]} // List[a]
     | {type:'fn',     from:Type, to:Type}       // x -> y
     | {type:'tuple',  elements:Type[]}          // (Int, Bool)
-    | {type:'record', fields:TypeRecordField[]} // {a:Int,b:Bool}
+    | {type:'record', fields:RecordTypeField[]} // {a:Int,b:Bool}
     | {type:'unit'}                             // ()
 
 export type Pattern =
@@ -66,7 +66,7 @@ export type Decl =
 export type Block =           {stmts:Stmt[], ret?:Expr} // TODO does this do what we want? Maybe<Expr>?
 export type Identifier =      {qualifiers:string[], name:string} // x, IO.println
 export type RecordField =     {field:string, value:Expr} // a:123
-export type TypeRecordField = {field:string, type:Type}  // a:Int
+export type RecordTypeField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:Type[]} // TODO arg names?
 export type Typevar =         string;
 

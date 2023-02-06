@@ -1,22 +1,10 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier} from './ast.ts';
+import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
 type State = { tokens: Token[], i: number };
 type Parser<T> = (state: State) => {i: number, match: T}; // Parser<Decl> = (state: State) => {i: number, match: Decl}
-
-function tagIs(tag: TokenTag, i:number, tokens: Token[]): boolean {
-    return tokens[i].type.type == tag;
-}
-
-function err(code: string, message: string, loc: Loc): CaraError {
-    return { stage: 'parser', code, message, loc };
-}
-
-function isAtEnd(state: State): boolean {
-    return tagIs('EOF',state.i,state.tokens);
-}
 
 export function parse(tokens: Token[]): Decl[] {
     console.log(tokens);
@@ -80,6 +68,7 @@ function typeAliasDecl(state: State): {i: number, match: Decl} {
             item:  typevar,
             state: {...state, i},
             parsedItem: `${desc} typevar list`,
+            skipEol: false,
         });
         i = listResult.i;
         vars = listResult.match;
@@ -133,6 +122,7 @@ function typeDecl(state: State): {i: number, match: Decl} {
             item:  typevar,
             state: {...state, i},
             parsedItem: `${desc} typevar list`,
+            skipEol: false,
         });
         i = listResult.i;
         vars = listResult.match;
@@ -156,7 +146,7 @@ function typeDecl(state: State): {i: number, match: Decl} {
 }
 
 function constructorList(state: State): {i: number, match: Constructor[]} {
-    throw err('EXXXX','TODO constructor list',state.tokens[state.i].loc);
+    throw todo('constructor list', state);
 }
 
 //: LOWER_NAME
@@ -172,16 +162,41 @@ function type(state: State): {i: number, match: Type} {
             {prefix: ['LPAREN','RPAREN'],       parser: unitType},
             {prefix: ['LPAREN'],                parser: tupleOrParenthesizedType},
             {prefix: ['UPPER_NAME','LBRACKET'], parser: callType},
+            {prefix: ['LBRACE'],                parser: recordType},
             /*
             | {type:'named',  name:string}              //= Int
             | {type:'var',    var:string}               //= a
             | {type:'fn',     from:Type, to:Type}       //= x -> y
-            | {type:'record', fields:TypeRecordField[]} //= {a:Int,b:Bool}
             */
         ],
         'type',
         state
     );
+}
+
+//: LBRACE (recordTypeField (COMMA recordTypeField)*)? RBRACE
+//= {a:Int,b:Bool}
+function recordType(state: State): {i: number, match: Type} {
+    const desc = 'record type';
+    const listResult = list({
+        left:  'LBRACE',
+        right: 'RBRACE',
+        sep:   'COMMA',
+        item:  recordTypeField,
+        state,
+        parsedItem: desc,
+        skipEol: true,
+    });
+    return {
+        i: listResult.i,
+        match: {type: 'record', fields: listResult.match},
+    }
+}
+
+//: LOWER_NAME COLON type
+//= a: Int
+function recordTypeField(state: State): {i: number, match: RecordTypeField} {
+    throw todo('record type field', state);
 }
 
 //: UPPER_NAME LBRACKET type (COMMA type)* RBRACKET
@@ -201,6 +216,7 @@ function callType(state: State): {i: number, match: Type} {
         item:  type,
         state: {...state, i},
         parsedItem: `${desc} arg list`,
+        skipEol: false,
     });
     i = argsResult.i;
     return {
@@ -233,6 +249,7 @@ function tupleOrParenthesizedType(state: State): {i: number, match: Type} {
         item:  type,
         state: state,
         parsedItem: 'tuple type or parenthesized type',
+        skipEol: true,
     });
 
     const match: Type = listResult.match.length == 1
@@ -258,7 +275,47 @@ type ListConfig<T> = {
     item:  Parser<T>,
     state: State,
     parsedItem: string,
+    skipEol:    boolean,
+    // TODO: allow trailing separators by default in list() and nonemptyList()... probably don't even make it configurable
 };
+
+//: left (item (sep item)*)? right
+function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
+    let {i} = c.state;
+    //: left
+    i = expect(c.left,c.parsedItem,i,c.state.tokens);
+    //: EOL*
+    i = skipEol({...c.state,i});
+    //: (item (sep item)*)?
+    const items: T[] = [];
+    let iBeforeItems = i;
+    try {
+        let firstItem = c.item({...c.state,i});
+        i = firstItem.i;
+        items.push(firstItem.match);
+        i = skipEol({...c.state,i});
+        while (!isAtEnd({...c.state,i})) {
+            if (tagIs(c.right,i,c.state.tokens)) {
+                break; // we'll consume `right` outside this try{}catch{} block
+            } else if (tagIs(c.sep,i,c.state.tokens)) {
+                i++;
+                i = skipEol({...c.state,i});
+                const nextItem = c.item({...c.state,i});
+                i = nextItem.i;
+                items.push(nextItem.match);
+                i = skipEol({...c.state,i});
+            } else {
+                throw err('EXXXX',`Expected ${c.right} or ${c.sep} in the ${c.parsedItem}`,c.state.tokens[i].loc);
+            }
+        }
+    } catch (e) {
+        i = iBeforeItems;
+        // items = []; // TODO is this needed?
+    }
+    //: right
+    i = expect(c.right,c.parsedItem,i,c.state.tokens);
+    return {i, match: items};
+}
 
 //: left item (sep item)* right
 function nonemptyList<T>(c: ListConfig<T>): {i: number, match: T[]} {
@@ -334,6 +391,23 @@ function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: numbe
 function getTags(n: number, state: State): TokenTag[] {
     return state.tokens.slice(state.i,state.i+n).map(t => t.type.type);
 }
+
+function tagIs(tag: TokenTag, i:number, tokens: Token[]): boolean {
+    return tokens[i].type.type == tag;
+}
+
+function err(code: string, message: string, loc: Loc): CaraError {
+    return { stage: 'parser', code, message, loc };
+}
+
+function todo(what: string, state: State): CaraError {
+    return err('E9999',`TODO ${what}`,state.tokens[state.i].loc);
+}
+
+function isAtEnd(state: State): boolean {
+    return tagIs('EOF',state.i,state.tokens);
+}
+
 
 function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
     if (!tagIs(tag,i,tokens)) {
