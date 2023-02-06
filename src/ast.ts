@@ -41,8 +41,8 @@ export type Pattern =
     // TODO other patterns
 
 export type Bang =
-    | {bang:'value', val:Expr}             // foo!
-    | {bang:'call',  fn:Expr, args:Expr[]} // foo!(123,456)
+    | {bang:'value', val:Identifier}             // foo!
+    | {bang:'call',  fn:Identifier, args:Expr[]} // foo!(123,456)
 
 export type Stmt =
     | {stmt:'let',      mod:LetModifier, name:string, body:Expr} // x = 123

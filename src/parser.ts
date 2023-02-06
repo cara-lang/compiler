@@ -30,7 +30,6 @@ function declaration(state: State): {i: number, match: Decl} {
             /*
             moduleDecl,
             functionDecl, // f(a,b) = expr
-            statementDecl,
             blockDecl, // handles block, block fn, effect block, effect block fn
                     // x[(a,b)] = [IO] { ... }
             valueAnnotationDecl,
@@ -97,6 +96,40 @@ function moduleName(state: State): {i: number, match: Identifier} {
     }
     //: UPPER_NAME
     let nameResult = getUpperName(desc,i,state.tokens);
+    i = nameResult.i;
+    // Done!
+    return {
+        i, 
+        match: {
+            qualifiers, 
+            name: nameResult.match,
+        }
+    };
+}
+
+//: QUALIFIER* LOWER_NAME
+//= foo
+//= Foo.bar
+//= Foo.Bar.baz
+function lowerIdentifier(state: State): {i: number, match: Identifier} {
+    let {i} = state;
+    const desc = 'identifier (lowercase)';
+    //: QUALIFIER*
+    const qualifiers = [];
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            //: QUALIFIER
+            const qualifierResult = getQualifier(desc,i,state.tokens);
+            i = qualifierResult.i;
+            qualifiers.push(qualifierResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    //: LOWER_NAME
+    let nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
     // Done!
     return {
@@ -215,8 +248,41 @@ function expr(state: State): {i: number, match: Expr} {
     throw todo('expr', state);
 }
 
+//: lowerIdentifier BANG (LPAREN expr (COMMA expr)* RPAREN)?
+//= foo!
+//= foo!()
+//= Bar.foo!(123,456)
 function bang(state: State): {i: number, match: Bang} {
-    throw todo('bang', state);
+    let {i} = state;
+    const desc = 'bang';
+    //: lowerIdentifier
+    const idResult = lowerIdentifier(state);
+    i = idResult.i;
+    const id = idResult.match;
+    //: BANG
+    i = expect('BANG',desc,i,state.tokens);
+    //: (LPAREN expr (COMMA expr)* RPAREN)?
+    let args: Expr[] = [];
+    if (tagIs('LPAREN',i,state.tokens)) {
+        const listResult = list({
+            left:  'LPAREN',
+            right: 'RPAREN',
+            sep:   'COMMA',
+            item:  expr,
+            state: {...state, i},
+            parsedItem: `${desc} typevar list`,
+            skipEol: false,
+        });
+        i = listResult.i;
+        args = listResult.match;
+    }
+    // Done!
+    return {
+        i,
+        match: (args.length == 0)
+                ? {bang: 'value', val: id}
+                : {bang: 'call', fn: id, args}
+    };
 }
 
 //: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ type
