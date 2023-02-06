@@ -36,8 +36,8 @@ function declaration(state: State): {i: number, decl: Decl} {
     return oneOf(
         [
             {prefix: ['TYPE','ALIAS'], parser: typeAliasDecl},
+            {prefix: ['TYPE'],         parser: typeDecl},
             /*
-            typeDecl,
             moduleDecl,
             extendModuleDecl,
             functionDecl, // f(a,b) = expr
@@ -66,12 +66,9 @@ function typeAliasDecl(state: State): {i: number, decl: Decl} {
     i = expect('TYPE', 'type alias',i,state.tokens);
     i = expect('ALIAS','type alias',i,state.tokens);
     //: UPPER_NAME
-    const nameToken = state.tokens[i];
-    if (nameToken.type.type !== 'UPPER_NAME') {
-        throw err('EXXXX','Expected UPPER_NAME for a `type alias`',state.tokens[i].loc);
-    }
-    const name = nameToken.type.name;
-    i++;
+    let nameResult = getUpperName('type alias',i,state.tokens);
+    i = nameResult.i;
+    const {name} = nameResult;
     //: (LBRACKET typevar (COMMA typevar)* RBRACKET)?
     let vars = [];
     if (tagIs('LBRACKET',i,state.tokens)) {
@@ -116,6 +113,12 @@ function typeAliasDecl(state: State): {i: number, decl: Decl} {
     }
 }
 
+//: (PRIVATE | OPAQUE)? TYPE UPPER_NAME LBRACKET typevar (COMMA typevar)* RBRACKET EQ constructorList
+function typeDecl(state: State): {i: number, decl: Decl} {
+    throw err('EXXXX','TODO type decl',{row:0,col:0});
+}
+
+
 function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
     if (!tagIs(tag,i,tokens)) {
         throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,tokens[i].loc);
@@ -123,8 +126,10 @@ function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
     return i + 1;
 }
 
+//: LOWER_NAME
 function typevar(state: State): {i: number, typevar: string} {
-    throw err('EXXXX','TODO typevar',{row:0,col:0});
+    const {name,i} = getLowerName('typevar',state.i,state.tokens);
+    return {i, typevar: name};
 }
 
 function type(state: State): {i: number, type: Type} {
@@ -204,6 +209,28 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
         }
     }
     throw err('EXXXX',`Expected ${parsedItem}`,state.tokens[state.i].loc);
+}
+
+function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: number, name: string} {
+    const nameToken = tokens[i];
+    if (nameToken.type.type !== 'LOWER_NAME') {
+        throw err('EXXXX',`Expected LOWER_NAME for a ${parsedItem}`,tokens[i].loc);
+    }
+    return {
+        i: i + 1, 
+        name: nameToken.type.name,
+    };
+}
+
+function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: number, name: string} {
+    const nameToken = tokens[i];
+    if (nameToken.type.type !== 'UPPER_NAME') {
+        throw err('EXXXX',`Expected UPPER_NAME for a ${parsedItem}`,tokens[i].loc);
+    }
+    return {
+        i: i + 1, 
+        name: nameToken.type.name,
+    };
 }
 
 function getTags(n: number, state: State): TokenTag[] {
