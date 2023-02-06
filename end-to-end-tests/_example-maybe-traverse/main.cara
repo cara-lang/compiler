@@ -1,8 +1,8 @@
-type Maybe(a) =
+type Maybe[a] =
   | Nothing
-  | Just(a)
+  | Just[a]
 
-traverse(fn: a -> Maybe(b), list: List(a)): Maybe(List(b))
+traverse(fn: a -> Maybe[b], list: List[a]): Maybe[List[b]]
 traverse(fn,list) = go(list,[])
   where
     go([],bs) = Just(List.reverse(bs))
