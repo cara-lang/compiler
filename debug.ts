@@ -1,16 +1,18 @@
 #!/usr/bin/env deno run --allow-read
 
+import {inspect} from 'node:util';
 import {argv} from 'node:process';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
-import {inspect} from 'node:util';
+
+const log = (data) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
 
 const program = argv[2];
 console.log('Source program:');
-console.log(inspect(program));
+log(program);
 const tokens = lex(program);
 console.log('Tokens:');
-console.log(inspect(tokens));
+log(tokens);
 const ast = parse(tokens);
 console.log('AST:');
-console.log(inspect(ast));
+log(ast);

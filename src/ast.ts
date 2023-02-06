@@ -67,7 +67,8 @@ export type Block =           {stmts:Stmt[], ret:Expr|null}
 export type Identifier =      {qualifiers:string[], name:string} // x, IO.println
 export type RecordField =     {field:string, value:Expr} // a:123
 export type RecordTypeField = {field:string, type:Type}  // a:Int
-export type Constructor =     {name:string, args:Type[]} // TODO arg names?
+export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(Int), Baz(n: Int, verbose: Bool)
+export type ConstructorArg =  {name:string|null, type:Type}
 export type Typevar =         string;
 
 export type LetModifier =

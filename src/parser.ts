@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, Stmt, LetModifier, Bang, Expr, Identifier} from './ast.ts';
+import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, Stmt, LetModifier, Bang, Expr, Identifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -79,7 +79,33 @@ function extendModuleDecl(state: State): {i: number, match: Decl} {
 //= Foo.Bar
 //= Foo.Bar.Baz
 function moduleName(state: State): {i: number, match: Identifier} {
-    throw todo('module name',state);
+    let {i} = state;
+    const desc = 'module name';
+    //: QUALIFIER*
+    const qualifiers = [];
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            //: QUALIFIER
+            const qualifierResult = getQualifier(desc,i,state.tokens);
+            i = qualifierResult.i;
+            qualifiers.push(qualifierResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    //: UPPER_NAME
+    let nameResult = getUpperName(desc,i,state.tokens);
+    i = nameResult.i;
+    // Done!
+    return {
+        i, 
+        match: {
+            qualifiers, 
+            name: nameResult.match,
+        }
+    };
 }
 
 function statementDecl(state: State): {i: number, match: Decl} {
@@ -299,7 +325,134 @@ function typeDecl(state: State): {i: number, match: Decl} {
 }
 
 function constructorList(state: State): {i: number, match: Constructor[]} {
-    throw todo('constructor list', state);
+    return oneOf(
+        [
+            {prefix: ['EOL'], parser: pipeFirstConstructorList},
+            {prefix: null,    parser: shortConstructorList},
+        ],
+        'constructor list',
+        state
+    );
+}
+
+//: (EOL+ PIPE constructor)+
+function pipeFirstConstructorList(state: State): {i: number, match: Constructor[]} {
+    let {i} = state;
+    const desc = 'constructor list';
+    const constructors: Constructor[] = [];
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            //: EOL
+            i = expect('EOL',desc,i,state.tokens);
+            //: EOL*
+            i = skipEol({...state,i});
+            //: PIPE
+            i = expect('PIPE',desc,i,state.tokens);
+            //: constructor
+            const constructorResult = constructor({...state, i});
+            i = constructorResult.i;
+            constructors.push(constructorResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    // Done!
+    if (constructors.length == 0) {
+        throw err('EXXXX','Expected non-empty list of constructors',state.tokens[i].loc);
+    }
+    return {i, match: constructors};
+}
+
+//: constructor (PIPE constructor)*
+//= Foo | Bar(Bool) | Baz(Int,String)
+function shortConstructorList(state: State): {i: number, match: Constructor[]} {
+    let {i} = state;
+    const desc = 'constructor list';
+    //: constructor
+    const firstConstructorResult = constructor(state);
+    i = firstConstructorResult.i;
+    const constructors = [firstConstructorResult.match];
+    //: (PIPE constructor)*
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            //: PIPE
+            i = expect('PIPE',desc,i,state.tokens);
+            //: constructor
+            const constructorResult = constructor({...state, i});
+            i = constructorResult.i;
+            constructors.push(constructorResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    // Done!
+    return {i, match: constructors};
+}
+
+//: UPPER_NAME (LPAREN constructorArg (COMMA constructorArg)* RPAREN)?
+//= Foo
+//= Bar(Int)
+//= Bar(n: Int, verbose: Bool)
+function constructor(state: State): {i: number, match: Constructor} {
+    let {i} = state;
+    const desc = 'constructor';
+    //: UPPER_NAME
+    const nameResult = getUpperName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: (LPAREN constructorArg (COMMA constructorArg)* RPAREN)?
+    let args: ConstructorArg[] = [];
+    if (tagIs('LPAREN',i,state.tokens)) {
+        const argsResult = nonemptyList({
+            left:  'LPAREN',
+            right: 'RPAREN',
+            sep:   'COMMA',
+            item:  constructorArg,
+            state: {...state, i},
+            parsedItem: desc,
+            skipEol: false,
+        });
+        i = argsResult.i;
+        args = argsResult.match;
+    }
+    // Done!
+    return {
+        i,
+        match: {
+            name: nameResult.match,
+            args,
+        },
+    };
+}
+
+//: (LOWER_NAME COLON)? type
+//= Int
+//= n: Int
+function constructorArg(state: State): {i: number, match: ConstructorArg} {
+    let {i} = state;
+    const desc = 'constructor argument';
+    //: (LOWER_NAME COLON)?
+    let name: string|null = null;
+    if (tagIs('LOWER_NAME',i,state.tokens)) {
+        const nameResult = getLowerName(desc,i,state.tokens);
+        i = nameResult.i;
+        name = nameResult.match;
+        i = expect('COLON',desc,i,state.tokens);
+    }
+    //: type
+    const typeResult = type({...state, i});
+    i = typeResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            name,
+            type: typeResult.match,
+        },
+    };
 }
 
 //: LOWER_NAME
@@ -310,16 +463,18 @@ function typevar(state: State): {i: number, match: Typevar} {
 }
 
 function type(state: State): {i: number, match: Type} {
+    // TODO: fn types
+    // {type:'fn', from:Type, to:Type}
+    //= x -> y
     return oneOf(
         [
-            {prefix: ['LPAREN','RPAREN'],       parser: unitType},
-            {prefix: ['LPAREN'],                parser: tupleOrParenthesizedType},
-            {prefix: ['UPPER_NAME','LBRACKET'], parser: callType},
-            {prefix: ['LBRACE'],                parser: recordType},
+            {prefix: ['LPAREN','RPAREN'], parser: unitType},
+            {prefix: ['LPAREN'],          parser: tupleOrParenthesizedType},
+            {prefix: ['LBRACE'],          parser: recordType},
+            {prefix: ['UPPER_NAME'],      parser: namedType},
+            {prefix: ['QUALIFIER'],       parser: namedType},
             /*
-            | {type:'named',  name:string}              //= Int
             | {type:'var',    var:string}               //= a
-            | {type:'fn',     from:Type, to:Type}       //= x -> y
             */
         ],
         'type',
@@ -327,6 +482,55 @@ function type(state: State): {i: number, match: Type} {
     );
 }
 
+//: QUALIFIER* UPPER_NAME (LBRACKET type (COMMA type)* RBRACKET)?
+//= Int
+//= Base.Maybe
+//= List.Internal.Step
+//= Maybe[Int]
+//= Base.List[Int]
+function namedType(state: State): {i: number, match: Type} {
+    let {i} = state;
+    const desc = 'named or call type';
+    //: QUALIFIER*
+    const qualifiers = [];
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            //: QUALIFIER
+            const qualifierResult = getQualifier(desc,i,state.tokens);
+            i = qualifierResult.i;
+            qualifiers.push(qualifierResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    //: UPPER_NAME
+    let nameResult = getUpperName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: (LBRACKET type (COMMA type)* RBRACKET)?
+    let args: Type[] = [];
+    if (tagIs('LBRACKET',i,state.tokens)) {
+        const argsResult = nonemptyList({
+            left:  'LBRACKET',
+            right: 'RBRACKET',
+            sep:   'COMMA',
+            item:  type,
+            state: {...state, i},
+            parsedItem: `${desc} arg list`,
+            skipEol: false,
+        });
+        i = argsResult.i;
+        args = argsResult.match;
+    }
+    // Done!
+    return {
+        i,
+        match: (args.length == 0)
+                ? { type: 'named', name: nameResult.match }
+                : { type: 'call',  name: nameResult.match, args }
+    }
+}
 //: LBRACE (recordTypeField (COMMA recordTypeField)*)? RBRACE
 //= {a:Int,b:Bool}
 function recordType(state: State): {i: number, match: Type} {
@@ -350,36 +554,6 @@ function recordType(state: State): {i: number, match: Type} {
 //= a: Int
 function recordTypeField(state: State): {i: number, match: RecordTypeField} {
     throw todo('record type field', state);
-}
-
-//: UPPER_NAME LBRACKET type (COMMA type)* RBRACKET
-//= List[a]
-//= Result[(),(Int,String)]
-function callType(state: State): {i: number, match: Type} {
-    let {i} = state;
-    const desc = 'call type';
-    //: UPPER_NAME
-    let nameResult = getUpperName(desc,i,state.tokens);
-    i = nameResult.i;
-    //: LBRACKET type (COMMA type)* RBRACKET
-    const argsResult = nonemptyList({
-        left:  'LBRACKET',
-        right: 'RBRACKET',
-        sep:   'COMMA',
-        item:  type,
-        state: {...state, i},
-        parsedItem: `${desc} arg list`,
-        skipEol: false,
-    });
-    i = argsResult.i;
-    return {
-        i,
-        match: {
-            type:'call',
-            name: nameResult.match,
-            args: argsResult.match,
-        },
-    };
 }
 
 //: LPAREN RPAREN
@@ -593,6 +767,17 @@ function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: numbe
     return {
         i: i + 1, 
         match: nameToken.type.name,
+    };
+}
+
+function getQualifier(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
+    const qualifierToken = tokens[i];
+    if (qualifierToken.type.type !== 'QUALIFIER') {
+        throw err('EXXXX',`Expected QUALIFIER for a ${parsedItem}`,tokens[i].loc);
+    }
+    return {
+        i: i + 1, 
+        match: qualifierToken.type.name,
     };
 }
 

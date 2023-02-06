@@ -28,3 +28,4 @@ E0026,Integer literal is too large for the declared type
 E0027,Bang used outside effect block
 E0028,Unexpected escaped character in a character
 E0029,Unexpected escaped character in a multi-line string
+E0030,Unexpected leading pipe in single-line type declaration

@@ -1,0 +1,13 @@
+E0030: Unexpected leading pipe in single-line type declaration
+
+A leading pipe is not allowed in a single-line type declaration. Either remove
+the pipe or add newlines:
+
+    type Foo =
+      | Bar
+      | Baz
+
+main.cara:1:12
+━━┓
+1 ┃ type Foo = | Bar | Baz
+  ┃            ^
