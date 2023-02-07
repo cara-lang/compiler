@@ -805,7 +805,9 @@ type Option<T> = {
 
 function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: number, match: T} {
     const iBefore = state.i;
-    let furthestI = state.i;
+    let loc = state.tokens[state.i].loc;
+    let furthestRow = loc.row;
+    let furthestCol = loc.col;
     let furthestErr = null;
     for (const option of options) {
         if (option.prefix == null) {
@@ -813,9 +815,10 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
             try {
                 return option.parser(state);
             } catch (e) {
-                if (furthestI < state.i) {
+                if (compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
                     furthestErr = e;
-                    furthestI = state.i;
+                    furthestRow = e.loc.row;
+                    furthestCol = e.loc.col;
                 }
                 state.i = iBefore;
             }
@@ -903,6 +906,14 @@ function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
         throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,i,tokens);
     }
     return i + 1;
+}
+
+function compareLoc(a:Loc, b:Loc): number {
+    if (a.row < b.row) return -1;
+    if (a.row > b.row) return 1;
+    if (a.col < b.col) return -1;
+    if (a.col > b.col) return 1;
+    return 0;
 }
 
 function arrayEquals<T>(a: T[], b: T[]): boolean {
