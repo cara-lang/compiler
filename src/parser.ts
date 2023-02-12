@@ -379,7 +379,9 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['LBRACE'],          parser: recordExpr},
             {prefix: ['IF'],              parser: ifExpr},
             {prefix: ['BACKSLASH'],       parser: lambdaExpr},
-            // TODO: hole lambda
+            {prefix: ['LHOLE'],           parser: holeLambdaExpr},
+            {prefix: ['UNDERSCORE'],      parser: holeExpr},
+            {prefix: ['HOLE'],            parser: holeExpr},
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
@@ -735,6 +737,168 @@ function lambdaExpr(state: State): {i: number, match: Expr} {
             body: bodyResult.match,
         },
     };
+}
+
+//: HOLE|UNDERSCORE
+//= _
+//= _1
+function holeExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'hole';
+    if (tagIs('UNDERSCORE',i,state.tokens)) {
+        i = expect('UNDERSCORE',desc,i,state.tokens);
+        return {
+            i,
+            match: {
+                expr: 'identifier',
+                id: {
+                    qualifiers: [],
+                    name: '_',
+                },
+            },
+        };
+    } else {
+        const holeResult = getHole(desc,i,state.tokens);
+        i = holeResult.i;
+        return {
+            i,
+            match: {
+                expr: 'identifier',
+                id: {
+                    qualifiers: [],
+                    name: `_${holeResult.match}`,
+                },
+            },
+        };
+    }
+}
+
+//: LHOLE expr RPAREN
+//= #(1 + _)
+//= #(1 + _1 - _2)
+function holeLambdaExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'hole lambda expr';
+    //: LHOLE
+    i = expect('LHOLE',desc,i,state.tokens);
+    //: expr
+    const bodyResult = expr({...state,i});
+    i = bodyResult.i;
+    //: RPAREN
+    i = expect('RPAREN',desc,i,state.tokens);
+    // Done!
+    return {
+        i,
+        match: lambdaWithHoles(bodyResult.match, {...state,i})
+    };
+}
+
+type HoleAnalysis =
+    | {type: 'no-holes'}
+    | {type: 'only-underscore'}
+    | {type: 'only-numbered', maxHole: number}
+    | {type: 'mixed'};
+
+function lambdaWithHoles(body: Expr, state: State): Expr {
+    const analyzed = analyzeHoles(body);
+    switch (analyzed.type) {
+        case 'no-holes':
+            return {
+                expr: 'lambda',
+                args: [],
+                body,
+            };
+        case 'only-underscore':
+            return {
+                expr: 'lambda',
+                args: [{pattern: 'var', var: '_'}],
+                body,
+            };
+        case 'only-numbered':
+            const args: Pattern[] = 
+                [...Array(analyzed.maxHole).keys()]
+                    .map(n => ({pattern: 'var', var: `_${n+1}`}));
+            return {
+                expr: 'lambda',
+                args,
+                body,
+            }
+        case 'mixed':
+            throw err('E0020','Anonymous function shorthand with mixed holes',state.i,state.tokens);
+    };
+}
+
+function analyzeHoles(expr: Expr): HoleAnalysis {
+    switch (expr.expr) {
+        case 'identifier':
+            if (expr.id.qualifiers.length == 0 && expr.id.name.startsWith('_')) {
+                if (expr.id.name.length == 1) {
+                    return {type:'only-underscore'};
+                } else {
+                    const holeNumber = parseInt(expr.id.name.substring(1),10);
+                    return {type:'only-numbered', maxHole: holeNumber};
+                }
+            } else {
+                return {type:'no-holes'};
+            }
+        case 'int':
+        case 'float':
+        case 'char':
+        case 'string':
+        case 'bool':
+        case 'unit':
+        case 'record-getter':
+        case 'constructor':
+            return {type:'no-holes'};
+        case 'lambda':
+        case 'closure':
+            return analyzeHoles(expr.body);
+        case 'unary-op':
+            return analyzeHoles(expr.arg);
+        case 'record-get':
+            return analyzeHoles(expr.record);
+        case 'tuple':
+        case 'list':
+            return analyzeHolesList(expr.elements);
+        case 'record':
+            return analyzeHolesList(expr.fields.map((x: RecordExprField) => x.value));
+        case 'call':
+            return combineHoles(analyzeHoles(expr.fn),analyzeHolesList(expr.args));
+        case 'if':
+            return analyzeHolesList([expr.cond,expr.then,expr.else]);
+        case 'binary-op':
+            return analyzeHolesList([expr.left,expr.right]);
+    }
+}
+
+function analyzeHolesList(exprs: Expr[]): HoleAnalysis {
+    return exprs
+        .map(analyzeHoles)
+        .reduce(combineHoles, {type:'no-holes'})
+    
+}
+
+function combineHoles(a: HoleAnalysis, b: HoleAnalysis): HoleAnalysis {
+    if (a.type == 'no-holes') return b;
+    if (b.type == 'no-holes') return a;
+    if (a.type == 'mixed')    return a;
+    if (b.type == 'mixed')    return b;
+    if (a.type == 'only-numbered' && b.type == 'only-underscore') {
+        return {type: 'mixed'};
+    }
+    if (b.type == 'only-numbered' && a.type == 'only-underscore') {
+        return {type: 'mixed'};
+    }
+    if (a.type == 'only-underscore' && b.type == 'only-underscore') {
+        return {type: 'only-underscore'};
+    }
+    if (a.type == 'only-numbered' && b.type == 'only-numbered') {
+        return {
+            type: 'only-numbered',
+            maxHole: Math.max(a.maxHole,b.maxHole)
+        };
+    }
+    throw bug('combineHoles: fell through all the options', {a,b});
 }
 
 function pattern(state: State): {i: number, match: Pattern} {
@@ -1482,6 +1646,17 @@ function getQualifier(parsedItem: string, i: number, tokens: Token[]): {i: numbe
     };
 }
 
+function getHole(parsedItem: string, i: number, tokens: Token[]): {i: number, match: number} {
+    const holeToken = tokens[i];
+    if (holeToken.type.type !== 'HOLE') {
+        throw err('EXXXX',`Expected HOLE for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: holeToken.type.n,
+    };
+}
+
 function getTags(n: number, state: State): TokenTag[] {
     return state.tokens.slice(state.i,state.i+n).map(t => t.type.type);
 }
@@ -1507,6 +1682,10 @@ function err(code: string, message: string, i: number, tokens: Token[]): CaraErr
 
 function todo(what: string, state: State): CaraError {
     return rawErr('E9999',`TODO ${what}`,state.tokens[state.i].loc);
+}
+
+function bug(what: string, extra: any): CaraError {
+    return rawErr('E9998',`BUG: ${what}, ${extra}`,{row:0,col:0});
 }
 
 function isAtEnd(state: State): boolean {

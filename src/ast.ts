@@ -17,7 +17,6 @@ export type Expr =
     | {expr:'binary-op',  op:BinaryOp, left:Expr, right:Expr}
     | {expr:'call',       fn:Expr,     args:Expr[]}  // foo(), bar(1,2)
     | {expr:'record-get', record:Expr, field:string} // r.a
-    | {expr:'pipeline',   arg:Expr,    fn:Expr}      // a |> b
 
     // other
     | {expr:'constructor', id:UpperIdentifier} // Foo, Bar.Foo
