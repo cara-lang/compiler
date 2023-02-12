@@ -179,7 +179,7 @@ function valueAnnotationDecl(state: State): {i: number, match: Decl} {
     };
 }
 
-//: EXTEND MODULE moduleName LBRACE declaration* RBRACE
+//: EXTEND MODULE moduleName LBRACE (EOL+ declaration)* EOL+ RBRACE
 //= extend module Foo.Bar { x = 1 }
 function extendModuleDecl(state: State): {i: number, match: Decl} {
     let {i} = state;
@@ -190,7 +190,7 @@ function extendModuleDecl(state: State): {i: number, match: Decl} {
     //: moduleName
     const moduleNameResult = moduleName({...state, i});
     i = moduleNameResult.i;
-    //: LBRACE declaration* RBRACE
+    //: LBRACE (EOL+ declaration*) EOL+ RBRACE
     const declsResult = nonemptyList({
         left:  'LBRACE',
         right: 'RBRACE',
@@ -1551,17 +1551,17 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
         let firstItem = c.item({...c.state,i});
         i = firstItem.i;
         items.push(firstItem.match);
-        i = skipEol({...c.state,i});
+        if (c.skipEol) i = skipEol({...c.state,i});
         while (!isAtEnd({...c.state,i})) {
             if (tagIs(c.right,i,c.state.tokens)) {
                 break; // we'll consume `right` outside this try{}catch{} block
             } else if (tagIs(sep,i,c.state.tokens)) {
                 i++;
-                i = skipEol({...c.state,i});
+                if (c.skipEol) i = skipEol({...c.state,i});
                 const nextItem = c.item({...c.state,i});
                 i = nextItem.i;
                 items.push(nextItem.match);
-                i = skipEol({...c.state,i});
+                if (c.skipEol) i = skipEol({...c.state,i});
             } else {
                 throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
             }
@@ -1586,11 +1586,13 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     const sep = c.sep!; // we're guaranteed this by the condition in nonemptyList()
     //: left
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
+    if (c.skipEol) i = skipEol({...c.state, i});
     //: item
     let firstItem = c.item({...c.state,i});
     i = firstItem.i;
     const items: T[] = [firstItem.match];
     let endedCorrectly = false;
+    if (c.skipEol) i = skipEol({...c.state, i});
     while (!isAtEnd({...c.state,i})) {
         if (tagIs(c.right,i,c.state.tokens)) {
             endedCorrectly = true;
@@ -1598,9 +1600,11 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
             break;
         } else if (tagIs(sep,i,c.state.tokens)) {
             i++;
+            if (c.skipEol) i = skipEol({...c.state, i});
             const nextItem = c.item({...c.state,i});
             i = nextItem.i;
             items.push(nextItem.match);
+            if (c.skipEol) i = skipEol({...c.state, i});
         } else {
             throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
         }
@@ -1616,12 +1620,14 @@ function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} 
     let {i} = c.state;
     //: left
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
+    if (c.skipEol) i = skipEol({...c.state, i});
     //: item
     let firstItem = c.item({...c.state,i});
     i = firstItem.i;
     const items: T[] = [firstItem.match];
     //: item*
     let endedCorrectly = false;
+    if (c.skipEol) i = skipEol({...c.state, i});
     while (!isAtEnd({...c.state,i})) {
         //: right
         if (tagIs(c.right,i,c.state.tokens)) {
@@ -1632,6 +1638,7 @@ function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} 
             const nextItem = c.item({...c.state,i});
             i = nextItem.i;
             items.push(nextItem.match);
+            if (c.skipEol) i = skipEol({...c.state, i});
         }
     }
     if (!endedCorrectly) {
@@ -1640,12 +1647,12 @@ function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} 
     return {i, match: items};
 }
 
-type Option<T> = { 
+type OneOfOption<T> = { 
     prefix: TokenTag[] | null,
     parser: Parser<T>,
 }
 
-function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: number, match: T} {
+function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): {i: number, match: T} {
     const iBefore = state.i;
     let loc = state.tokens[state.i].loc;
     let furthestRow = loc.row;
