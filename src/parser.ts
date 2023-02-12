@@ -391,9 +391,9 @@ function binaryOpExpr(left: Expr, precedence: number, isRight: boolean, state: S
 function pipelineExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     const rightResult = exprAux(precedence, isRight, state);
     const right = rightResult.match;
-    const match = right.expr == 'call'
-                    ? { expr: 'call', fn: right.fn, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case!)
-                    : { expr: 'call', fn: right,    args: [left] };                 // 3 |> f      ==> f(3)
+    const match: Expr = right.expr == 'call'
+                        ? { ...right, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case, we inline!)
+                        : { expr: 'call', fn: right,args: [left] };   // 3 |> f      ==> f(3)
     return { i: rightResult.i, match };
 }
 
