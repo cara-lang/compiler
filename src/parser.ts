@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -339,6 +339,8 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['LBRACKET'],        parser: listExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
             {prefix: ['IF'],              parser: ifExpr},
+            {prefix: ['BACKSLASH'],       parser: lambdaExpr},
+            // TODO: hole lambda
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
@@ -347,9 +349,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
 
             {prefix: null, parser: constructorExpr},
             {prefix: null, parser: identifierExpr},
-            // TODO: lambda
-            // TODO: closure
-            // TODO: record-getter
         ],
         'expr',
         state
@@ -524,7 +523,7 @@ function boolExpr(state: State): {i: number, match: Expr} {
     switch (tag) {
         case 'TRUE':  return {i: state.i + 1, match: {expr: 'bool', bool: true}};
         case 'FALSE': return {i: state.i + 1, match: {expr: 'bool', bool: false}};
-        default:      return err('EXXXX','Expected TRUE or FALSE',state.i,state.tokens);
+        default:      throw err('EXXXX','Expected TRUE or FALSE',state.i,state.tokens);
     }
 }
 
@@ -670,6 +669,60 @@ function ifExpr(state: State): {i: number, match: Expr} {
     };
 }
 
+//: BACKSLASH LOWER_NAME (COMMA LOWER_NAME)* ARROW expr
+function lambdaExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'lambda expr';
+    //: BACKSLASH LOWER_NAME (COMMA LOWER_NAME)* ARROW
+    const argsResult = list({
+        left:  'BACKSLASH',
+        right: 'ARROW',
+        sep:   'COMMA',
+        item:  pattern,
+        state,
+        parsedItem: `${desc} argument list`,
+        skipEol: true,
+    });
+    i = argsResult.i;
+    //: expr
+    const bodyResult = expr({...state,i});
+    i = bodyResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            expr: 'lambda',
+            args: argsResult.match,
+            body: bodyResult.match,
+        },
+    };
+}
+
+function pattern(state: State): {i: number, match: Pattern} {
+    return oneOf(
+        [
+            {prefix: ['LOWER_NAME'], parser: varPattern},
+            // TODO other patterns
+        ],
+        'pattern',
+        state,
+    )
+}
+
+//: LOWER_NAME
+//= abc
+function varPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'var pattern';
+    const varResult = getLowerName(desc,state.i,state.tokens);
+    return {
+        i: varResult.i,
+        match: {
+            pattern: 'var',
+            var: varResult.match,
+        },
+    };
+}
+
 //: ${tokenTag} expr
 function unaryOpExpr(desc: string, tokenTag: TokenTag, op: UnaryOp): Parser<Expr> {
     return function(state: State): {i: number, match: Expr} {
@@ -803,7 +856,7 @@ function constructorList(state: State): {i: number, match: Constructor[]} {
             {prefix: null,    parser: shortConstructorList},
         ],
         'constructor list',
-        state
+        state,
     );
 }
 
