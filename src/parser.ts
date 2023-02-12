@@ -385,8 +385,16 @@ function binaryOpExpr(left: Expr, precedence: number, isRight: boolean, state: S
     throw todo('binary op expr', state);
 }
 
+//: expr PIPELINE expr
+//  ^^^^^^^^^^^^^ already parsed
+//= a |> b
 function pipelineExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-    throw todo('pipeline expr', state);
+    const rightResult = exprAux(precedence, isRight, state);
+    const right = rightResult.match;
+    const match = right.expr == 'call'
+                    ? { expr: 'call', fn: right.fn, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case!)
+                    : { expr: 'call', fn: right,    args: [left] };                 // 3 |> f      ==> f(3)
+    return { i: rightResult.i, match };
 }
 
 //: expr LPAREN (expr (COMMA expr)*)? RPAREN
