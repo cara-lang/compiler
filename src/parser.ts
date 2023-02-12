@@ -316,10 +316,26 @@ function prefixExpr(state: State): {i: number, match: Expr} {
         [
             {prefix: ['INT'],             parser: intExpr},
             {prefix: ['FLOAT'],           parser: floatExpr},
+            {prefix: ['CHAR'],            parser: charExpr},
+            {prefix: ['STRING'],          parser: stringExpr},
+            // TODO: bool
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
             {prefix: ['LBRACKET'],        parser: listExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
+            // TODO: constructor
+            // TODO: unary-op
+
+            // TODO where should it be: {expr:'binary-op'}
+            // TODO where should it be: {expr:'call'}
+            // TODO where should it be: {expr:'record-get'}
+            // TODO where should it be: {expr:'pipeline'}
+
+            // TODO: id
+            // TODO: lambda
+            // TODO: closure
+            // TODO: record-getter
+            // TODO: if
         ],
         'expr',
         state
@@ -389,6 +405,20 @@ function floatExpr(state: State): {i: number, match: Expr} {
     return {i: floatResult.i, match: {expr: 'float', float: floatResult.match}};
 }
 
+//: CHAR
+//= 'a'
+function charExpr(state: State): {i: number, match: Expr} {
+    const charResult = getChar('char expr',state.i,state.tokens);
+    return {i: charResult.i, match: {expr: 'char', char: charResult.match}};
+}
+
+//: STRING
+//= 123.45
+function stringExpr(state: State): {i: number, match: Expr} {
+    const stringResult = getString('string expr',state.i,state.tokens);
+    return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
+}
+
 //: LPAREN RPAREN
 //= ()
 function unitExpr(state: State): {i: number, match: Expr} {
@@ -413,7 +443,7 @@ function tupleOrParenthesizedExpr(state: State): {i: number, match: Expr} {
         skipEol: true,
     });
 
-    const match: Type = listResult.match.length == 1
+    const match: Expr = listResult.match.length == 1
         ?  listResult.match[0] // parenthesized expr: return the child
         :  {expr: 'tuple', elements: listResult.match};
 
@@ -1100,6 +1130,28 @@ function getFloat(parsedItem: string, i: number, tokens: Token[]): {i: number, m
     return {
         i: i + 1, 
         match: floatToken.type.float,
+    };
+}
+
+function getChar(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
+    const charToken = tokens[i];
+    if (charToken.type.type !== 'CHAR') {
+        throw err('EXXXX',`Expected CHAR for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: charToken.type.char,
+    };
+}
+
+function getString(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
+    const stringToken = tokens[i];
+    if (stringToken.type.type !== 'STRING') {
+        throw err('EXXXX',`Expected STRING for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: stringToken.type.string,
     };
 }
 
