@@ -50,7 +50,8 @@ function infixExpr(tag: TokenTag): {precedence: number, parser: InfixParser<Expr
         case 'PERCENT':  return {precedence: 13, parser: binaryOpExpr}; // %
         case 'POWER':    return {precedence: 14, parser: binaryOpExpr}; // **
 
-        case 'LPAREN':   return {precedence: 15, parser: callExpr}; // (
+        case 'LPAREN':   return {precedence: 15, parser: callExpr};      // (
+        case 'GETTER':   return {precedence: 16, parser: recordGetExpr}; // .abc
 
         default:         return null;
     }
@@ -314,10 +315,11 @@ function exprAux(precedence: number, state: State): {i: number, match: Expr} {
 function prefixExpr(state: State): {i: number, match: Expr} {
     return oneOf(
         [
-            {prefix: ['INT'],             parser: intExpr},
-            {prefix: ['FLOAT'],           parser: floatExpr},
-            {prefix: ['CHAR'],            parser: charExpr},
-            {prefix: ['STRING'],          parser: stringExpr},
+            {prefix: ['INT'],    parser: intExpr},
+            {prefix: ['FLOAT'],  parser: floatExpr},
+            {prefix: ['CHAR'],   parser: charExpr},
+            {prefix: ['STRING'], parser: stringExpr},
+            {prefix: ['GETTER'], parser: recordGetterExpr},
             // TODO: bool
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
@@ -328,11 +330,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
             {prefix: ['BANG'],  parser: unaryOpExpr('bool negation expr',  'BANG', 'NegateBool')},
             {prefix: ['TILDE'], parser: unaryOpExpr('binary negation expr','TILDE','NegateBin')},
-
-            // TODO where should it be: {expr:'binary-op'}
-            // TODO where should it be: {expr:'call'}
-            // TODO where should it be: {expr:'record-get'}
-            // TODO where should it be: {expr:'pipeline'}
 
             {prefix: null, parser: constructorExpr},
             {prefix: null, parser: identifierExpr},
@@ -395,6 +392,10 @@ function callExpr(left: Expr, state: State): {i: number, match: Expr} {
     throw todo('call expr', state);
 }
 
+function recordGetExpr(left: Expr, state: State): {i: number, match: Expr} {
+    throw todo('record get expr', state);
+}
+
 //: INT
 //= 123
 function intExpr(state: State): {i: number, match: Expr} {
@@ -421,6 +422,13 @@ function charExpr(state: State): {i: number, match: Expr} {
 function stringExpr(state: State): {i: number, match: Expr} {
     const stringResult = getString('string expr',state.i,state.tokens);
     return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
+}
+
+//: GETTER
+//= .abc
+function recordGetterExpr(state: State): {i: number, match: Expr} {
+    const getterResult = getRecordGetter('record getter expr',state.i,state.tokens);
+    return {i: getterResult.i, match: {expr: 'record-getter', field: getterResult.match}};
 }
 
 //: QUALIFIER* UPPER_NAME
@@ -1203,6 +1211,17 @@ function getString(parsedItem: string, i: number, tokens: Token[]): {i: number, 
     return {
         i: i + 1, 
         match: stringToken.type.string,
+    };
+}
+
+function getRecordGetter(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
+    const getterToken = tokens[i];
+    if (getterToken.type.type !== 'GETTER') {
+        throw err('EXXXX',`Expected GETTER for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: getterToken.type.field,
     };
 }
 
