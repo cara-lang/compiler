@@ -321,7 +321,8 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['CHAR'],   parser: charExpr},
             {prefix: ['STRING'], parser: stringExpr},
             {prefix: ['GETTER'], parser: recordGetterExpr},
-            // TODO: bool
+            {prefix: ['TRUE'],   parser: boolExpr},
+            {prefix: ['FALSE'],  parser: boolExpr},
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
             {prefix: ['LBRACKET'],        parser: listExpr},
@@ -502,6 +503,18 @@ function stringExpr(state: State): {i: number, match: Expr} {
 function recordGetterExpr(state: State): {i: number, match: Expr} {
     const getterResult = getRecordGetter('record getter expr',state.i,state.tokens);
     return {i: getterResult.i, match: {expr: 'record-getter', field: getterResult.match}};
+}
+
+//: TRUE|FALSE
+//= True
+//= False
+function boolExpr(state: State): {i: number, match: Expr} {
+    const tag = state.tokens[state.i].type.type;
+    switch (tag) {
+        case 'TRUE':  return {i: state.i + 1, match: {expr: 'bool', bool: true}};
+        case 'FALSE': return {i: state.i + 1, match: {expr: 'bool', bool: false}};
+        default:      return err('EXXXX','Expected TRUE or FALSE',state.i,state.tokens);
+    }
 }
 
 //: QUALIFIER* UPPER_NAME
