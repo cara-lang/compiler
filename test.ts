@@ -31,16 +31,28 @@ async function allSynchronously<T>(resolvables: (() => Promise<T>)[]): Promise<T
 }
 
 const test = async (test:string): Promise<TestResult> => {
-  //if (test !== 'unit') return {status:'skip',test};
+  const specificTest: string | null = null;
+  if (specificTest != null && test != specificTest) return {status:'skip',test};
   if (test.startsWith('test-')) return {status:'skip',test}; // TODO handle test tests
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
   try {
-    //console.log(test);
-    const tokens: Token[] = lex(source);
-    //console.log({tokens});
-    const ast: Decl[] = parse(tokens);
-    //console.log({ast});
-    return {status:'pass',test};
+    if (specificTest != null) {
+
+      console.log(test);
+      console.log(`\n${source}`);
+      const tokens: Token[] = lex(source);
+      console.log({tokens});
+      const ast: Decl[] = parse(tokens);
+      console.log({ast});
+      return {status:'pass',test};
+
+    } else {
+
+      const tokens: Token[] = lex(source);
+      const ast: Decl[] = parse(tokens);
+      return {status:'pass',test};
+
+    }
   }
   catch (e) {
     if (isCaraError(e)) {

@@ -389,8 +389,39 @@ function pipelineExpr(left: Expr, precedence: number, isRight: boolean, state: S
     throw todo('pipeline expr', state);
 }
 
+//: expr LPAREN (expr (COMMA expr)*)? RPAREN
+//  ^^^^^^^^^^^ already parsed
+//= x()
+//= x(1)
+//= x(1,2)
 function callExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-    throw todo('call expr', state);
+    let {i} = state;
+    const desc = 'call expr'
+    //: LPAREN (expr (COMMA expr)*)? RPAREN
+    let args: Expr[] = [];
+    i--; // we'll parse LPAREN as part of the list()
+    try {
+        const argsResult = list({
+            left:  'LPAREN',
+            right: 'RPAREN',
+            sep:   'COMMA',
+            item:  expr,
+            state: {...state, i},
+            parsedItem: `${desc} argument list`,
+            skipEol: true,
+        });
+        i = argsResult.i;
+        args = argsResult.match;
+    } catch (e) {}
+    // Done!
+    return {
+        i,
+        match: {
+            expr: 'call',
+            fn: left,
+            args,
+        },
+    };
 }
 
 //: expr GETTER
