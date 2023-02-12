@@ -327,17 +327,18 @@ function exprAux(precedence: number, isRight: boolean, state: State): {i: number
 function prefixExpr(state: State): {i: number, match: Expr} {
     return oneOf(
         [
-            {prefix: ['INT'],    parser: intExpr},
-            {prefix: ['FLOAT'],  parser: floatExpr},
-            {prefix: ['CHAR'],   parser: charExpr},
-            {prefix: ['STRING'], parser: stringExpr},
-            {prefix: ['GETTER'], parser: recordGetterExpr},
-            {prefix: ['TRUE'],   parser: boolExpr},
-            {prefix: ['FALSE'],  parser: boolExpr},
+            {prefix: ['INT'],             parser: intExpr},
+            {prefix: ['FLOAT'],           parser: floatExpr},
+            {prefix: ['CHAR'],            parser: charExpr},
+            {prefix: ['STRING'],          parser: stringExpr},
+            {prefix: ['GETTER'],          parser: recordGetterExpr},
+            {prefix: ['TRUE'],            parser: boolExpr},
+            {prefix: ['FALSE'],           parser: boolExpr},
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
             {prefix: ['LBRACKET'],        parser: listExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
+            {prefix: ['IF'],              parser: ifExpr},
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
@@ -349,7 +350,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             // TODO: lambda
             // TODO: closure
             // TODO: record-getter
-            // TODO: if
         ],
         'expr',
         state
@@ -636,6 +636,38 @@ function recordExprField(state: State): {i: number, match: RecordExprField} {
     i = exprResult.i;
     // Done!
     return {i, match: {field: lowerNameResult.match, value: exprResult.match}};
+}
+
+//: IF expr THEN expr ELSE expr
+//= if 1 == 2 then foo() else bar()
+function ifExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'if expr';
+    //: IF
+    i = expect('IF',desc,i,state.tokens);
+    //: expr
+    const conditionResult = expr({...state,i});
+    i = conditionResult.i;
+    //: THEN
+    i = expect('THEN',desc,i,state.tokens);
+    //: expr
+    const thenResult = expr({...state,i});
+    i = thenResult.i;
+    //: ELSE
+    i = expect('ELSE',desc,i,state.tokens);
+    //: expr
+    const elseResult = expr({...state,i});
+    i = elseResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            expr: 'if',
+            cond: conditionResult.match,
+            then: thenResult.match,
+            else: elseResult.match,
+        },
+    };
 }
 
 //: ${tokenTag} expr
