@@ -6,6 +6,7 @@ import {Loc} from './loc.ts';
 type State = { tokens: Token[], i: number };
 type Parser<T> = (state: State) => {i: number, match: T}; // Parser<Decl> = (state: State) => {i: number, match: Decl}
 type InfixParser<T> = (left: T, state: State) => {i: number, match: T};
+type InfixParserTable<T> = (tag: TokenTag) => {precedence: number, parser: InfixParser<T>} | null;
 
 export function parse(tokens: Token[]): Decl[] {
     let state = {tokens, i: 0};
@@ -18,33 +19,37 @@ export function parse(tokens: Token[]): Decl[] {
     return decls;
 }
 
-function exprPrecedence(tag: TokenTag): number | null {
+function infixExpr(tag: TokenTag): {precedence: number, parser: InfixParser<Expr>} | null {
     switch (tag) {
-        case 'ANDAND':   return  1; // &&
-        case 'OROR':     return  2; // ||
-        case 'PLUSPLUS': return  3; // ++
-        case 'PIPELINE': return  4; // |>
-        case 'RANGE_I':  return  5; // ..
-        case 'RANGE_E':  return  5; // ...
-        case 'PIPE':     return  6; // |
-        case 'CARET':    return  7; // ^
-        case 'AND':      return  8; // &
-        case 'EQEQ':     return  9; // ==
-        case 'NEQ':      return  9; // !=
-        case 'LTE':      return 10; // <=
-        case 'LT':       return 10; // <
-        case 'GT':       return 10; // >
-        case 'GTE':      return 10; // >=
-        case 'SHL':      return 11; // <<
-        case 'SHR':      return 11; // >>
-        case 'SHRU':     return 11; // >>>
-        case 'PLUS':     return 12; // +
-        case 'MINUS':    return 12; // -
-        case 'TIMES':    return 13; // *
-        case 'DIV':      return 13; // /
-        case 'PERCENT':  return 13; // %
-        case 'POWER':    return 14; // **
-        case 'LPAREN':   return 15; // (
+        case 'ANDAND':   return {precedence:  1, parser: binaryOpExpr}; // &&
+        case 'OROR':     return {precedence:  2, parser: binaryOpExpr}; // ||
+        case 'PLUSPLUS': return {precedence:  3, parser: binaryOpExpr}; // ++
+
+        case 'PIPELINE': return {precedence:  4, parser: pipelineExpr}; // |>
+
+        case 'RANGE_I':  return {precedence:  5, parser: binaryOpExpr}; // ..
+        case 'RANGE_E':  return {precedence:  5, parser: binaryOpExpr}; // ...
+        case 'PIPE':     return {precedence:  6, parser: binaryOpExpr}; // |
+        case 'CARET':    return {precedence:  7, parser: binaryOpExpr}; // ^
+        case 'AND':      return {precedence:  8, parser: binaryOpExpr}; // &
+        case 'EQEQ':     return {precedence:  9, parser: binaryOpExpr}; // ==
+        case 'NEQ':      return {precedence:  9, parser: binaryOpExpr}; // !=
+        case 'LTE':      return {precedence: 10, parser: binaryOpExpr}; // <=
+        case 'LT':       return {precedence: 10, parser: binaryOpExpr}; // <
+        case 'GT':       return {precedence: 10, parser: binaryOpExpr}; // >
+        case 'GTE':      return {precedence: 10, parser: binaryOpExpr}; // >=
+        case 'SHL':      return {precedence: 11, parser: binaryOpExpr}; // <<
+        case 'SHR':      return {precedence: 11, parser: binaryOpExpr}; // >>
+        case 'SHRU':     return {precedence: 11, parser: binaryOpExpr}; // >>>
+        case 'PLUS':     return {precedence: 12, parser: binaryOpExpr}; // +
+        case 'MINUS':    return {precedence: 12, parser: binaryOpExpr}; // -
+        case 'TIMES':    return {precedence: 13, parser: binaryOpExpr}; // *
+        case 'DIV':      return {precedence: 13, parser: binaryOpExpr}; // /
+        case 'PERCENT':  return {precedence: 13, parser: binaryOpExpr}; // %
+        case 'POWER':    return {precedence: 14, parser: binaryOpExpr}; // **
+
+        case 'LPAREN':   return {precedence: 15, parser: callExpr}; // (
+
         default:         return null;
     }
 };
@@ -602,23 +607,32 @@ function type(state: State): {i: number, match: Type} {
 }
 
 function typeAux(precedence: number, state: State): {i: number, match: Type} {
+    return pratt(
+        precedence,
+        prefixType,
+        infixType,
+        state,
+    );
+}
+
+function pratt<T>(precedence: number, prefix: Parser<T>, infix: InfixParserTable<T>, state: State): {i: number, match: T} {
     let {i} = state;
 
     // prefix or literal
-    const prefixTypeResult = prefixType(state);
-    i = prefixTypeResult.i;
-    let left = prefixTypeResult.match;
+    const prefixResult = prefix(state);
+    i = prefixResult.i;
+    let left = prefixResult.match;
 
     // infix or postfix
     let nextToken = state.tokens[i];
-    let next: {precedence:number, parser: InfixParser<Type>} | null = infixType(nextToken.type.type);
+    let next: {precedence: number, parser: InfixParser<T>} | null = infix(nextToken.type.type);
     while (next != null && precedence < next.precedence) {
         i++;
         const nextResult = next.parser(left, {...state, i});
         i = nextResult.i;
         left = nextResult.match;
         nextToken = state.tokens[i];
-        next = infixType(nextToken.type.type);
+        next = infix(nextToken.type.type);
     }
 
     // Done!
