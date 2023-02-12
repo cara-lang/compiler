@@ -521,7 +521,6 @@ function number(state: State): {token: Token, state: State} {
     const c = state.source[state.i++];
     state.col++;
     const next = state.source[state.i];
-    console.log({x: 'number',c,next});
     if (c == '0' && next == 'X') {
         state.i++;
         state.col++;
