@@ -365,7 +365,7 @@ function bang(state: State): {i: number, match: Bang} {
             sep:   'COMMA',
             item:  expr,
             state: {...state, i},
-            parsedItem: `${desc} typevar list`,
+            parsedItem: `${desc} argument list`,
             skipEol: false,
         });
         i = listResult.i;
