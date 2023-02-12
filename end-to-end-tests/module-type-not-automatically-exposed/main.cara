@@ -3,7 +3,7 @@ module MyList {
   // the magic auto-expose doesn't apply here because the type name doesn't match the module name
   opaque type Foo[a] = 
     | Empty
-    | Cons[a]
+    | Cons(a)
   
   empty = Empty
 

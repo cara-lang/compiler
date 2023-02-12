@@ -2,7 +2,7 @@ module MyList {
 
   opaque type Foo[a] = 
     | Empty
-    | Cons[a]
+    | Cons(a)
 
 }
 
