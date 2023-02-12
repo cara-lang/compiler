@@ -23,35 +23,46 @@ export function parse(tokens: Token[]): Decl[] {
 
 function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser: InfixParser<Expr>} | null {
     switch (tag) {
-        case 'ANDAND':   return {precedence:  1, isRight: false, parser: binaryOpExpr('AndBool')}; // &&
-        case 'OROR':     return {precedence:  2, isRight: false, parser: binaryOpExpr('OrBool')};  // ||
-        case 'PLUSPLUS': return {precedence:  3, isRight: false, parser: binaryOpExpr('Append')};  // ++
+        case 'ANDAND':   return {precedence:  1, isRight: false, parser: binaryOpExpr('AndBool')};        // &&
 
-        case 'PIPELINE': return {precedence:  4, isRight: false, parser: pipelineExpr}; // |>
+        case 'OROR':     return {precedence:  2, isRight: false, parser: binaryOpExpr('OrBool')};         // ||
+
+        case 'PLUSPLUS': return {precedence:  3, isRight: false, parser: binaryOpExpr('Append')};         // ++
+
+        case 'PIPELINE': return {precedence:  4, isRight: false, parser: pipelineExpr};                   // |>
 
         case 'RANGE_I':  return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeInclusive')}; // ..
         case 'RANGE_E':  return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeExclusive')}; // ...
+
         case 'PIPE':     return {precedence:  6, isRight: false, parser: binaryOpExpr('OrBin')};          // |
+
         case 'CARET':    return {precedence:  7, isRight: false, parser: binaryOpExpr('XorBin')};         // ^
+
         case 'AND':      return {precedence:  8, isRight: false, parser: binaryOpExpr('AndBin')};         // &
+
         case 'EQEQ':     return {precedence:  9, isRight: false, parser: binaryOpExpr('Eq')};             // ==
         case 'NEQ':      return {precedence:  9, isRight: false, parser: binaryOpExpr('Neq')};            // !=
+
         case 'LTE':      return {precedence: 10, isRight: false, parser: binaryOpExpr('Lte')};            // <=
         case 'LT':       return {precedence: 10, isRight: false, parser: binaryOpExpr('Lt')};             // <
         case 'GT':       return {precedence: 10, isRight: false, parser: binaryOpExpr('Gt')};             // >
         case 'GTE':      return {precedence: 10, isRight: false, parser: binaryOpExpr('Gte')};            // >=
+
         case 'SHL':      return {precedence: 11, isRight: false, parser: binaryOpExpr('ShiftL')};         // <<
         case 'SHR':      return {precedence: 11, isRight: false, parser: binaryOpExpr('ShiftR')};         // >>
         case 'SHRU':     return {precedence: 11, isRight: false, parser: binaryOpExpr('ShiftRU')};        // >>>
+
         case 'PLUS':     return {precedence: 12, isRight: false, parser: binaryOpExpr('Plus')};           // +
         case 'MINUS':    return {precedence: 12, isRight: false, parser: binaryOpExpr('Minus')};          // -
+
         case 'TIMES':    return {precedence: 13, isRight: false, parser: binaryOpExpr('Times')};          // *
         case 'DIV':      return {precedence: 13, isRight: false, parser: binaryOpExpr('Div')};            // /
         case 'PERCENT':  return {precedence: 13, isRight: false, parser: binaryOpExpr('Mod')};            // %
+
         case 'POWER':    return {precedence: 14, isRight: true,  parser: binaryOpExpr('Pow')};            // **
 
-        case 'LPAREN':   return {precedence: 15, isRight: true,  parser: callExpr};      // (
-        case 'GETTER':   return {precedence: 16, isRight: false, parser: recordGetExpr}; // .abc
+        case 'LPAREN':   return {precedence: 15, isRight: true,  parser: callExpr};                       // (
+        case 'GETTER':   return {precedence: 16, isRight: false, parser: recordGetExpr};                  // .abc
 
         default:         return null;
     }
@@ -936,7 +947,7 @@ function pratt<T>(isRight: boolean, precedence: number, prefix: Parser<T>, infix
 
     while (next != null && precedence < next.precedence) {
         i++;
-        const nextResult = next.parser(left, precedence, isRight, {...state, i});
+        const nextResult = next.parser(left, next.precedence, next.isRight, {...state, i});
         i = nextResult.i;
         left = nextResult.match;
         nextToken = state.tokens[i];
