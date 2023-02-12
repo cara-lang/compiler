@@ -27,13 +27,13 @@ export type Expr =
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
 
 export type Type =
-    | {type:'named',  qualifiers:string[], name:string}              // Int, Base.Maybe
-    | {type:'call',   qualifiers:string[], name:string, args:Type[]} // List[a]
-    | {type:'var',    var:Typevar}                                   // a
-    | {type:'fn',     from:Type, to:Type}                            // x -> y
-    | {type:'tuple',  elements:Type[]}                               // (Int, Bool)
-    | {type:'record', fields:RecordTypeField[]}                      // {a:Int,b:Bool}
-    | {type:'unit'}                                                  // ()
+    | {type:'named',  qualifiers:string[], name:string} // Int, Base.Maybe
+    | {type:'call',   fn: Type, args:Type[]}            // List[a]
+    | {type:'var',    var:Typevar}                      // a
+    | {type:'fn',     from:Type, to:Type}               // x -> y
+    | {type:'tuple',  elements:Type[]}                  // (Int, Bool)
+    | {type:'record', fields:RecordTypeField[]}         // {a:Int,b:Bool}
+    | {type:'unit'}                                     // ()
 
 export type Pattern =
     | {pattern:'var',   var:string}   // a

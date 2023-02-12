@@ -70,8 +70,9 @@ function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser
 
 function infixType(tag: TokenTag): {precedence: number, isRight: boolean, parser: InfixParser<Type>} | null {
     switch (tag) {
-        case 'ARROW': return {precedence: 1, isRight: true, parser: fnType}; // -> 
-        default:      return null;
+        case 'ARROW':    return {precedence: 1, isRight: true, parser: fnType};   // -> 
+        case 'LBRACKET': return {precedence: 2, isRight: true, parser: callType}; // [
+        default:         return null;
     }
 };
 
@@ -1326,8 +1327,8 @@ function prefixType(state: State): {i: number, match: Type} {
             {prefix: ['LPAREN','RPAREN'], parser: unitType},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedType},
             {prefix: ['LBRACE'],          parser: recordType},
-            {prefix: ['UPPER_NAME'],      parser: namedOrCallType},
-            {prefix: ['QUALIFIER'],       parser: namedOrCallType},
+            {prefix: ['UPPER_NAME'],      parser: namedType},
+            {prefix: ['QUALIFIER'],       parser: namedType},
             {prefix: ['LOWER_NAME'],      parser: varType},
         ],
         'type',
@@ -1385,6 +1386,28 @@ function fnType(left: Type, precedence: number, isRight: boolean, state: State):
     return {i, match: {type: 'fn', from: left, to: right}};
 }
 
+//: type LBRACKET type (COMMA type)* RBRACKET
+//  ^^^^^^^^^^^^^ already parsed
+//= List[a]
+function callType(left: Type, precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
+    let {i} = state;
+    const desc = 'call type';
+    i--; // we'll parse LBRACKET as part of the list
+    //: LBRACKET type (COMMA type)* RBRACKET
+    const argsResult = nonemptyList({
+        left:  'LBRACKET',
+        right: 'RBRACKET',
+        sep:   'COMMA',
+        item:  type,
+        state: {...state, i},
+        parsedItem: `${desc} arg list`,
+        skipEol: false,
+    });
+    i = argsResult.i;
+    const args = argsResult.match;
+    return {i, match: {type: 'call', fn: left, args}};
+}
+
 //: typevar
 //= a
 //= comparable123
@@ -1396,15 +1419,13 @@ function varType(state: State): {i: number, match: Type} {
     };
 }
 
-//: QUALIFIER* UPPER_NAME (LBRACKET type (COMMA type)* RBRACKET)?
+//: QUALIFIER* UPPER_NAME
 //= Int
 //= Base.Maybe
 //= List.Internal.Step
-//= Maybe[Int]
-//= Base.List[Int]
-function namedOrCallType(state: State): {i: number, match: Type} {
+function namedType(state: State): {i: number, match: Type} {
     let {i} = state;
-    const desc = 'named or call type';
+    const desc = 'named type';
     //: QUALIFIER*
     const qualifiers = [];
     while (!isAtEnd({...state, i})) {
@@ -1423,28 +1444,15 @@ function namedOrCallType(state: State): {i: number, match: Type} {
     let nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
     const name = nameResult.match;
-    //: (LBRACKET type (COMMA type)* RBRACKET)?
-    let args: Type[] = [];
-    if (tagIs('LBRACKET',i,state.tokens)) {
-        const argsResult = nonemptyList({
-            left:  'LBRACKET',
-            right: 'RBRACKET',
-            sep:   'COMMA',
-            item:  type,
-            state: {...state, i},
-            parsedItem: `${desc} arg list`,
-            skipEol: false,
-        });
-        i = argsResult.i;
-        args = argsResult.match;
-    }
     // Done!
     return {
         i,
-        match: (args.length == 0)
-                ? { type: 'named', qualifiers, name }
-                : { type: 'call',  qualifiers, name, args }
-    }
+        match: {
+            type: 'named',
+            qualifiers,
+            name,
+        }
+    };
 }
 //: LBRACE (recordTypeField (COMMA recordTypeField)*)? RBRACE
 //= {a:Int,b:Bool}
