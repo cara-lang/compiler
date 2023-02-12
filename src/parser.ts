@@ -905,7 +905,10 @@ function pattern(state: State): {i: number, match: Pattern} {
     return oneOf(
         [
             {prefix: ['LOWER_NAME'], parser: varPattern},
+            {prefix: ['INT'],        parser: intPattern},
+            {prefix: ['FLOAT'],      parser: floatPattern},
             // TODO other patterns
+            // TODO negation of int/float in the pattern
         ],
         'pattern',
         state,
@@ -922,6 +925,34 @@ function varPattern(state: State): {i: number, match: Pattern} {
         match: {
             pattern: 'var',
             var: varResult.match,
+        },
+    };
+}
+
+//: INT
+//= 123
+function intPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'int pattern';
+    const intResult = getInt(desc,state.i,state.tokens);
+    return {
+        i: intResult.i,
+        match: {
+            pattern: 'int',
+            int: intResult.match,
+        },
+    };
+}
+
+//: FLOAT
+//= 123.45
+function floatPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'float pattern';
+    const floatResult = getFloat(desc,state.i,state.tokens);
+    return {
+        i: floatResult.i,
+        match: {
+            pattern: 'float',
+            float: floatResult.match,
         },
     };
 }

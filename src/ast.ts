@@ -36,7 +36,9 @@ export type Type =
     | {type:'unit'}                                                  // ()
 
 export type Pattern =
-    | {pattern:'var', var:string}
+    | {pattern:'var',   var:string}   // a
+    | {pattern:'int',   int:number}   // 1
+    | {pattern:'float', float:number} // 1.2345
     // TODO other patterns
 
 export type Bang =
