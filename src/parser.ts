@@ -316,6 +316,7 @@ function prefixExpr(state: State): {i: number, match: Expr} {
         [
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
+            {prefix: ['LBRACKET'],        parser: listExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
         ],
         'expr',
@@ -401,6 +402,23 @@ function tupleOrParenthesizedExpr(state: State): {i: number, match: Expr} {
         :  {expr: 'tuple', elements: listResult.match};
 
     return {i: listResult.i, match};
+}
+
+//: LBRACKET expr (COMMA expr)* RBRACKET
+//= []
+//= [1]
+//= [1,2]
+function listExpr(state: State): {i: number, match: Expr} {
+    const listResult = list({
+        left:  'LBRACKET',
+        right: 'RBRACKET',
+        sep:   'COMMA',
+        item:  expr,
+        state: state,
+        parsedItem: 'list expr',
+        skipEol: true,
+    });
+    return {i: listResult.i, match: {expr:'list', elements: listResult.match}};
 }
 
 //: LBRACE (recordExprField (COMMA recordExprField)*)? RBRACE
