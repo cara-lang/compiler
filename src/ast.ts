@@ -55,7 +55,7 @@ export type Decl =
     | {decl:'type',             mod:TypeModifier,      name:string, vars:Typevar[], constructors:Constructor[]}
     | {decl:'module',           mod:ModuleModifier,    name:string, decls:Decl[]}
     | {decl:'extend-module',    module:UpperIdentifier, decls:Decl[]}
-    | {decl:'function',         name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
+    | {decl:'function',         mod:LetModifier, name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
     | {decl:'statement',        stmt:Stmt}
     | {decl:'block',            name:string, block:Block}                                      // x = { ... }
     | {decl:'block-fn',         name:string, args:Pattern[], block:Block}                      // x(a,b) = { ... }

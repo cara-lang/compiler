@@ -93,7 +93,9 @@ function declaration(state: State): {i: number, match: Decl} {
             {prefix: ['MODULE'],           parser: moduleDecl},
 
             // f(a,b) = expr
-            {prefix: ['LOWER_NAME','LPAREN'], parser: functionDecl},
+            // private f(a,b) = expr
+            {prefix: ['PRIVATE','LOWER_NAME','LPAREN'], parser: functionDecl},
+            {prefix: ['LOWER_NAME','LPAREN'],           parser: functionDecl},
 
             // x = 123
             // x = foo!(123)
@@ -117,11 +119,17 @@ function declaration(state: State): {i: number, match: Decl} {
     );
 }
 
-//: LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
+//: PRIVATE? LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
 //= f(a,b) = a + b
 function functionDecl(state: State): {i: number, match: Decl} {
     let {i} = state;
     const desc = 'function decl';
+    //: PRIVATE?
+    let mod: LetModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
@@ -148,6 +156,7 @@ function functionDecl(state: State): {i: number, match: Decl} {
         i,
         match: {
             decl: 'function',
+            mod,
             name: nameResult.match,
             args: argsResult.match,
             body: bodyResult.match,
