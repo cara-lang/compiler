@@ -95,20 +95,21 @@ function declaration(state: State): {i: number, match: Decl} {
             // f(a,b) = expr
             {prefix: ['LOWER_NAME','LPAREN'], parser: functionDecl},
 
-            // x : Int
-            {prefix: ['LOWER_NAME','COLON'], parser: valueAnnotationDecl},
+            // x = 123
+            // x = foo!(123)
+            // foo!(123)
+            // private x = 123
+            // x: Int = 123
+            {prefix: null, parser: statementDecl}, // This needs to be before the valueAnnotationDecl to parse `x: Int = 123`
 
-            // x = expr
-            // x = bang!
-            // bang!
-            {prefix: null, parser: statementDecl},
+            // x : Int
+            {prefix: null, parser: valueAnnotationDecl}, // can't prefix it because `x:Int = 123` is also possible and needs to be handled inside statementDecl (because of `private`!)
 
             //{prefix: ['LOWER_NAME','EQ','LBRACE'], parser: blockDecl}, // TODO does this mean we'll have blockFnDecl, effectBlockDecl, effectBlockFnDecl?
             /*
             moduleDecl,
             blockDecl, // handles block, block fn, effect block, effect block fn
                     // x[(a,b)] = [IO] { ... }
-            valueAnnotationDecl,
             */
         ],
         'declaration',
@@ -347,9 +348,6 @@ function statementDecl(state: State): {i: number, match: Decl} {
     }
 }
 
-//: LOWER_NAME EQ bang //= x = Foo.bar!(1,False)
-//: LOWER_NAME EQ expr //= x = 123
-//: bang               //= Foo.bar!(1,False)
 function statement(state: State): {i: number, match: Stmt} {
     return oneOf(
         [
@@ -362,7 +360,7 @@ function statement(state: State): {i: number, match: Stmt} {
     );
 }
 
-//: PRIVATE? LOWER_NAME EQ expr
+//: PRIVATE? LOWER_NAME (COLON type)? EQ expr
 //= x = 123
 function letStatement(state: State): {i: number, match: Stmt} {
     let {i} = state;
@@ -376,6 +374,16 @@ function letStatement(state: State): {i: number, match: Stmt} {
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
+    //: (COLON type)?
+    let typeVal: Type | null = null;
+    if (tagIs('COLON',i,state.tokens)) {
+        //: COLON
+        i = expect('COLON',desc,i,state.tokens);
+        //: type
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    }
     //: EQ
     i = expect('EQ',desc,i,state.tokens);
     //: expr
@@ -387,13 +395,14 @@ function letStatement(state: State): {i: number, match: Stmt} {
         match: {
             stmt: 'let',
             mod,
+            type: typeVal,
             name: nameResult.match,
             body: exprResult.match,
         }
     };
 }
 
-//: PRIVATE? LOWER_NAME EQ bang
+//: PRIVATE? LOWER_NAME (COLON type)? EQ bang
 //= x = Foo.bar!(1,False)
 function letBangStatement(state: State): {i: number, match: Stmt} {
     let {i} = state;
@@ -407,6 +416,16 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
+    //: (COLON type)?
+    let typeVal: Type | null = null;
+    if (tagIs('COLON',i,state.tokens)) {
+        //: COLON
+        i = expect('COLON',desc,i,state.tokens);
+        //: type
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    }
     //: EQ
     i = expect('EQ',desc,i,state.tokens);
     //: bang
@@ -418,6 +437,7 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
         match: {
             stmt: 'let-bang',
             mod,
+            type: typeVal,
             name: nameResult.match,
             body: bangResult.match,
         }
@@ -1795,6 +1815,16 @@ function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
         throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,i,tokens);
     }
     return i + 1;
+}
+
+function map<A,B>(p: Parser<A>, fn: (match: A) => B): Parser<B> {
+    return function(state: State): {i: number, match: B} {
+        const result = p(state);
+        return {
+            i: result.i,
+            match: fn(result.match),
+        };
+    }
 }
 
 function compareLoc(a:Loc, b:Loc): number {
