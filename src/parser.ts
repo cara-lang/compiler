@@ -804,6 +804,9 @@ function ifExpr(state: State): {i: number, match: Expr} {
     const thenResult = expr({...state,i});
     i = thenResult.i;
     //: ELSE
+    if (!tagIs('ELSE',i,state.tokens)) {
+        throw err('E0021','If expression without an else branch',i,state.tokens);
+    }
     i = expect('ELSE',desc,i,state.tokens);
     //: expr
     const elseResult = expr({...state,i});
