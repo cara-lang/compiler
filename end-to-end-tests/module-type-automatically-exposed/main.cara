@@ -3,7 +3,7 @@ module MyList {
   // magic: if the type is named the same as the module, it also get exposed without the namespace
   opaque type MyList[a] = 
     | Empty
-    | Cons[a]
+    | Cons(a)
   
   empty = Empty
 
