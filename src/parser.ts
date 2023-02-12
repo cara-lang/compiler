@@ -5,6 +5,7 @@ import {Loc} from './loc.ts';
 
 type State = { tokens: Token[], i: number };
 type Parser<T> = (state: State) => {i: number, match: T}; // Parser<Decl> = (state: State) => {i: number, match: Decl}
+type InfixParser<T> = (left: T, state: State) => {i: number, match: T};
 
 export function parse(tokens: Token[]): Decl[] {
     let state = {tokens, i: 0};
@@ -48,9 +49,9 @@ function exprPrecedence(tag: TokenTag): number | null {
     }
 };
 
-function typePrecedence(tag: TokenTag): number | null {
+function infixType(tag: TokenTag): {precedence: number, parser: InfixParser<Type>} | null {
     switch (tag) {
-        case 'ARROW': return 1; // -> 
+        case 'ARROW': return {precedence: 1, parser: fnType}; // -> 
         default:      return null;
     }
 };
@@ -293,6 +294,10 @@ function bangStatement(state: State): {i: number, match: Stmt} {
 }
 
 function expr(state: State): {i: number, match: Expr} {
+    return exprAux(0, state);
+}
+
+function exprAux(precedence: number, state: State): {i: number, match: Expr} {
     throw todo('expr', state);
 }
 
@@ -606,21 +611,14 @@ function typeAux(precedence: number, state: State): {i: number, match: Type} {
 
     // infix or postfix
     let nextToken = state.tokens[i];
-    let nextPrecedence: number | null = typePrecedence(nextToken.type.type);
-    while (nextPrecedence != null && precedence < nextPrecedence) {
-        switch (nextToken.type.type) {
-            case 'ARROW':
-                i++;
-                const fnTypeResult = fnType(left, {...state, i});
-                // ^ receives i pointing to the token _after_ the operator token
-                i = fnTypeResult.i;
-                left = fnTypeResult.match;
-                nextToken = state.tokens[i];
-                nextPrecedence = typePrecedence(nextToken.type.type);
-                break;
-            default:
-                throw todo('Parser bug? Type parser infix default case', {...state, i});
-        }
+    let next: {precedence:number, parser: InfixParser<Type>} | null = infixType(nextToken.type.type);
+    while (next != null && precedence < next.precedence) {
+        i++;
+        const nextResult = next.parser(left, {...state, i});
+        i = nextResult.i;
+        left = nextResult.match;
+        nextToken = state.tokens[i];
+        next = infixType(nextToken.type.type);
     }
 
     // Done!
