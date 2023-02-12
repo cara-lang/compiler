@@ -87,11 +87,12 @@ function declaration(state: State): {i: number, match: Decl} {
 
             {prefix: ['EXTEND','MODULE'], parser: extendModuleDecl},
 
+            {prefix: ['LOWER_NAME','LPAREN'], parser: functionDecl},
+
             {prefix: null, parser: statementDecl},
             //{prefix: ['LOWER_NAME','EQ','LBRACE'], parser: blockDecl}, // TODO does this mean we'll have blockFnDecl, effectBlockDecl, effectBlockFnDecl?
             /*
             moduleDecl,
-            functionDecl, // f(a,b) = expr
             blockDecl, // handles block, block fn, effect block, effect block fn
                     // x[(a,b)] = [IO] { ... }
             valueAnnotationDecl,
@@ -100,6 +101,44 @@ function declaration(state: State): {i: number, match: Decl} {
         'declaration',
         state
     );
+}
+
+//: LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
+//= f(a,b) = a + b
+function functionDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'function decl';
+    //: LOWER_NAME
+    const nameResult = getLowerName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: LPAREN (pattern (COMMA pattern)*)? RPAREN
+    const argsResult = list({
+        left:  'LPAREN',
+        right: 'RPAREN',
+        sep:   'COMMA',
+        item:  pattern,
+        state: {...state, i},
+        parsedItem: `${desc} argument list`,
+        skipEol: false,
+    });
+    i = argsResult.i;
+    //: EQ
+    i = expect('EQ',desc,i,state.tokens);
+    //: EOL*
+    i = skipEol({...state, i});
+    //: expr
+    const bodyResult = expr({...state, i});
+    i = bodyResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            decl: 'function',
+            name: nameResult.match,
+            args: argsResult.match,
+            body: bodyResult.match,
+        },
+    };
 }
 
 //: EXTEND MODULE moduleName LBRACE declaration* RBRACE
