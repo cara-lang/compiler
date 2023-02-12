@@ -8,22 +8,22 @@ export type Expr =
     | {expr:'unit'}
   
     // collections
-    | {expr:'tuple',  elements:Expr[]}
-    | {expr:'list',   elements:Expr[]}
-    | {expr:'record', fields:RecordField[]}
-    | {expr:'constructor', name:string, args:Expr[]}
+    | {expr:'tuple',  elements:Expr[]}      // (1,True)
+    | {expr:'list',   elements:Expr[]}      // [1,2]
+    | {expr:'record', fields:RecordField[]} // {a:1,b:True}
+    | {expr:'constructor', id:UpperIdentifier, args:Expr[]} // Foo, Bar.Foo(1,2)
 
     // calls
     | {expr:'unary-op',   op:UnaryOp,  arg:Expr}
     | {expr:'binary-op',  op:BinaryOp, left:Expr, right:Expr}
-    | {expr:'call',       fn:Expr,     args:Expr[]}
+    | {expr:'call',       fn:Expr,     args:Expr[]}  // foo(), bar(1,2)
     | {expr:'record-get', record:Expr, field:string} // r.a
     | {expr:'pipeline',   arg:Expr,    fn:Expr}      // a |> b
 
     // other
-    | {expr:'id', id:Identifier}
+    | {expr:'id', id:LowerIdentifier} // bar, Foo.bar
     | {expr:'lambda',  args:Pattern[], body:Expr}
-    | {expr:'closure', args:Pattern[], body:Expr, env:Map<Identifier,Expr>} // not creatable via syntax, only by the interpreter
+    | {expr:'closure', args:Pattern[], body:Expr, env:Map<LowerIdentifier,Expr>} // not creatable via syntax, only by the interpreter
     | {expr:'record-getter', field:string} // .a
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
 
@@ -41,19 +41,19 @@ export type Pattern =
     // TODO other patterns
 
 export type Bang =
-    | {bang:'value', val:Identifier}             // foo!
-    | {bang:'call',  fn:Identifier, args:Expr[]} // foo!(123,456)
+    | {bang:'value', val:LowerIdentifier}             // foo!,      Bar.foo!
+    | {bang:'call',  fn:LowerIdentifier, args:Expr[]} // foo!(1,2), Bar.foo!(1,2)
 
 export type Stmt =
     | {stmt:'let',      mod:LetModifier, name:string, body:Expr} // x = 123
-    | {stmt:'let-bang', mod:LetModifier, name:string, body:Bang} // x = foo!(123)
-    | {stmt:'bang',     bang:Bang}                               // foo!(123)
+    | {stmt:'let-bang', mod:LetModifier, name:string, body:Bang} // x = Bar.foo!(123)
+    | {stmt:'bang',     bang:Bang}                               // Bar.foo!(123)
 
 export type Decl =
     | {decl:'type-alias',       mod:TypeAliasModifier, name:string, vars:Typevar[], body:Type}
     | {decl:'type',             mod:TypeModifier,      name:string, vars:Typevar[], constructors:Constructor[]}
-    | {decl:'module',           mod:ModuleModifier, name:string, decls:Decl[]}
-    | {decl:'extend-module',    id:Identifier, decls:Decl[]}
+    | {decl:'module',           mod:ModuleModifier,    name:string, decls:Decl[]}
+    | {decl:'extend-module',    module:UpperIdentifier, decls:Decl[]}
     | {decl:'function',         name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
     | {decl:'statement',        stmt:Stmt}
     | {decl:'block',            name:string, block:Block}                                      // x = { ... }
@@ -64,7 +64,8 @@ export type Decl =
     // TODO Function annotation: x(y: Int): Bool
 
 export type Block =           {stmts:Stmt[], ret:Expr|null}
-export type Identifier =      {qualifiers:string[], name:string} // x, IO.println
+export type LowerIdentifier = {qualifiers:string[], name:string} // x, IO.println
+export type UpperIdentifier = {qualifiers:string[], name:string} // X, IO.Println
 export type RecordField =     {field:string, value:Expr} // a:123
 export type RecordTypeField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(Int), Baz(n: Int, verbose: Bool)

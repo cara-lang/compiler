@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, Stmt, LetModifier, Bang, Expr, Identifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -112,17 +112,21 @@ function extendModuleDecl(state: State): {i: number, match: Decl} {
         i,
         match: {
             decl: 'extend-module',
-            id: moduleNameResult.match,
+            module: moduleNameResult.match,
             decls: declsResult.match,
         },
     }
+}
+
+function moduleName(state: State): {i: number, match: UpperIdentifier} {
+    return upperIdentifier(state);
 }
 
 //: QUALIFIER* UPPER_NAME
 //= Foo
 //= Foo.Bar
 //= Foo.Bar.Baz
-function moduleName(state: State): {i: number, match: Identifier} {
+function upperIdentifier(state: State): {i: number, match: UpperIdentifier} {
     let {i} = state;
     const desc = 'module name';
     //: QUALIFIER*
@@ -156,7 +160,7 @@ function moduleName(state: State): {i: number, match: Identifier} {
 //= foo
 //= Foo.bar
 //= Foo.Bar.baz
-function lowerIdentifier(state: State): {i: number, match: Identifier} {
+function lowerIdentifier(state: State): {i: number, match: LowerIdentifier} {
     let {i} = state;
     const desc = 'identifier (lowercase)';
     //: QUALIFIER*
