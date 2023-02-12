@@ -1533,7 +1533,31 @@ function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
 
 //: left item* right
 function nonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
-    throw todo('nonseparated list', c.state);
+    let {i} = c.state;
+    const sep = c.sep!; // we're guaranteed this by the condition in list()
+    //: left
+    i = expect(c.left,c.parsedItem,i,c.state.tokens);
+    if (c.skipEol) i = skipEol({...c.state,i});
+    //: item*
+    const items: T[] = [];
+    let iBeforeItems = i;
+    try {
+        while (!isAtEnd({...c.state,i})) {
+            if (tagIs(c.right,i,c.state.tokens)) {
+                break; // we'll consume `right` outside this try{}catch{} block
+            } else {
+                const nextItem = c.item({...c.state,i});
+                i = nextItem.i;
+                items.push(nextItem.match);
+                if (c.skipEol) i = skipEol({...c.state,i});
+            }
+        }
+    } catch (e) {
+        i = iBeforeItems;
+    }
+    //: right
+    i = expect(c.right,c.parsedItem,i,c.state.tokens);
+    return {i, match: items};
 }
 
 //: left (item (sep item)*)? right
@@ -1542,8 +1566,7 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     const sep = c.sep!; // we're guaranteed this by the condition in list()
     //: left
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
-    //: EOL*
-    i = skipEol({...c.state,i});
+    if (c.skipEol) i = skipEol({...c.state,i});
     //: (item (sep item)*)?
     const items: T[] = [];
     let iBeforeItems = i;
