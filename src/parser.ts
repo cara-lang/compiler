@@ -51,7 +51,6 @@ function exprPrecedence(tag: TokenTag): number | null {
 function typePrecedence(tag: TokenTag): number | null {
     switch (tag) {
         case 'ARROW': return 1; // -> 
-        // Foo[a] - postfix?
         default:      return null;
     }
 };
@@ -584,8 +583,8 @@ function prefixType(state: State): {i: number, match: Type} {
             {prefix: ['LPAREN','RPAREN'], parser: unitType},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedType},
             {prefix: ['LBRACE'],          parser: recordType},
-            {prefix: ['UPPER_NAME'],      parser: namedType},
-            {prefix: ['QUALIFIER'],       parser: namedType},
+            {prefix: ['UPPER_NAME'],      parser: namedOrCallType},
+            {prefix: ['QUALIFIER'],       parser: namedOrCallType},
             {prefix: ['LOWER_NAME'],      parser: varType},
         ],
         'type',
@@ -655,7 +654,7 @@ function varType(state: State): {i: number, match: Type} {
 //= List.Internal.Step
 //= Maybe[Int]
 //= Base.List[Int]
-function namedType(state: State): {i: number, match: Type} {
+function namedOrCallType(state: State): {i: number, match: Type} {
     let {i} = state;
     const desc = 'named or call type';
     //: QUALIFIER*
