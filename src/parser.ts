@@ -324,7 +324,11 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['LBRACKET'],        parser: listExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
             // TODO: constructor
-            // TODO: unary-op
+
+            // unary-op
+            {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
+            {prefix: ['BANG'],  parser: unaryOpExpr('bool negation expr',  'BANG', 'NegateBool')},
+            {prefix: ['TILDE'], parser: unaryOpExpr('binary negation expr','TILDE','NegateBin')},
 
             // TODO where should it be: {expr:'binary-op'}
             // TODO where should it be: {expr:'call'}
@@ -501,6 +505,27 @@ function recordExprField(state: State): {i: number, match: RecordExprField} {
     i = exprResult.i;
     // Done!
     return {i, match: {field: lowerNameResult.match, value: exprResult.match}};
+}
+
+//: ${tokenTag} expr
+function unaryOpExpr(desc: string, tokenTag: TokenTag, op: string): Parser<Expr> {
+    return function(state: State) {
+        let {i} = state;
+        //: ${tokenTag}
+        i = expect(tokenTag,desc,i,state.tokens);
+        //: expr
+        const exprResult = expr({...state, i});
+        i = exprResult.i;
+        // Done!
+        return {
+            i,
+            match: {
+                expr: 'unary-op',
+                op,
+                arg: exprResult.match,
+            }
+        };
+    }
 }
 
 //: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ type
