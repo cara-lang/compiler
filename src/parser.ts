@@ -95,6 +95,9 @@ function declaration(state: State): {i: number, match: Decl} {
             // f(a,b) = expr
             {prefix: ['LOWER_NAME','LPAREN'], parser: functionDecl},
 
+            // x : Int
+            {prefix: ['LOWER_NAME','COLON'], parser: valueAnnotationDecl},
+
             // x = expr
             // x = bang!
             // bang!
@@ -147,6 +150,30 @@ function functionDecl(state: State): {i: number, match: Decl} {
             name: nameResult.match,
             args: argsResult.match,
             body: bodyResult.match,
+        },
+    };
+}
+
+//: LOWER_NAME COLON type
+//= x : Int
+function valueAnnotationDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'value annotation decl';
+    //: LOWER_NAME
+    const nameResult = getLowerName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: COLON
+    i = expect('COLON',desc,i,state.tokens);
+    //: type
+    const typeResult = type({...state, i});
+    i = typeResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            decl: 'value-annotation',
+            name: nameResult.match,
+            type: typeResult.match,
         },
     };
 }
