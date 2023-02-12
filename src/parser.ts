@@ -315,6 +315,7 @@ function prefixExpr(state: State): {i: number, match: Expr} {
     return oneOf(
         [
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
+            {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
         ],
         'expr',
@@ -379,6 +380,27 @@ function unitExpr(state: State): {i: number, match: Expr} {
     i = expect('LPAREN',desc,i,state.tokens);
     i = expect('RPAREN',desc,i,state.tokens);
     return {i, match: {expr: 'unit'}};
+}
+
+//: LPAREN expr (COMMA expr)* RPAREN
+//= (1)
+//= (1,True,foo)
+function tupleOrParenthesizedExpr(state: State): {i: number, match: Expr} {
+    const listResult = nonemptyList({
+        left:  'LPAREN',
+        right: 'RPAREN',
+        sep:   'COMMA',
+        item:  expr,
+        state: state,
+        parsedItem: 'tuple expr or parenthesized expr',
+        skipEol: true,
+    });
+
+    const match: Type = listResult.match.length == 1
+        ?  listResult.match[0] // parenthesized expr: return the child
+        :  {expr: 'tuple', elements: listResult.match};
+
+    return {i: listResult.i, match};
 }
 
 //: LBRACE (recordExprField (COMMA recordExprField)*)? RBRACE
