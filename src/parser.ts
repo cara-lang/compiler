@@ -671,6 +671,7 @@ function namedType(state: State): {i: number, match: Type} {
     //: UPPER_NAME
     let nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
+    const name = nameResult.match;
     //: (LBRACKET type (COMMA type)* RBRACKET)?
     let args: Type[] = [];
     if (tagIs('LBRACKET',i,state.tokens)) {
@@ -690,8 +691,8 @@ function namedType(state: State): {i: number, match: Type} {
     return {
         i,
         match: (args.length == 0)
-                ? { type: 'named', name: nameResult.match }
-                : { type: 'call',  name: nameResult.match, args }
+                ? { type: 'named', qualifiers, name }
+                : { type: 'call',  qualifiers, name, args }
     }
 }
 //: LBRACE (recordTypeField (COMMA recordTypeField)*)? RBRACE
@@ -716,7 +717,18 @@ function recordType(state: State): {i: number, match: Type} {
 //: LOWER_NAME COLON type
 //= a: Int
 function recordTypeField(state: State): {i: number, match: RecordTypeField} {
-    throw todo('record type field', state);
+    let {i} = state;
+    const desc = 'record type field';
+    //: LOWER_NAME
+    const lowerNameResult = getLowerName(desc, i, state.tokens);
+    i = lowerNameResult.i;
+    //: COLON
+    i = expect('COLON',desc,i,state.tokens);
+    //: type
+    const typeResult = type({...state, i});
+    i = typeResult.i;
+    // Done!
+    return {i, match: {field: lowerNameResult.match, type: typeResult.match}};
 }
 
 //: LPAREN RPAREN
