@@ -17,15 +17,60 @@ export function parse(tokens: Token[]): Decl[] {
     return decls;
 }
 
+function exprPrecedence(tag: TokenTag): number | null {
+    switch (tag) {
+        case 'ANDAND':   return  1; // &&
+        case 'OROR':     return  2; // ||
+        case 'PLUSPLUS': return  3; // ++
+        case 'PIPELINE': return  4; // |>
+        case 'RANGE_I':  return  5; // ..
+        case 'RANGE_E':  return  5; // ...
+        case 'PIPE':     return  6; // |
+        case 'CARET':    return  7; // ^
+        case 'AND':      return  8; // &
+        case 'EQEQ':     return  9; // ==
+        case 'NEQ':      return  9; // !=
+        case 'LTE':      return 10; // <=
+        case 'LT':       return 10; // <
+        case 'GT':       return 10; // >
+        case 'GTE':      return 10; // >=
+        case 'SHL':      return 11; // <<
+        case 'SHR':      return 11; // >>
+        case 'SHRU':     return 11; // >>>
+        case 'PLUS':     return 12; // +
+        case 'MINUS':    return 12; // -
+        case 'TIMES':    return 13; // *
+        case 'DIV':      return 13; // /
+        case 'PERCENT':  return 13; // %
+        case 'POWER':    return 14; // **
+        case 'LPAREN':   return 15; // (
+        default:         return null;
+    }
+};
+
+function typePrecedence(tag: TokenTag): number | null {
+    switch (tag) {
+        case 'ARROW': return 1; // -> 
+        // Foo[a] - postfix?
+        default:      return null;
+    }
+};
+
 function declaration(state: State): {i: number, match: Decl} {
     const i = skipEol(state);
     state = {...state, i};
     return oneOf(
         [
-            {prefix: ['TYPE','ALIAS'], parser: typeAliasDecl},
-            {prefix: ['TYPE'],         parser: typeDecl},
+            {prefix: ['PRIVATE','TYPE','ALIAS'], parser: typeAliasDecl},
+            {prefix: ['TYPE','ALIAS'],           parser: typeAliasDecl},
+
+            {prefix: ['PRIVATE','TYPE'], parser: typeDecl},
+            {prefix: ['OPAQUE','TYPE'],  parser: typeDecl},
+            {prefix: ['TYPE'],           parser: typeDecl},
+
             {prefix: ['EXTEND','MODULE'], parser: extendModuleDecl},
-            {prefix: null,                parser: statementDecl},
+
+            {prefix: null, parser: statementDecl},
             //{prefix: ['LOWER_NAME','EQ','LBRACE'], parser: blockDecl}, // TODO does this mean we'll have blockFnDecl, effectBlockDecl, effectBlockFnDecl?
             /*
             moduleDecl,
@@ -529,10 +574,7 @@ function typevar(state: State): {i: number, match: Typevar} {
     return getLowerName('typevar',state.i,state.tokens);
 }
 
-function type(state: State): {i: number, match: Type} {
-    // TODO: fn types
-    // {type:'fn', from:Type, to:Type}
-    //= x -> y
+function prefixType(state: State): {i: number, match: Type} {
     return oneOf(
         [
             {prefix: ['LPAREN','RPAREN'], parser: unitType},
@@ -545,6 +587,51 @@ function type(state: State): {i: number, match: Type} {
         'type',
         state
     );
+}
+
+function type(state: State): {i: number, match: Type} {
+    return typeAux(0, state);
+}
+
+function typeAux(precedence: number, state: State): {i: number, match: Type} {
+    let {i} = state;
+
+    // prefix or literal
+    const prefixTypeResult = prefixType(state);
+    i = prefixTypeResult.i;
+    let left = prefixTypeResult.match;
+
+    // infix or postfix
+    let nextToken = state.tokens[i];
+    let nextPrecedence: number | null = typePrecedence(nextToken.type.type);
+    while (nextPrecedence != null && precedence < nextPrecedence) {
+        switch (nextToken.type.type) {
+            case 'ARROW':
+                i++;
+                const fnTypeResult = fnType(left, {...state, i});
+                // ^ receives i pointing to the token _after_ the operator token
+                i = fnTypeResult.i;
+                left = fnTypeResult.match;
+                nextToken = state.tokens[i];
+                nextPrecedence = typePrecedence(nextToken.type.type);
+                break;
+            default:
+                throw todo('Parser bug? Type parser infix default case', {...state, i});
+        }
+    }
+
+    // Done!
+    return {i, match: left};
+}
+
+//: type ARROW type
+//  ^^^^^^^^^^ already parsed
+//= x -> y
+function fnType(left: Type, state: State): {i: number, match: Type} {
+    const typeResult = type(state);
+    const i = typeResult.i;
+    const right = typeResult.match;
+    return {i, match: {type: 'fn', from: left, to: right}};
 }
 
 //: typevar
