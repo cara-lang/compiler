@@ -11,7 +11,6 @@ export type Expr =
     | {expr:'tuple',  elements:Expr[]}      // (1,True)
     | {expr:'list',   elements:Expr[]}      // [1,2]
     | {expr:'record', fields:RecordExprField[]} // {a:1,b:True}
-    | {expr:'constructor', id:UpperIdentifier, args:Expr[]} // Foo, Bar.Foo(1,2)
 
     // calls
     | {expr:'unary-op',   op:UnaryOp,  arg:Expr}
@@ -21,7 +20,8 @@ export type Expr =
     | {expr:'pipeline',   arg:Expr,    fn:Expr}      // a |> b
 
     // other
-    | {expr:'id', id:LowerIdentifier} // bar, Foo.bar
+    | {expr:'constructor', id:UpperIdentifier} // Foo, Bar.Foo
+    | {expr:'identifier',  id:LowerIdentifier} // foo, Bar.foo
     | {expr:'lambda',  args:Pattern[], body:Expr}
     | {expr:'closure', args:Pattern[], body:Expr, env:Map<LowerIdentifier,Expr>} // not creatable via syntax, only by the interpreter
     | {expr:'record-getter', field:string} // .a

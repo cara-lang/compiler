@@ -323,7 +323,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
             {prefix: ['LBRACKET'],        parser: listExpr},
             {prefix: ['LBRACE'],          parser: recordExpr},
-            // TODO: constructor
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
@@ -335,7 +334,8 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             // TODO where should it be: {expr:'record-get'}
             // TODO where should it be: {expr:'pipeline'}
 
-            // TODO: id
+            {prefix: null, parser: constructorExpr},
+            {prefix: null, parser: identifierExpr},
             // TODO: lambda
             // TODO: closure
             // TODO: record-getter
@@ -421,6 +421,32 @@ function charExpr(state: State): {i: number, match: Expr} {
 function stringExpr(state: State): {i: number, match: Expr} {
     const stringResult = getString('string expr',state.i,state.tokens);
     return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
+}
+
+//: QUALIFIER* UPPER_NAME
+//= Foo.Bar
+function constructorExpr(state: State): {i: number, match: Expr} {
+    const upperIdentifierResult = upperIdentifier(state);
+    return {
+        i: upperIdentifierResult.i,
+        match: {
+            expr: 'constructor',
+            id: upperIdentifierResult.match,
+        }
+    };
+}
+
+//: QUALIFIER* LOWER_NAME
+//= Foo.bar
+function identifierExpr(state: State): {i: number, match: Expr} {
+    const lowerIdentifierResult = lowerIdentifier(state);
+    return {
+        i: lowerIdentifierResult.i,
+        match: {
+            expr: 'identifier',
+            id: lowerIdentifierResult.match,
+        }
+    };
 }
 
 //: LPAREN RPAREN
