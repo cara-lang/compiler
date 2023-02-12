@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, UnaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -9,12 +9,14 @@ type InfixParser<T> = (left: T, state: State) => {i: number, match: T};
 type InfixParserTable<T> = (tag: TokenTag) => {precedence: number, parser: InfixParser<T>} | null;
 
 export function parse(tokens: Token[]): Decl[] {
-    let state = {tokens, i: 0};
+    let i = 0;
     const decls: Decl[] = [];
-    while (!isAtEnd(state)) {
-        const {i, match} = declaration(state);
-        state = {...state, i};
-        decls.push(match);
+    i = skipEol({tokens,i});
+    while (!isAtEnd({tokens,i})) {
+        const declResult = declaration({tokens,i});
+        i = declResult.i;
+        decls.push(declResult.match);
+        i = skipEol({tokens,i});
     }
     return decls;
 }
@@ -62,8 +64,6 @@ function infixType(tag: TokenTag): {precedence: number, parser: InfixParser<Type
 };
 
 function declaration(state: State): {i: number, match: Decl} {
-    const i = skipEol(state);
-    state = {...state, i};
     return oneOf(
         [
             {prefix: ['PRIVATE','TYPE','ALIAS'], parser: typeAliasDecl},
@@ -508,8 +508,8 @@ function recordExprField(state: State): {i: number, match: RecordExprField} {
 }
 
 //: ${tokenTag} expr
-function unaryOpExpr(desc: string, tokenTag: TokenTag, op: string): Parser<Expr> {
-    return function(state: State) {
+function unaryOpExpr(desc: string, tokenTag: TokenTag, op: UnaryOp): Parser<Expr> {
+    return function(state: State): {i: number, match: Expr} {
         let {i} = state;
         //: ${tokenTag}
         i = expect(tokenTag,desc,i,state.tokens);

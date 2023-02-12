@@ -31,14 +31,15 @@ async function allSynchronously<T>(resolvables: (() => Promise<T>)[]): Promise<T
 }
 
 const test = async (test:string): Promise<TestResult> => {
-  //if (test !== 'comment-unicode') return {status:'skip',test};
+  //if (test !== 'unit') return {status:'skip',test};
   if (test.startsWith('test-')) return {status:'skip',test}; // TODO handle test tests
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');
   try {
-    console.log(test);
+    //console.log(test);
     const tokens: Token[] = lex(source);
+    //console.log({tokens});
     const ast: Decl[] = parse(tokens);
-    // console.log({ast});
+    //console.log({ast});
     return {status:'pass',test};
   }
   catch (e) {
