@@ -314,6 +314,8 @@ function exprAux(precedence: number, state: State): {i: number, match: Expr} {
 function prefixExpr(state: State): {i: number, match: Expr} {
     return oneOf(
         [
+            {prefix: ['INT'],             parser: intExpr},
+            {prefix: ['FLOAT'],           parser: floatExpr},
             {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
             {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
             {prefix: ['LBRACKET'],        parser: listExpr},
@@ -371,6 +373,20 @@ function pipelineExpr(left: Expr, state: State): {i: number, match: Expr} {
 
 function callExpr(left: Expr, state: State): {i: number, match: Expr} {
     throw todo('call expr', state);
+}
+
+//: INT
+//= 123
+function intExpr(state: State): {i: number, match: Expr} {
+    const intResult = getInt('int expr',state.i,state.tokens);
+    return {i: intResult.i, match: {expr: 'int', int: intResult.match}};
+}
+
+//: FLOAT
+//= 123.45
+function floatExpr(state: State): {i: number, match: Expr} {
+    const floatResult = getFloat('float expr',state.i,state.tokens);
+    return {i: floatResult.i, match: {expr: 'float', float: floatResult.match}};
 }
 
 //: LPAREN RPAREN
@@ -1063,6 +1079,28 @@ function oneOf<T>(options: Option<T>[], parsedItem: string, state: State): {i: n
     } else {
         throw furthestErr;
     }
+}
+
+function getInt(parsedItem: string, i: number, tokens: Token[]): {i: number, match: number} {
+    const intToken = tokens[i];
+    if (intToken.type.type !== 'INT') {
+        throw err('EXXXX',`Expected INT for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: intToken.type.int,
+    };
+}
+
+function getFloat(parsedItem: string, i: number, tokens: Token[]): {i: number, match: number} {
+    const floatToken = tokens[i];
+    if (floatToken.type.type !== 'FLOAT') {
+        throw err('EXXXX',`Expected FLOAT for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: floatToken.type.float,
+    };
 }
 
 function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
