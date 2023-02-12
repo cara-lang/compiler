@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -78,18 +78,28 @@ function infixType(tag: TokenTag): {precedence: number, isRight: boolean, parser
 function declaration(state: State): {i: number, match: Decl} {
     return oneOf(
         [
+            // type alias
             {prefix: ['PRIVATE','TYPE','ALIAS'], parser: typeAliasDecl},
             {prefix: ['TYPE','ALIAS'],           parser: typeAliasDecl},
 
+            // type
             {prefix: ['PRIVATE','TYPE'], parser: typeDecl},
             {prefix: ['OPAQUE','TYPE'],  parser: typeDecl},
             {prefix: ['TYPE'],           parser: typeDecl},
 
-            {prefix: ['EXTEND','MODULE'], parser: extendModuleDecl},
+            // module
+            {prefix: ['EXTEND','MODULE'],  parser: extendModuleDecl},
+            {prefix: ['PRIVATE','MODULE'], parser: moduleDecl},
+            {prefix: ['MODULE'],           parser: moduleDecl},
 
+            // f(a,b) = expr
             {prefix: ['LOWER_NAME','LPAREN'], parser: functionDecl},
 
+            // x = expr
+            // x = bang!
+            // bang!
             {prefix: null, parser: statementDecl},
+
             //{prefix: ['LOWER_NAME','EQ','LBRACE'], parser: blockDecl}, // TODO does this mean we'll have blockFnDecl, effectBlockDecl, effectBlockFnDecl?
             /*
             moduleDecl,
@@ -172,6 +182,59 @@ function extendModuleDecl(state: State): {i: number, match: Decl} {
             decls: declsResult.match,
         },
     }
+}
+
+//: PRIVATE? MODULE UPPER_NAME LBRACE (EOL+ declaration)+ EOL+ RBRACE
+function moduleDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'module decl';
+    //: PRIVATE?
+    let mod: ModuleModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
+    //: MODULE
+    i = expect('MODULE', desc,i,state.tokens);
+    //: UPPER_NAME
+    let nameResult = getUpperName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: LBRACE
+    i = expect('LBRACE', desc,i,state.tokens);
+    //: (EOL+ declaration)+
+    let decls: Decl[] = [];
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            //: EOL
+            i = expect('EOL',desc,i,state.tokens);
+            //: EOL*
+            i = skipEol({...state,i});
+            //: declaration
+            const declResult = declaration({...state, i});
+            i = declResult.i;
+            decls.push(declResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    //: EOL
+    i = expect('EOL',desc,i,state.tokens);
+    //: EOL*
+    i = skipEol({...state,i});
+    //: RBRACE
+    i = expect('RBRACE', desc,i,state.tokens);
+    // Done!
+    return {
+        i,
+        match: {
+            decl: 'module',
+            mod,
+            name: nameResult.match,
+            decls,
+        },
+    };
 }
 
 function moduleName(state: State): {i: number, match: UpperIdentifier} {
