@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, Constructor, Typevar, TypeAliasModifier, TypeModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -303,7 +303,23 @@ function expr(state: State): {i: number, match: Expr} {
 }
 
 function exprAux(precedence: number, state: State): {i: number, match: Expr} {
-    throw todo('expr', state);
+    return pratt(
+        precedence,
+        prefixExpr,
+        infixExpr,
+        state,
+    );
+}
+
+function prefixExpr(state: State): {i: number, match: Expr} {
+    return oneOf(
+        [
+            {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
+            {prefix: ['LBRACE'],          parser: recordExpr},
+        ],
+        'expr',
+        state
+    );
 }
 
 //: lowerIdentifier BANG (LPAREN expr (COMMA expr)* RPAREN)?
@@ -341,6 +357,64 @@ function bang(state: State): {i: number, match: Bang} {
                 ? {bang: 'value', val: id}
                 : {bang: 'call', fn: id, args}
     };
+}
+
+function binaryOpExpr(left: Expr, state: State): {i: number, match: Expr} {
+    throw todo('binary op expr', state);
+}
+
+function pipelineExpr(left: Expr, state: State): {i: number, match: Expr} {
+    throw todo('pipeline expr', state);
+}
+
+function callExpr(left: Expr, state: State): {i: number, match: Expr} {
+    throw todo('call expr', state);
+}
+
+//: LPAREN RPAREN
+//= ()
+function unitExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'unit expr';
+    i = expect('LPAREN',desc,i,state.tokens);
+    i = expect('RPAREN',desc,i,state.tokens);
+    return {i, match: {expr: 'unit'}};
+}
+
+//: LBRACE (recordExprField (COMMA recordExprField)*)? RBRACE
+//= {a:1,b:True}
+function recordExpr(state: State): {i: number, match: Expr} {
+    const desc = 'record expr';
+    const listResult = list({
+        left:  'LBRACE',
+        right: 'RBRACE',
+        sep:   'COMMA',
+        item:  recordExprField,
+        state,
+        parsedItem: desc,
+        skipEol: true,
+    });
+    return {
+        i: listResult.i,
+        match: {expr: 'record', fields: listResult.match},
+    }
+}
+
+//: LOWER_NAME COLON expr
+//= a: 1
+function recordExprField(state: State): {i: number, match: RecordExprField} {
+    let {i} = state;
+    const desc = 'record expr field';
+    //: LOWER_NAME
+    const lowerNameResult = getLowerName(desc, i, state.tokens);
+    i = lowerNameResult.i;
+    //: COLON
+    i = expect('COLON',desc,i,state.tokens);
+    //: expr
+    const exprResult = expr({...state, i});
+    i = exprResult.i;
+    // Done!
+    return {i, match: {field: lowerNameResult.match, value: exprResult.match}};
 }
 
 //: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ type
@@ -750,8 +824,9 @@ function recordTypeField(state: State): {i: number, match: RecordTypeField} {
 //= ()
 function unitType(state: State): {i: number, match: Type} {
     let {i} = state;
-    i = expect('LPAREN','unit type',i,state.tokens);
-    i = expect('RPAREN','unit type',i,state.tokens);
+    const desc = 'unit type';
+    i = expect('LPAREN',desc,i,state.tokens);
+    i = expect('RPAREN',desc,i,state.tokens);
     return {i, match: {type: 'unit'}};
 }
 

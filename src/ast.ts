@@ -10,7 +10,7 @@ export type Expr =
     // collections
     | {expr:'tuple',  elements:Expr[]}      // (1,True)
     | {expr:'list',   elements:Expr[]}      // [1,2]
-    | {expr:'record', fields:RecordField[]} // {a:1,b:True}
+    | {expr:'record', fields:RecordExprField[]} // {a:1,b:True}
     | {expr:'constructor', id:UpperIdentifier, args:Expr[]} // Foo, Bar.Foo(1,2)
 
     // calls
@@ -66,7 +66,7 @@ export type Decl =
 export type Block =           {stmts:Stmt[], ret:Expr|null}
 export type LowerIdentifier = {qualifiers:string[], name:string} // x, IO.println
 export type UpperIdentifier = {qualifiers:string[], name:string} // X, IO.Println
-export type RecordField =     {field:string, value:Expr} // a:123
+export type RecordExprField = {field:string, value:Expr} // a:123
 export type RecordTypeField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(Int), Baz(n: Int, verbose: Bool)
 export type ConstructorArg =  {name:string|null, type:Type}
