@@ -1173,62 +1173,38 @@ function typeDecl(state: State): {i: number, match: Decl} {
     }
 }
 
-function constructorList(state: State): {i: number, match: Constructor[]} {
-    return oneOf(
-        [
-            {prefix: ['EOL'], parser: pipeFirstConstructorList},
-            {prefix: null,    parser: shortConstructorList},
-        ],
-        'constructor list',
-        state,
-    );
-}
-
-//: (EOL+ PIPE constructor)+
-function pipeFirstConstructorList(state: State): {i: number, match: Constructor[]} {
-    let {i} = state;
-    const desc = 'constructor list';
-    const constructors: Constructor[] = [];
-    while (!isAtEnd({...state, i})) {
-        const iBeforeLoop = i;
-        try {
-            //: EOL
-            i = expect('EOL',desc,i,state.tokens);
-            //: EOL*
-            i = skipEol({...state,i});
-            //: PIPE
-            i = expect('PIPE',desc,i,state.tokens);
-            //: constructor
-            const constructorResult = constructor({...state, i});
-            i = constructorResult.i;
-            constructors.push(constructorResult.match);
-        } catch (e) {
-            i = iBeforeLoop;
-            break;
-        }
-    }
-    // Done!
-    if (constructors.length == 0) {
-        throw err('EXXXX','Expected non-empty list of constructors',i,state.tokens);
-    }
-    return {i, match: constructors};
-}
-
-//: constructor (PIPE constructor)*
+//: (EOL+ PIPE)? EOL* constructor (EOL* PIPE EOL* constructor)*
 //= Foo | Bar(Bool) | Baz(Int,String)
-function shortConstructorList(state: State): {i: number, match: Constructor[]} {
+//= | Foo | Bar(Bool) | Baz(Int,String)
+function constructorList(state: State): {i: number, match: Constructor[]} {
     let {i} = state;
     const desc = 'constructor list';
+    //: (EOL* PIPE)?
+    const iBeforeOptional = i;
+    try {
+        //: EOL*
+        i = skipEol({...state, i});
+        //: PIPE
+        i = expect('PIPE',desc,i,state.tokens);
+    } catch (e) {
+        i = iBeforeOptional;
+    }
+    //: EOL*
+    i = skipEol({...state, i});
     //: constructor
-    const firstConstructorResult = constructor(state);
+    const firstConstructorResult = constructor({...state, i});
     i = firstConstructorResult.i;
     const constructors = [firstConstructorResult.match];
-    //: (PIPE constructor)*
+    //: (EOL* PIPE EOL* constructor)*
     while (!isAtEnd({...state, i})) {
         const iBeforeLoop = i;
         try {
+            //: EOL*
+            i = skipEol({...state, i});
             //: PIPE
             i = expect('PIPE',desc,i,state.tokens);
+            //: EOL*
+            i = skipEol({...state, i});
             //: constructor
             const constructorResult = constructor({...state, i});
             i = constructorResult.i;
