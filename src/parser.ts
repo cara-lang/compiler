@@ -5,8 +5,8 @@ import {Loc} from './loc.ts';
 
 type State = { tokens: Token[], i: number };
 type Parser<T> = (state: State) => {i: number, match: T}; // Parser<Decl> = (state: State) => {i: number, match: Decl}
-type InfixParser<T> = (left: T, state: State) => {i: number, match: T};
-type InfixParserTable<T> = (tag: TokenTag) => {precedence: number, parser: InfixParser<T>} | null;
+type InfixParser<T> = (left: T, precedence: number, isRight: boolean, state: State) => {i: number, match: T};
+type InfixParserTable<T> = (tag: TokenTag) => {precedence: number, isRight: boolean, parser: InfixParser<T>} | null;
 
 export function parse(tokens: Token[]): Decl[] {
     let i = 0;
@@ -21,45 +21,45 @@ export function parse(tokens: Token[]): Decl[] {
     return decls;
 }
 
-function infixExpr(tag: TokenTag): {precedence: number, parser: InfixParser<Expr>} | null {
+function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser: InfixParser<Expr>} | null {
     switch (tag) {
-        case 'ANDAND':   return {precedence:  1, parser: binaryOpExpr}; // &&
-        case 'OROR':     return {precedence:  2, parser: binaryOpExpr}; // ||
-        case 'PLUSPLUS': return {precedence:  3, parser: binaryOpExpr}; // ++
+        case 'ANDAND':   return {precedence:  1, isRight: false, parser: binaryOpExpr}; // &&
+        case 'OROR':     return {precedence:  2, isRight: false, parser: binaryOpExpr}; // ||
+        case 'PLUSPLUS': return {precedence:  3, isRight: false, parser: binaryOpExpr}; // ++
 
-        case 'PIPELINE': return {precedence:  4, parser: pipelineExpr}; // |>
+        case 'PIPELINE': return {precedence:  4, isRight: false, parser: pipelineExpr}; // |>
 
-        case 'RANGE_I':  return {precedence:  5, parser: binaryOpExpr}; // ..
-        case 'RANGE_E':  return {precedence:  5, parser: binaryOpExpr}; // ...
-        case 'PIPE':     return {precedence:  6, parser: binaryOpExpr}; // |
-        case 'CARET':    return {precedence:  7, parser: binaryOpExpr}; // ^
-        case 'AND':      return {precedence:  8, parser: binaryOpExpr}; // &
-        case 'EQEQ':     return {precedence:  9, parser: binaryOpExpr}; // ==
-        case 'NEQ':      return {precedence:  9, parser: binaryOpExpr}; // !=
-        case 'LTE':      return {precedence: 10, parser: binaryOpExpr}; // <=
-        case 'LT':       return {precedence: 10, parser: binaryOpExpr}; // <
-        case 'GT':       return {precedence: 10, parser: binaryOpExpr}; // >
-        case 'GTE':      return {precedence: 10, parser: binaryOpExpr}; // >=
-        case 'SHL':      return {precedence: 11, parser: binaryOpExpr}; // <<
-        case 'SHR':      return {precedence: 11, parser: binaryOpExpr}; // >>
-        case 'SHRU':     return {precedence: 11, parser: binaryOpExpr}; // >>>
-        case 'PLUS':     return {precedence: 12, parser: binaryOpExpr}; // +
-        case 'MINUS':    return {precedence: 12, parser: binaryOpExpr}; // -
-        case 'TIMES':    return {precedence: 13, parser: binaryOpExpr}; // *
-        case 'DIV':      return {precedence: 13, parser: binaryOpExpr}; // /
-        case 'PERCENT':  return {precedence: 13, parser: binaryOpExpr}; // %
-        case 'POWER':    return {precedence: 14, parser: binaryOpExpr}; // **
+        case 'RANGE_I':  return {precedence:  5, isRight: false, parser: binaryOpExpr}; // ..
+        case 'RANGE_E':  return {precedence:  5, isRight: false, parser: binaryOpExpr}; // ...
+        case 'PIPE':     return {precedence:  6, isRight: false, parser: binaryOpExpr}; // |
+        case 'CARET':    return {precedence:  7, isRight: false, parser: binaryOpExpr}; // ^
+        case 'AND':      return {precedence:  8, isRight: false, parser: binaryOpExpr}; // &
+        case 'EQEQ':     return {precedence:  9, isRight: false, parser: binaryOpExpr}; // ==
+        case 'NEQ':      return {precedence:  9, isRight: false, parser: binaryOpExpr}; // !=
+        case 'LTE':      return {precedence: 10, isRight: false, parser: binaryOpExpr}; // <=
+        case 'LT':       return {precedence: 10, isRight: false, parser: binaryOpExpr}; // <
+        case 'GT':       return {precedence: 10, isRight: false, parser: binaryOpExpr}; // >
+        case 'GTE':      return {precedence: 10, isRight: false, parser: binaryOpExpr}; // >=
+        case 'SHL':      return {precedence: 11, isRight: false, parser: binaryOpExpr}; // <<
+        case 'SHR':      return {precedence: 11, isRight: false, parser: binaryOpExpr}; // >>
+        case 'SHRU':     return {precedence: 11, isRight: false, parser: binaryOpExpr}; // >>>
+        case 'PLUS':     return {precedence: 12, isRight: false, parser: binaryOpExpr}; // +
+        case 'MINUS':    return {precedence: 12, isRight: false, parser: binaryOpExpr}; // -
+        case 'TIMES':    return {precedence: 13, isRight: false, parser: binaryOpExpr}; // *
+        case 'DIV':      return {precedence: 13, isRight: false, parser: binaryOpExpr}; // /
+        case 'PERCENT':  return {precedence: 13, isRight: false, parser: binaryOpExpr}; // %
+        case 'POWER':    return {precedence: 14, isRight: true,  parser: binaryOpExpr}; // **
 
-        case 'LPAREN':   return {precedence: 15, parser: callExpr};      // (
-        case 'GETTER':   return {precedence: 16, parser: recordGetExpr}; // .abc
+        case 'LPAREN':   return {precedence: 15, isRight: true,  parser: callExpr};      // (
+        case 'GETTER':   return {precedence: 16, isRight: false, parser: recordGetExpr}; // .abc
 
         default:         return null;
     }
 };
 
-function infixType(tag: TokenTag): {precedence: number, parser: InfixParser<Type>} | null {
+function infixType(tag: TokenTag): {precedence: number, isRight: boolean, parser: InfixParser<Type>} | null {
     switch (tag) {
-        case 'ARROW': return {precedence: 1, parser: fnType}; // -> 
+        case 'ARROW': return {precedence: 1, isRight: true, parser: fnType}; // -> 
         default:      return null;
     }
 };
@@ -300,11 +300,12 @@ function bangStatement(state: State): {i: number, match: Stmt} {
 }
 
 function expr(state: State): {i: number, match: Expr} {
-    return exprAux(0, state);
+    return exprAux(0, false, state);
 }
 
-function exprAux(precedence: number, state: State): {i: number, match: Expr} {
+function exprAux(precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     return pratt(
+        isRight,
         precedence,
         prefixExpr,
         infixExpr,
@@ -380,20 +381,38 @@ function bang(state: State): {i: number, match: Bang} {
     };
 }
 
-function binaryOpExpr(left: Expr, state: State): {i: number, match: Expr} {
+function binaryOpExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     throw todo('binary op expr', state);
 }
 
-function pipelineExpr(left: Expr, state: State): {i: number, match: Expr} {
+function pipelineExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     throw todo('pipeline expr', state);
 }
 
-function callExpr(left: Expr, state: State): {i: number, match: Expr} {
+function callExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     throw todo('call expr', state);
 }
 
-function recordGetExpr(left: Expr, state: State): {i: number, match: Expr} {
-    throw todo('record get expr', state);
+//: expr GETTER
+//  ^^^^^^^^^^^ already parsed, we need to i-- to access the GETTER!
+//= foo.abc
+//= getRecord(123).abc
+function recordGetExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'record access';
+    //: GETTER
+    i--;
+    const getterResult = getRecordGetter(desc,i,state.tokens);
+    i = getterResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            expr: 'record-get',
+            record: left,
+            field: getterResult.match,
+        },
+    };
 }
 
 //: INT
@@ -822,11 +841,12 @@ function prefixType(state: State): {i: number, match: Type} {
 }
 
 function type(state: State): {i: number, match: Type} {
-    return typeAux(0, state);
+    return typeAux(0, false, state);
 }
 
-function typeAux(precedence: number, state: State): {i: number, match: Type} {
+function typeAux(precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
     return pratt(
+        isRight,
         precedence,
         prefixType,
         infixType,
@@ -834,8 +854,9 @@ function typeAux(precedence: number, state: State): {i: number, match: Type} {
     );
 }
 
-function pratt<T>(precedence: number, prefix: Parser<T>, infix: InfixParserTable<T>, state: State): {i: number, match: T} {
+function pratt<T>(isRight: boolean, precedence: number, prefix: Parser<T>, infix: InfixParserTable<T>, state: State): {i: number, match: T} {
     let {i} = state;
+    precedence = isRight ? precedence - 1 : precedence;
 
     // prefix or literal
     const prefixResult = prefix(state);
@@ -844,10 +865,11 @@ function pratt<T>(precedence: number, prefix: Parser<T>, infix: InfixParserTable
 
     // infix or postfix
     let nextToken = state.tokens[i];
-    let next: {precedence: number, parser: InfixParser<T>} | null = infix(nextToken.type.type);
+    let next: {precedence: number, isRight: boolean, parser: InfixParser<T>} | null = infix(nextToken.type.type);
+
     while (next != null && precedence < next.precedence) {
         i++;
-        const nextResult = next.parser(left, {...state, i});
+        const nextResult = next.parser(left, precedence, isRight, {...state, i});
         i = nextResult.i;
         left = nextResult.match;
         nextToken = state.tokens[i];
@@ -861,8 +883,8 @@ function pratt<T>(precedence: number, prefix: Parser<T>, infix: InfixParserTable
 //: type ARROW type
 //  ^^^^^^^^^^ already parsed
 //= x -> y
-function fnType(left: Type, state: State): {i: number, match: Type} {
-    const typeResult = type(state);
+function fnType(left: Type, precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
+    const typeResult = typeAux(precedence, isRight, state);
     const i = typeResult.i;
     const right = typeResult.match;
     return {i, match: {type: 'fn', from: left, to: right}};
