@@ -1225,8 +1225,8 @@ function pattern(state: State): {i: number, match: Pattern} {
             {prefix: ['INT'],        parser: intPattern},
             {prefix: ['FLOAT'],      parser: floatPattern},
             {prefix: ['LBRACKET'],   parser: listPattern},
+            {prefix: ['MINUS'],      parser: negatedPattern},
             // TODO other patterns
-            // TODO negation of int/float in the pattern
         ],
         'pattern',
         state,
@@ -1299,6 +1299,30 @@ function listPattern(state: State): {i: number, match: Pattern} {
             elements: listResult.match,
         },
     };
+}
+
+//: MINUS (intPattern | floatPattern)
+//= -123
+//= -123.45
+function negatedPattern(state: State): {i: number, match: Pattern} {
+    let {i} = state;
+    const desc = 'negated pattern';
+    i = expect('MINUS',desc,i,state.tokens);
+    const numResult = oneOf(
+        [
+            {prefix: ['INT'], parser: intPattern},
+            {prefix: ['INT'], parser: floatPattern},
+        ],
+        desc,
+        {...state,i},
+    );
+    i = numResult.i;
+    const newMatch: Pattern =
+        numResult.match.pattern == 'int'
+            ? {...numResult.match, int:   -numResult.match.int}
+            : {...numResult.match, float: -numResult.match.float};
+
+    return {i, match: newMatch};
 }
 
 //: ${tokenTag} expr
