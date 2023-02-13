@@ -1,12 +1,15 @@
 #!/usr/bin/env deno run --allow-read --allow-sys
 
 import fs from 'node:fs/promises';
+import {inspect} from 'node:util';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
 import {isCaraError,Stage} from './src/error.ts';
 import {Loc} from './src/loc.ts';
 import {Token} from './src/token.ts';
 import {Decl} from './src/ast.ts';
+
+const log = (data: any) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
 
 const testsDir = 'end-to-end-tests';
 
@@ -38,12 +41,12 @@ const test = async (test:string): Promise<TestResult> => {
   try {
     if (specificTest != null) {
 
-      console.log(test);
+      log(test);
       console.log(`\n${source}`);
       const tokens: Token[] = lex(source);
-      console.log({tokens});
+      log({tokens});
       const ast: Decl[] = parse(tokens);
-      console.log({ast});
+      log({ast});
       return {status:'pass',test};
 
     } else {

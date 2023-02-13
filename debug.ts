@@ -5,7 +5,7 @@ import {argv} from 'node:process';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
 
-const log = (data) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
+const log = (data: any) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
 
 const program = argv[2];
 console.log('Source program:');

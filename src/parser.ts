@@ -138,6 +138,7 @@ function functionDecl(state: State): {i: number, match: Decl} {
         state: {...state, i},
         parsedItem: `${desc} argument list`,
         skipEol: false,
+        allowTrailingSep: false,
     });
     i = argsResult.i;
     //: EQ
@@ -204,6 +205,7 @@ function extendModuleDecl(state: State): {i: number, match: Decl} {
         state: {...state, i},
         parsedItem: `${desc}`,
         skipEol: true,
+        allowTrailingSep: false,
     });
     i = declsResult.i;
     // Done!
@@ -536,6 +538,7 @@ function bang(state: State): {i: number, match: Bang} {
             state: {...state, i},
             parsedItem: `${desc} argument list`,
             skipEol: false,
+            allowTrailingSep: false,
         });
         i = listResult.i;
         args = listResult.match;
@@ -600,6 +603,7 @@ function callExpr(left: Expr, precedence: number, isRight: boolean, state: State
             state: {...state, i},
             parsedItem: `${desc} argument list`,
             skipEol: true,
+            allowTrailingSep: false,
         });
         i = argsResult.i;
         args = argsResult.match;
@@ -732,6 +736,7 @@ function tupleOrParenthesizedExpr(state: State): {i: number, match: Expr} {
         state: state,
         parsedItem: 'tuple expr or parenthesized expr',
         skipEol: true,
+        allowTrailingSep: false,
     });
 
     const match: Expr = listResult.match.length == 1
@@ -754,6 +759,7 @@ function listExpr(state: State): {i: number, match: Expr} {
         state: state,
         parsedItem: 'list expr',
         skipEol: true,
+        allowTrailingSep: false,
     });
     return {i: listResult.i, match: {expr:'list', elements: listResult.match}};
 }
@@ -770,6 +776,7 @@ function recordExpr(state: State): {i: number, match: Expr} {
         state,
         parsedItem: desc,
         skipEol: true,
+        allowTrailingSep: true,
     });
     return {
         i: listResult.i,
@@ -946,6 +953,7 @@ function lambdaExpr(state: State): {i: number, match: Expr} {
         state,
         parsedItem: `${desc} argument list`,
         skipEol: true,
+        allowTrailingSep: false,
     });
     i = argsResult.i;
     //: expr
@@ -1248,6 +1256,7 @@ function typeAliasDecl(state: State): {i: number, match: Decl} {
             state: {...state, i},
             parsedItem: `${desc} typevar list`,
             skipEol: false,
+            allowTrailingSep: false,
         });
         i = listResult.i;
         vars = listResult.match;
@@ -1302,6 +1311,7 @@ function typeDecl(state: State): {i: number, match: Decl} {
             state: {...state, i},
             parsedItem: `${desc} typevar list`,
             skipEol: false,
+            allowTrailingSep: false,
         });
         i = listResult.i;
         vars = listResult.match;
@@ -1390,6 +1400,7 @@ function constructor(state: State): {i: number, match: Constructor} {
             state: {...state, i},
             parsedItem: desc,
             skipEol: false,
+            allowTrailingSep: false,
         });
         i = argsResult.i;
         args = argsResult.match;
@@ -1520,6 +1531,7 @@ function callType(left: Type, precedence: number, isRight: boolean, state: State
         state: {...state, i},
         parsedItem: `${desc} arg list`,
         skipEol: false,
+        allowTrailingSep: false,
     });
     i = argsResult.i;
     const args = argsResult.match;
@@ -1584,6 +1596,7 @@ function recordType(state: State): {i: number, match: Type} {
         state,
         parsedItem: desc,
         skipEol: true,
+        allowTrailingSep: false,
     });
     return {
         i: listResult.i,
@@ -1630,6 +1643,7 @@ function tupleOrParenthesizedType(state: State): {i: number, match: Type} {
         state: state,
         parsedItem: 'tuple type or parenthesized type',
         skipEol: true,
+        allowTrailingSep: false,
     });
 
     const match: Type = listResult.match.length == 1
@@ -1656,7 +1670,7 @@ type ListConfig<T> = {
     state: State,
     parsedItem: string,
     skipEol:    boolean,
-    // TODO: allow trailing separators by default in list() and nonemptyList()... probably don't even make it configurable
+    allowTrailingSep: boolean,
 };
 
 //: left (item (sep item)*)? right
@@ -1715,11 +1729,26 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                 break; // we'll consume `right` outside this try{}catch{} block
             } else if (tagIs(sep,i,c.state.tokens)) {
                 i++;
-                if (c.skipEol) i = skipEol({...c.state,i});
-                const nextItem = c.item({...c.state,i});
-                i = nextItem.i;
-                items.push(nextItem.match);
-                if (c.skipEol) i = skipEol({...c.state,i});
+                if (c.allowTrailingSep) {
+                    const iBeforeItem = i;
+                    try {
+                        if (c.skipEol) i = skipEol({...c.state,i});
+                        const nextItem = c.item({...c.state,i});
+                        i = nextItem.i;
+                        items.push(nextItem.match);
+                        if (c.skipEol) i = skipEol({...c.state,i});
+                    } catch (e) {
+                        i = iBeforeItem;
+                        if (c.skipEol) i = skipEol({...c.state,i});
+                        break;
+                    }
+                } else {
+                    if (c.skipEol) i = skipEol({...c.state,i});
+                    const nextItem = c.item({...c.state,i});
+                    i = nextItem.i;
+                    items.push(nextItem.match);
+                    if (c.skipEol) i = skipEol({...c.state,i});
+                }
             } else {
                 throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
             }
@@ -1758,11 +1787,26 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
             break;
         } else if (tagIs(sep,i,c.state.tokens)) {
             i++;
-            if (c.skipEol) i = skipEol({...c.state, i});
-            const nextItem = c.item({...c.state,i});
-            i = nextItem.i;
-            items.push(nextItem.match);
-            if (c.skipEol) i = skipEol({...c.state, i});
+            if (c.allowTrailingSep) {
+                const iBeforeItem = i;
+                try {
+                    if (c.skipEol) i = skipEol({...c.state, i});
+                    const nextItem = c.item({...c.state,i});
+                    i = nextItem.i;
+                    items.push(nextItem.match);
+                    if (c.skipEol) i = skipEol({...c.state, i});
+                } catch (e) {
+                    i = iBeforeItem;
+                    if (c.skipEol) i = skipEol({...c.state, i});
+                    break;
+                }
+            } else {
+                if (c.skipEol) i = skipEol({...c.state, i});
+                const nextItem = c.item({...c.state,i});
+                i = nextItem.i;
+                items.push(nextItem.match);
+                if (c.skipEol) i = skipEol({...c.state, i});
+            }
         } else {
             throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
         }
