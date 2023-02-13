@@ -674,9 +674,7 @@ function callExpr(left: Expr, precedence: number, isRight: boolean, state: State
         skipEol: true,
         allowTrailingSep: false,
     });
-    console.log({c:state.tokens[i]});
     i = argsResult.i;
-    console.log({d:state.tokens[i]});
     const args = argsResult.match;
     // Done!
     return {
@@ -1729,21 +1727,16 @@ function pratt<T>(c: PrattConfig<T>): {i: number, match: T} {
     let left = prefixResult.match;
 
     // infix or postfix
-    console.log({p1:c.state.tokens[i]});
     if (c.skipEol) i = skipEol({...c.state,i});
-    console.log({p2:c.state.tokens[i]});
     let nextToken = c.state.tokens[i];
     let next: {precedence: number, isRight: boolean, parser: InfixParser<T>} | null = c.infix(nextToken.type.type);
 
     while (next != null && c.precedence < next.precedence) {
         i++;
-        console.log({p3:c.state.tokens[i+1]});
         const nextResult = next.parser(left, next.precedence, next.isRight, {...c.state, i});
         i = nextResult.i;
-        console.log({p4:c.state.tokens[i+1]});
         left = nextResult.match;
         if (c.skipEol) i = skipEol({...c.state,i});
-        console.log({p5:c.state.tokens[i+1]});
         nextToken = c.state.tokens[i];
         next = c.infix(nextToken.type.type);
     }
