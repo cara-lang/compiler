@@ -1224,6 +1224,7 @@ function pattern(state: State): {i: number, match: Pattern} {
             {prefix: ['LOWER_NAME'], parser: varPattern},
             {prefix: ['INT'],        parser: intPattern},
             {prefix: ['FLOAT'],      parser: floatPattern},
+            {prefix: ['LBRACKET'],   parser: listPattern},
             // TODO other patterns
             // TODO negation of int/float in the pattern
         ],
@@ -1270,6 +1271,32 @@ function floatPattern(state: State): {i: number, match: Pattern} {
         match: {
             pattern: 'float',
             float: floatResult.match,
+        },
+    };
+}
+
+//: LBRACKET (pattern (COMMA pattern)*)? RBRACKET
+//= []
+//= [a]
+//= [1,a]
+function listPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'list pattern';
+    let {i} = state;
+    const listResult = list({
+        left:  'LBRACKET',
+        right: 'RBRACKET',
+        sep:   'COMMA',
+        item:  pattern,
+        state: {...state, i},
+        parsedItem: `${desc} elements`,
+        skipEol: false,
+        allowTrailingSep: false,
+    });
+    return {
+        i: listResult.i,
+        match: {
+            pattern: 'list',
+            elements: listResult.match,
         },
     };
 }
