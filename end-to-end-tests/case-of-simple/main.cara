@@ -1,0 +1,7 @@
+x = case 1 of
+  3 -> "Hello"
+  2 -> "There"
+  1 -> "World"
+  _ -> "!"
+
+IO.println!(x)
