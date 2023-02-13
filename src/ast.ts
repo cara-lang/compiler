@@ -55,14 +55,14 @@ export type Stmt =
     | {stmt:'bang',     bang:Bang}                               // Bar.foo!(123)
 
 export type Decl =
-    | {decl:'type-alias',       mod:TypeAliasModifier, name:string, vars:Typevar[], body:Type}
-    | {decl:'type',             mod:TypeModifier,      name:string, vars:Typevar[], constructors:Constructor[]}
-    | {decl:'module',           mod:ModuleModifier,    name:string, decls:Decl[]}
-    | {decl:'extend-module',    module:UpperIdentifier, decls:Decl[]}
-    | {decl:'function',         mod:LetModifier, name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
-    | {decl:'statement',        stmt:Stmt}
-    | {decl:'value-annotation', name:string, type:Type} // TODO move this into Stmt?
-    // TODO Function annotation: x(y: Int): Bool
+    | {decl:'type-alias',         mod:TypeAliasModifier, name:string, vars:Typevar[], body:Type}
+    | {decl:'type',               mod:TypeModifier,      name:string, vars:Typevar[], constructors:Constructor[]}
+    | {decl:'module',             mod:ModuleModifier,    name:string, decls:Decl[]}
+    | {decl:'extend-module',      module:UpperIdentifier, decls:Decl[]}
+    | {decl:'function',           mod:LetModifier, name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
+    | {decl:'statement',          stmt:Stmt}
+    | {decl:'value-annotation',   name:string, type:Type}
+    | {decl:'function-annotation',mod:LetModifier, name:string, args:FnTypedArg[], resultType:Type|null}
 
 export type Block =           {stmts:Stmt[], ret:Expr|null}
 export type LowerIdentifier = {qualifiers:string[], name:string} // x, IO.println
@@ -70,7 +70,8 @@ export type UpperIdentifier = {qualifiers:string[], name:string} // X, IO.Printl
 export type RecordExprField = {field:string, value:Expr} // a:123
 export type RecordTypeField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(Int), Baz(n: Int, verbose: Bool)
-export type ConstructorArg =  {name:string|null, type:Type}
+export type ConstructorArg =  {name:string|null, type:Type}      // a:Int, Int
+export type FnTypedArg =      {name:string|null, type:Type|null} // a:Int, Int, a
 export type Typevar =         string;
 
 export type LetModifier =

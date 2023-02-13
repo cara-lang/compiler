@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnTypedArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -93,11 +93,6 @@ function declaration(state: State): {i: number, match: Decl} {
             {prefix: ['PRIVATE','MODULE'], parser: moduleDecl},
             {prefix: ['MODULE'],           parser: moduleDecl},
 
-            // f(a,b) = expr
-            // private f(a,b) = expr
-            {prefix: ['PRIVATE','LOWER_NAME','LPAREN'], parser: functionDecl},
-            {prefix: ['LOWER_NAME','LPAREN'],           parser: functionDecl},
-
             // x = 123
             // x = foo!(123)
             // foo!(123)
@@ -108,7 +103,13 @@ function declaration(state: State): {i: number, match: Decl} {
             // x : Int
             {prefix: null, parser: valueAnnotationDecl}, // can't prefix it because `x:Int = 123` is also possible and needs to be handled inside statementDecl (because of `private`!)
 
-            // TODO function annotation
+            // f(a,b) = expr
+            // private f(a,b) = expr
+            {prefix: null, parser: functionDecl},
+
+            // f(a:Int, b:Int): Bool
+            // private f(a:Int, b:Int): Bool
+            {prefix: null, parser: functionAnnotationDecl},
         ],
         'declaration',
         state
@@ -157,6 +158,65 @@ function functionDecl(state: State): {i: number, match: Decl} {
             name: nameResult.match,
             args: argsResult.match,
             body: bodyResult.match,
+        },
+    };
+}
+
+//: PRIVATE? LOWER_NAME LPAREN (fnTypedArg (COMMA fnTypedArg)*)? RPAREN (COLON type)?
+//= f(a: Int, b: Int): Bool
+//= f(a: Int, b: Int)
+//= f(a, b): Bool
+//= f(Int, Float): Bool
+//= f(Int, Float)
+// note we don't allow f(a,b)
+function functionAnnotationDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'function annotation decl';
+    //: PRIVATE?
+    let mod: LetModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
+    //: LOWER_NAME
+    const nameResult = getLowerName(desc,i,state.tokens);
+    i = nameResult.i;
+    //: LPAREN (fnTypedArg (COMMA fnTypedArg)*)? RPAREN
+    const argsResult = list({
+        left:  'LPAREN',
+        right: 'RPAREN',
+        sep:   'COMMA',
+        item:  fnTypedArg,
+        state: {...state, i},
+        parsedItem: `${desc} argument list`,
+        skipEol: false,
+        allowTrailingSep: false,
+    });
+    i = argsResult.i;
+    const args = argsResult.match;
+    //: (COLON type)?
+    let resultType: Type|null = null;
+    const iBeforeResult = i;
+    try {
+        i = expect('COLON',desc,i,state.tokens);
+        const resultTypeResult = type({...state,i});
+        i = resultTypeResult.i;
+        resultType = resultTypeResult.match;
+    } catch (e) {
+        i = iBeforeResult;
+    }
+    // Done!
+    if (resultType == null && args.every((arg: FnTypedArg) => arg.type == null)) {
+        throw err('EXXXX','Function annotation needs more types',i,state.tokens);
+    }
+    return {
+        i,
+        match: {
+            decl: 'function-annotation',
+            mod,
+            name: nameResult.match,
+            args,
+            resultType,
         },
     };
 }
@@ -1450,6 +1510,46 @@ function constructorArg(state: State): {i: number, match: ConstructorArg} {
         },
     };
 }
+
+//: (LOWER_NAME | type | (LOWER_NAME COLON type))
+//= n
+//= Int
+//= n: Int
+function fnTypedArg(state: State): {i: number, match: FnTypedArg} {
+    let {i} = state;
+    const desc = 'typed function argument';
+    let name: string|null = null;
+    let typeVal: Type|null = null;
+    let needsType: boolean = false;
+    //: (LOWER_NAME COLON?)?
+    if (tagIs('LOWER_NAME',i,state.tokens)) {
+        const nameResult = getLowerName(desc,i,state.tokens);
+        i = nameResult.i;
+        name = nameResult.match;
+        if (tagIs('COLON',i,state.tokens)) {
+            i++;
+            needsType = true;
+        }
+    }
+    // type
+    if (needsType) {
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    } else {
+        try {
+            const typeResult = type({...state, i});
+            i = typeResult.i;
+            typeVal = typeResult.match;
+        } catch (e) {}
+    }
+    // Done!
+    if (name == null && typeVal == null) {
+        throw todo('Bug: fnTypedArg',{...state,i});
+    }
+    return { i, match: { name, type: typeVal } };
+}
+
 
 //: LOWER_NAME
 //= a
