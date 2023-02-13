@@ -523,6 +523,7 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
 
 //: bang
 //= Foo.bar!(1,False)
+//= 1 |> IO.println!
 function bangStatement(state: State): {i: number, match: Stmt} {
     //: bang
     const bangResult = bang(state);
@@ -585,17 +586,27 @@ function prefixExpr(state: State): {i: number, match: Expr} {
     );
 }
 
-//: lowerIdentifier BANG (LPAREN expr (COMMA expr)* RPAREN)?
+//: expr BANG (LPAREN expr (COMMA expr)* RPAREN)?
+//  ^ where this expr is a `call` or `identifier`
+/* ^ TODO: This likely allows things like `x(1)!` and `x(1)!(2) - is there a way
+           to get rid of that? One solution might be to have bangExpr parsers
+           that are basically expr types but more constrained / allowing
+           the `foo!()` expr
+*/
 //= foo!
 //= foo!()
 //= Bar.foo!(123,456)
+//= x |> IO.println!
+//= x |> f(1) |> Foo.bar!(1,2,3)
 function bang(state: State): {i: number, match: Bang} {
     let {i} = state;
     const desc = 'bang';
-    //: lowerIdentifier
-    const idResult = lowerIdentifier(state);
-    i = idResult.i;
-    const id = idResult.match;
+    //: expr
+    const exprResult = expr({...state,i});
+    i = exprResult.i;
+    if (exprResult.match.expr != 'call' && exprResult.match.expr != 'identifier') {
+        throw err('EXXXX','Only calls and identifiers allowed in bangs',i,state.tokens);
+    }
     //: BANG
     i = expect('BANG',desc,i,state.tokens);
     //: (LPAREN expr (COMMA expr)* RPAREN)?
@@ -615,12 +626,11 @@ function bang(state: State): {i: number, match: Bang} {
         args = listResult.match;
     }
     // Done!
-    return {
-        i,
-        match: (args.length == 0)
-                ? {bang: 'value', val: id}
-                : {bang: 'call', fn: id, args}
-    };
+    const finalBang: Bang =
+            (args.length == 0)
+                ? {bang: 'value', val: exprResult.match}
+                : {bang: 'call', fn: exprResult.match, args};
+    return { i, match: finalBang };
 }
 
 //: expr ${tokenTag} expr
@@ -648,10 +658,19 @@ function binaryOpExpr(op: BinaryOp): InfixParser<Expr> {
 function pipelineExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     const rightResult = exprAux(precedence, isRight, state);
     const right = rightResult.match;
-    const match: Expr = right.expr == 'call'
-                        ? { ...right, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case, we inline!)
-                        : { expr: 'call', fn: right,args: [left] };   // 3 |> f      ==> f(3)
+    const match: Expr = pipeline({left,right});
     return { i: rightResult.i, match };
+}
+
+type PipelineOptions = {
+    left: Expr,
+    right: Expr,
+}
+
+function pipeline({left,right}:PipelineOptions): Expr {
+    return right.expr == 'call'
+            ? { ...right, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case, we inline!)
+            : { expr: 'call', fn: right,args: [left] };   // 3 |> f      ==> f(3)
 }
 
 //: expr LPAREN (expr (COMMA expr)*)? RPAREN
