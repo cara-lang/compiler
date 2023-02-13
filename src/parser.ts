@@ -1223,13 +1223,15 @@ function combineHoles(a: HoleAnalysis, b: HoleAnalysis): HoleAnalysis {
 function pattern(state: State): {i: number, match: Pattern} {
     return oneOf(
         [
-            {prefix: ['LOWER_NAME'], parser: varPattern},
-            {prefix: ['INT'],        parser: intPattern},
-            {prefix: ['FLOAT'],      parser: floatPattern},
-            {prefix: ['LBRACKET'],   parser: listPattern},
-            {prefix: ['MINUS'],      parser: negatedPattern},
-            {prefix: ['UNDERSCORE'], parser: wildcardPattern},
-            {prefix: ['DOTDOTDOT'],  parser: spreadPattern},
+            {prefix: ['LPAREN','RPAREN'], parser: unitPattern},
+            {prefix: ['LOWER_NAME'],      parser: varPattern},
+            {prefix: ['INT'],             parser: intPattern},
+            {prefix: ['FLOAT'],           parser: floatPattern},
+            {prefix: ['LPAREN'],          parser: tuplePattern},
+            {prefix: ['LBRACKET'],        parser: listPattern},
+            {prefix: ['MINUS'],           parser: negatedPattern},
+            {prefix: ['UNDERSCORE'],      parser: wildcardPattern},
+            {prefix: ['DOTDOTDOT'],       parser: spreadPattern},
             // TODO other patterns
         ],
         'pattern',
@@ -1300,6 +1302,41 @@ function listPattern(state: State): {i: number, match: Pattern} {
         i: listResult.i,
         match: {
             pattern: 'list',
+            elements: listResult.match,
+        },
+    };
+}
+
+//: LPAREN RPAREN
+//= ()
+function unitPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'unit pattern';
+    let {i} = state;
+    i = expect('LPAREN',desc,i,state.tokens);
+    i = expect('RPAREN',desc,i,state.tokens);
+    return { i, match: { pattern: 'unit' } };
+}
+
+//: LPAREN (pattern (COMMA pattern)*)? RPAREN
+//= (a)
+//= (1,a)
+function tuplePattern(state: State): {i: number, match: Pattern} {
+    const desc = 'tuple pattern';
+    let {i} = state;
+    const listResult = nonemptyList({
+        left:  'LPAREN',
+        right: 'RPAREN',
+        sep:   'COMMA',
+        item:  pattern,
+        state: {...state, i},
+        parsedItem: `${desc} elements`,
+        skipEol: false,
+        allowTrailingSep: false,
+    });
+    return {
+        i: listResult.i,
+        match: {
+            pattern: 'tuple',
             elements: listResult.match,
         },
     };

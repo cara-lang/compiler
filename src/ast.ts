@@ -40,10 +40,12 @@ export type Type =
     | {type:'unit'}                                     // ()
 
 export type Pattern =
+    | {pattern:'unit'}                      // ()
     | {pattern:'var',   var:string}         // a
     | {pattern:'int',   int:number}         // 1
     | {pattern:'float', float:number}       // 1.2345
     | {pattern:'list',  elements:Pattern[]} // [1,a]
+    | {pattern:'tuple', elements:Pattern[]} // (1,a)
     | {pattern:'wildcard'}                  // _
     | {pattern:'spread',var:string|null}    // ...a, ..._
     // TODO other patterns
