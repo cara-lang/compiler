@@ -541,13 +541,14 @@ function expr(state: State): {i: number, match: Expr} {
 }
 
 function exprAux(precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-    return pratt(
+    return pratt({
+        skipEol: true,
         isRight,
         precedence,
-        prefixExpr,
-        infixExpr,
+        prefix: prefixExpr,
+        infix: infixExpr,
         state,
-    );
+    });
 }
 
 function prefixExpr(state: State): {i: number, match: Expr} {
@@ -662,22 +663,21 @@ function callExpr(left: Expr, precedence: number, isRight: boolean, state: State
     let {i} = state;
     const desc = 'call expr'
     //: LPAREN (expr (COMMA expr)*)? RPAREN
-    let args: Expr[] = [];
     i--; // we'll parse LPAREN as part of the list()
-    try {
-        const argsResult = list({
-            left:  'LPAREN',
-            right: 'RPAREN',
-            sep:   'COMMA',
-            item:  expr,
-            state: {...state, i},
-            parsedItem: `${desc} argument list`,
-            skipEol: true,
-            allowTrailingSep: false,
-        });
-        i = argsResult.i;
-        args = argsResult.match;
-    } catch (e) {}
+    const argsResult = list({
+        left:  'LPAREN',
+        right: 'RPAREN',
+        sep:   'COMMA',
+        item:  expr,
+        state: {...state, i},
+        parsedItem: `${desc} argument list`,
+        skipEol: true,
+        allowTrailingSep: false,
+    });
+    console.log({c:state.tokens[i]});
+    i = argsResult.i;
+    console.log({d:state.tokens[i]});
+    const args = argsResult.match;
     // Done!
     return {
         i,
@@ -1700,35 +1700,52 @@ function type(state: State): {i: number, match: Type} {
 }
 
 function typeAux(precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
-    return pratt(
+    return pratt({
+        skipEol: false,
         isRight,
         precedence,
-        prefixType,
-        infixType,
+        prefix: prefixType,
+        infix: infixType,
         state,
-    );
+    });
 }
 
-function pratt<T>(isRight: boolean, precedence: number, prefix: Parser<T>, infix: InfixParserTable<T>, state: State): {i: number, match: T} {
-    let {i} = state;
-    precedence = isRight ? precedence - 1 : precedence;
+type PrattConfig<T> = {
+    skipEol: boolean,
+    isRight: boolean,
+    precedence: number, 
+    prefix: Parser<T>, 
+    infix: InfixParserTable<T>, 
+    state: State,
+}
+
+function pratt<T>(c: PrattConfig<T>): {i: number, match: T} {
+    let {i} = c.state;
+    c.precedence = c.isRight ? c.precedence - 1 : c.precedence;
 
     // prefix or literal
-    const prefixResult = prefix(state);
+    const prefixResult = c.prefix(c.state);
     i = prefixResult.i;
     let left = prefixResult.match;
 
     // infix or postfix
-    let nextToken = state.tokens[i];
-    let next: {precedence: number, isRight: boolean, parser: InfixParser<T>} | null = infix(nextToken.type.type);
+    console.log({p1:c.state.tokens[i]});
+    if (c.skipEol) i = skipEol({...c.state,i});
+    console.log({p2:c.state.tokens[i]});
+    let nextToken = c.state.tokens[i];
+    let next: {precedence: number, isRight: boolean, parser: InfixParser<T>} | null = c.infix(nextToken.type.type);
 
-    while (next != null && precedence < next.precedence) {
+    while (next != null && c.precedence < next.precedence) {
         i++;
-        const nextResult = next.parser(left, next.precedence, next.isRight, {...state, i});
+        console.log({p3:c.state.tokens[i+1]});
+        const nextResult = next.parser(left, next.precedence, next.isRight, {...c.state, i});
         i = nextResult.i;
+        console.log({p4:c.state.tokens[i+1]});
         left = nextResult.match;
-        nextToken = state.tokens[i];
-        next = infix(nextToken.type.type);
+        if (c.skipEol) i = skipEol({...c.state,i});
+        console.log({p5:c.state.tokens[i+1]});
+        nextToken = c.state.tokens[i];
+        next = c.infix(nextToken.type.type);
     }
 
     // Done!
