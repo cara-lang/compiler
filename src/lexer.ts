@@ -42,7 +42,12 @@ function eol(state: State): { token: Token, state: State } {
     let { row, col } = state;
     state.row++;
     state.col = 1;
+    while (isWhitespace(state.source[state.i])) { state.col++; state.i++; } // without this we tracked tokens right after newline wrongly (col was 1 instead of eg. 3). This has to do with the way we fix row,col in lex()
     return { token: { type: { type: 'EOL' }, loc: {row, col} }, state };
+}
+
+function isWhitespace(char: string): boolean {
+    return char == ' ' || char == '\t';
 }
 
 function isAtEnd(state: State) {
