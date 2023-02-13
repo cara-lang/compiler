@@ -427,7 +427,7 @@ function statement(state: State): {i: number, match: Stmt} {
     );
 }
 
-//: PRIVATE? LOWER_NAME (COLON type)? EQ expr
+//: PRIVATE? pattern (COLON type)? EQ expr
 //= x = 123
 function letStatement(state: State): {i: number, match: Stmt} {
     let {i} = state;
@@ -439,12 +439,13 @@ function letStatement(state: State): {i: number, match: Stmt} {
         i++;
     }
     // prevent _
+    // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
         throw err('E0013','Assignment of expression to underscore',i,state.tokens);
     }
-    //: LOWER_NAME
-    const nameResult = getLowerName(desc,i,state.tokens);
-    i = nameResult.i;
+    //: pattern
+    const lhsResult = pattern({...state, i});
+    i = lhsResult.i;
     //: (COLON type)?
     let typeVal: Type | null = null;
     if (tagIs('COLON',i,state.tokens)) {
@@ -467,13 +468,13 @@ function letStatement(state: State): {i: number, match: Stmt} {
             stmt: 'let',
             mod,
             type: typeVal,
-            name: nameResult.match,
+            lhs: lhsResult.match,
             body: exprResult.match,
         }
     };
 }
 
-//: PRIVATE? LOWER_NAME (COLON type)? EQ bang
+//: PRIVATE? pattern (COLON type)? EQ bang
 //= x = Foo.bar!(1,False)
 function letBangStatement(state: State): {i: number, match: Stmt} {
     let {i} = state;
@@ -485,12 +486,13 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
         i++;
     }
     // prevent _
+    // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
         throw err('E0013','Assignment of bang expression to underscore',i,state.tokens);
     }
-    //: LOWER_NAME
-    const nameResult = getLowerName(desc,i,state.tokens);
-    i = nameResult.i;
+    //: pattern
+    const lhsResult = pattern({...state,i});
+    i = lhsResult.i;
     //: (COLON type)?
     let typeVal: Type | null = null;
     if (tagIs('COLON',i,state.tokens)) {
@@ -513,7 +515,7 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
             stmt: 'let-bang',
             mod,
             type: typeVal,
-            name: nameResult.match,
+            lhs: lhsResult.match,
             body: bangResult.match,
         }
     };

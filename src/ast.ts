@@ -53,9 +53,9 @@ export type Bang =
     | {bang:'call',  fn:LowerIdentifier, args:Expr[]} // foo!(1,2), Bar.foo!(1,2)
 
 export type Stmt =
-    | {stmt:'let',      mod:LetModifier, type:Type|null, name:string, body:Expr} // x = 123,           x: Int = 123
-    | {stmt:'let-bang', mod:LetModifier, type:Type|null, name:string, body:Bang} // x = Bar.foo!(123), x: Maybe[Int] = Bar.foo!(123)
-    | {stmt:'bang',     bang:Bang}                               // Bar.foo!(123)
+    | {stmt:'let',      mod:LetModifier, type:Type|null, lhs:Pattern, body:Expr} // x = 123,           x: Int = 123
+    | {stmt:'let-bang', mod:LetModifier, type:Type|null, lhs:Pattern, body:Bang} // x = Bar.foo!(123), x: Maybe[Int] = Bar.foo!(123)
+    | {stmt:'bang',     bang:Bang}                                               // Bar.foo!(123)
 
 export type Decl =
     | {decl:'type-alias',         mod:TypeAliasModifier, name:string, vars:Typevar[], body:Type}
