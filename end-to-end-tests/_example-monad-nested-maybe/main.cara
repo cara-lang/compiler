@@ -17,10 +17,10 @@ isTitleNonEmpty1(Doc): Maybe[Bool]
 isTitleNonEmpty1(doc) =
   case doc.head of
     Nothing -> Nothing
-    Just head ->
+    Just(head) ->
       case head.title of
         Nothing -> Nothing
-        Just title -> Just(!title.isEmpty())
+        Just(title) -> Just(!title.isEmpty())
 
 
 isTitleNonEmpty2(Doc): Maybe[Bool]
