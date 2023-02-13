@@ -1226,6 +1226,8 @@ function pattern(state: State): {i: number, match: Pattern} {
             {prefix: ['FLOAT'],      parser: floatPattern},
             {prefix: ['LBRACKET'],   parser: listPattern},
             {prefix: ['MINUS'],      parser: negatedPattern},
+            {prefix: ['UNDERSCORE'], parser: wildcardPattern},
+            {prefix: ['DOTDOTDOT'],  parser: spreadPattern},
             // TODO other patterns
         ],
         'pattern',
@@ -1317,12 +1319,42 @@ function negatedPattern(state: State): {i: number, match: Pattern} {
         {...state,i},
     );
     i = numResult.i;
-    const newMatch: Pattern =
-        numResult.match.pattern == 'int'
-            ? {...numResult.match, int:   -numResult.match.int}
-            : {...numResult.match, float: -numResult.match.float};
+    switch (numResult.match.pattern) {
+        case 'int':   numResult.match.int   = -numResult.match.int;   break;
+        case 'float': numResult.match.float = -numResult.match.float; break;
+    }
+    return {i, match: numResult.match};
+}
 
-    return {i, match: newMatch};
+//: UNDERSCORE
+//= _
+function wildcardPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'wildcard pattern';
+    const i = expect('UNDERSCORE',desc,state.i,state.tokens);
+    return {i, match: {pattern:'wildcard'}};
+}
+
+//: DOTDOTDOT (varPattern | wildcardPattern)
+//= ...a
+//= ..._
+function spreadPattern(state: State): {i: number, match: Pattern} {
+    let {i} = state;
+    const desc = 'spread pattern';
+    i = expect('DOTDOTDOT',desc,i,state.tokens);
+    const varResult = oneOf(
+        [
+            {prefix: ['LOWER_NAME'], parser: varPattern},
+            {prefix: ['UNDERSCORE'], parser: wildcardPattern},
+        ],
+        desc,
+        {...state,i},
+    );
+    i = varResult.i;
+    const varName = 
+        varResult.match.pattern == 'var'
+            ? varResult.match.var
+            : null;
+    return {i, match: {pattern:'spread', var:varName}};
 }
 
 //: ${tokenTag} expr
