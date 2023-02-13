@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
+import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -108,12 +108,7 @@ function declaration(state: State): {i: number, match: Decl} {
             // x : Int
             {prefix: null, parser: valueAnnotationDecl}, // can't prefix it because `x:Int = 123` is also possible and needs to be handled inside statementDecl (because of `private`!)
 
-            //{prefix: ['LOWER_NAME','EQ','LBRACE'], parser: blockDecl}, // TODO does this mean we'll have blockFnDecl, effectBlockDecl, effectBlockFnDecl?
-            /*
-            moduleDecl,
-            blockDecl, // handles block, block fn, effect block, effect block fn
-                    // x[(a,b)] = [IO] { ... }
-            */
+            // TODO function annotation
         ],
         'declaration',
         state
@@ -486,30 +481,31 @@ function exprAux(precedence: number, isRight: boolean, state: State): {i: number
 function prefixExpr(state: State): {i: number, match: Expr} {
     return oneOf(
         [
-            {prefix: ['INT'],             parser: intExpr},
-            {prefix: ['FLOAT'],           parser: floatExpr},
-            {prefix: ['CHAR'],            parser: charExpr},
-            {prefix: ['STRING'],          parser: stringExpr},
-            {prefix: ['GETTER'],          parser: recordGetterExpr},
-            {prefix: ['TRUE'],            parser: boolExpr},
-            {prefix: ['FALSE'],           parser: boolExpr},
-            {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
-            {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
-            {prefix: ['LBRACKET'],        parser: listExpr},
-            {prefix: ['LBRACE'],          parser: recordExpr},
-            {prefix: ['IF'],              parser: ifExpr},
-            {prefix: ['BACKSLASH'],       parser: lambdaExpr},
-            {prefix: ['LHOLE'],           parser: holeLambdaExpr},
-            {prefix: ['UNDERSCORE'],      parser: holeExpr},
-            {prefix: ['HOLE'],            parser: holeExpr},
+            {prefix: ['INT'],                         parser: intExpr},
+            {prefix: ['FLOAT'],                       parser: floatExpr},
+            {prefix: ['CHAR'],                        parser: charExpr},
+            {prefix: ['STRING'],                      parser: stringExpr},
+            {prefix: ['GETTER'],                      parser: recordGetterExpr},
+            {prefix: ['TRUE'],                        parser: boolExpr},
+            {prefix: ['FALSE'],                       parser: boolExpr},
+            {prefix: ['LPAREN','RPAREN'],             parser: unitExpr},
+            {prefix: ['LPAREN'],                      parser: tupleOrParenthesizedExpr},
+            {prefix: ['LBRACKET'],                    parser: listExpr},
+            {prefix: ['IF'],                          parser: ifExpr},
+            {prefix: ['BACKSLASH'],                   parser: lambdaExpr},
+            {prefix: ['LHOLE'],                       parser: holeLambdaExpr},
+            {prefix: ['UNDERSCORE'],                  parser: holeExpr},
+            {prefix: ['HOLE'],                        parser: holeExpr},
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
             {prefix: ['BANG'],  parser: unaryOpExpr('bool negation expr',  'BANG', 'NegateBool')},
             {prefix: ['TILDE'], parser: unaryOpExpr('binary negation expr','TILDE','NegateBin')},
 
+            {prefix: null, parser: blockExpr},
             {prefix: null, parser: constructorExpr},
             {prefix: null, parser: identifierExpr},
+            {prefix: null, parser: recordExpr},
         ],
         'expr',
         state
@@ -798,6 +794,110 @@ function recordExprField(state: State): {i: number, match: RecordExprField} {
     return {i, match: {field: lowerNameResult.match, value: exprResult.match}};
 }
 
+//: moduleName? block
+//= { 
+//    x = 1
+//    y = 1 + x
+//    (x,y)
+//  }
+//= Maybe { 
+//    head = doc.head!
+//    title = head.title!
+//    title != ""
+//  }
+function blockExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'block expr';
+    //: moduleName?
+    let monadModule: UpperIdentifier|null = null;
+    const iBeforeMonadModule = i;
+    try {
+        const moduleResult = moduleName({...state, i});
+        i = moduleResult.i;
+        monadModule = moduleResult.match;
+    } catch (e) {
+        i = iBeforeMonadModule;
+    }
+    //: block
+    const blockResult = block({...state,i});
+    i = blockResult.i;
+    // Done!
+    if (monadModule == null) {
+        return {
+            i,
+            match: {
+                expr: 'block',
+                block: blockResult.match,
+            },
+        };
+    } else {
+        return {
+            i,
+            match: {
+                expr: 'effect-block',
+                monadModule,
+                block: blockResult.match,
+            },
+        };
+    }
+}
+
+//: LBRACE (EOL+ stmt)+ (EOL+ expr)? EOL+ RBRACE
+function block(state: State): {i: number, match: Block} {
+    let {i} = state;
+    const desc = 'block';
+    //: LBRACE
+    i = expect('LBRACE',desc,i,state.tokens);
+    //: (EOL+ stmt)+
+    i = expect('EOL',desc,i,state.tokens);
+    i = skipEol({...state, i});
+    const firstStmtResult = statement({...state, i});
+    i = firstStmtResult.i;
+    const stmts = [firstStmtResult.match];
+    while (!isAtEnd({...state, i})) {
+        const iBeforeLoop = i;
+        try {
+            i = expect('EOL',desc,i,state.tokens);
+            i = skipEol({...state, i});
+            const stmtResult = statement({...state, i});
+            i = stmtResult.i;
+            stmts.push(stmtResult.match);
+        } catch (e) {
+            i = iBeforeLoop;
+            break;
+        }
+    }
+    //: (EOL+ expr)?
+    let ret: Expr|null = null;
+    const iBeforeRet = i;
+    try {
+        //: EOL
+        i = expect('EOL',desc,i,state.tokens);
+        //: EOL*
+        i = skipEol({...state, i});
+        //: expr
+        const exprResult = expr({...state, i});
+        i = exprResult.i;
+        ret = exprResult.match;
+    } catch (e) {
+        i = iBeforeRet;
+    }
+    //: EOL
+    i = expect('EOL',desc,i,state.tokens);
+    //: EOL*
+    i = skipEol({...state, i});
+    //: RBRACE
+    i = expect('RBRACE',desc,i,state.tokens);
+    // Done!
+    return {
+        i,
+        match: {
+            stmts,
+            ret,
+        },
+    };
+}
+
 //: IF expr THEN expr ELSE expr
 //= if 1 == 2 then foo() else bar()
 function ifExpr(state: State): {i: number, match: Expr} {
@@ -982,23 +1082,41 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
             return analyzeHoles(expr.record);
         case 'tuple':
         case 'list':
-            return analyzeHolesList(expr.elements);
+            return analyzeHolesList(expr.elements.map(analyzeHoles));
         case 'record':
-            return analyzeHolesList(expr.fields.map((x: RecordExprField) => x.value));
+            return analyzeHolesList(expr.fields.map((x: RecordExprField) => analyzeHoles(x.value)));
         case 'call':
-            return combineHoles(analyzeHoles(expr.fn),analyzeHolesList(expr.args));
+            return combineHoles(analyzeHoles(expr.fn),analyzeHolesList(expr.args.map(analyzeHoles)));
         case 'if':
-            return analyzeHolesList([expr.cond,expr.then,expr.else]);
+            return analyzeHolesList([expr.cond,expr.then,expr.else].map(analyzeHoles));
         case 'binary-op':
-            return analyzeHolesList([expr.left,expr.right]);
+            return analyzeHolesList([expr.left,expr.right].map(analyzeHoles));
+        case 'block':
+        case 'effect-block':
+            return combineHoles(
+                expr.block.ret ? analyzeHoles(expr.block.ret) : {type:'no-holes'},
+                analyzeHolesList(expr.block.stmts.map(analyzeHolesStmt)),
+            );
     }
 }
 
-function analyzeHolesList(exprs: Expr[]): HoleAnalysis {
-    return exprs
-        .map(analyzeHoles)
-        .reduce(combineHoles, {type:'no-holes'})
-    
+function analyzeHolesStmt(stmt: Stmt): HoleAnalysis {
+    switch (stmt.stmt) {
+        case 'let':      return analyzeHoles(stmt.body);
+        case 'let-bang': return analyzeHolesBang(stmt.body);
+        case 'bang':     return analyzeHolesBang(stmt.bang);
+    }
+}
+
+function analyzeHolesBang(bang: Bang): HoleAnalysis {
+    switch (bang.bang) {
+        case 'value': return {type:'no-holes'};
+        case 'call':  return analyzeHolesList(bang.args.map(analyzeHoles));
+    }
+}
+
+function analyzeHolesList(holes: HoleAnalysis[]): HoleAnalysis {
+    return holes.reduce(combineHoles, {type:'no-holes'})
 }
 
 function combineHoles(a: HoleAnalysis, b: HoleAnalysis): HoleAnalysis {

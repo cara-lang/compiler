@@ -18,6 +18,10 @@ export type Expr =
     | {expr:'call',       fn:Expr,     args:Expr[]}  // foo(), bar(1,2)
     | {expr:'record-get', record:Expr, field:string} // r.a
 
+    // blocks
+    | {expr:'block',        block:Block}                              // x = { ... }
+    | {expr:'effect-block', monadModule:UpperIdentifier, block:Block} // x = My.Monad { ... }
+
     // other
     | {expr:'constructor', id:UpperIdentifier} // Foo, Bar.Foo
     | {expr:'identifier',  id:LowerIdentifier} // foo, Bar.foo
@@ -57,10 +61,6 @@ export type Decl =
     | {decl:'extend-module',    module:UpperIdentifier, decls:Decl[]}
     | {decl:'function',         mod:LetModifier, name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
     | {decl:'statement',        stmt:Stmt}
-    | {decl:'block',            name:string, block:Block}                                      // x = { ... }
-    | {decl:'block-fn',         name:string, args:Pattern[], block:Block}                      // x(a,b) = { ... }
-    | {decl:'effect-block',     name:string, qualifiers:string[], block:Block}                 // x = My.Monad { ... }
-    | {decl:'effect-block-fn',  name:string, args:Pattern[], qualifiers:string[], block:Block} // x(a,b) = My.Monad { ... }
     | {decl:'value-annotation', name:string, type:Type} // TODO move this into Stmt?
     // TODO Function annotation: x(y: Int): Bool
 
