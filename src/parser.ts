@@ -290,7 +290,7 @@ function moduleDecl(state: State): {i: number, match: Decl} {
         i++;
     }
     //: MODULE
-    i = expect('MODULE', desc,i,state.tokens);
+    i = expect('MODULE',desc,i,state.tokens);
     //: UPPER_NAME
     let nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
@@ -1732,18 +1732,22 @@ function pratt<T>(c: PrattConfig<T>): {i: number, match: T} {
     let left = prefixResult.match;
 
     // infix or postfix
+    const iBeforeFirstSkip = i;
     if (c.skipEolBeforeIndented) i = skipEolBeforeIndented({...c.state,i});
     let nextToken = c.state.tokens[i];
     let next: {precedence: number, isRight: boolean, parser: InfixParser<T>} | null = c.infix(nextToken.type.type);
+    if (next == null) i = iBeforeFirstSkip; // Don't eat EOL prematurely, this would throw off (EOL+ declaration)* in moduleDecl() etc.
 
     while (next != null && c.precedence < next.precedence) {
         i++;
         const nextResult = next.parser(left, next.precedence, next.isRight, {...c.state, i});
         i = nextResult.i;
         left = nextResult.match;
+        const iBeforeLastSkip = i;
         if (c.skipEolBeforeIndented) i = skipEolBeforeIndented({...c.state,i});
         nextToken = c.state.tokens[i];
         next = c.infix(nextToken.type.type);
+        if (next == null) i = iBeforeLastSkip; // Don't eat EOL prematurely, this would throw off (EOL+ declaration)* in moduleDecl() etc.
     }
 
     // Done!
