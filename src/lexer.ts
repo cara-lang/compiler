@@ -208,8 +208,8 @@ function nextToken(state: State): { token: Token, state: State } {
             let first = match('.', state);
             if (first.matches) {
                 let second = match('.', first.state);
-                if (second.matches) return simple('RANGE_E', second.state); // ...
-                return simple('RANGE_I', first.state) // ..
+                if (second.matches) return simple('DOTDOTDOT', second.state); // ...
+                return simple('DOTDOT', first.state) // ..
             }
             let lower = lowerName(state);
             if (lower.match == null) throw err("EXXXX", "Unexpected character: '.'", lower.state);

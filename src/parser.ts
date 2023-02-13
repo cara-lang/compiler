@@ -31,8 +31,8 @@ function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser
 
         case 'PIPELINE': return {precedence:  4, isRight: false, parser: pipelineExpr};                   // |>
 
-        case 'RANGE_I':  return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeInclusive')}; // ..
-        case 'RANGE_E':  return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeExclusive')}; // ...
+        case 'DOTDOT':   return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeInclusive')}; // ..
+        case 'DOTDOTDOT':return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeExclusive')}; // ...
 
         case 'PIPE':     return {precedence:  6, isRight: false, parser: binaryOpExpr('OrBin')};          // |
 
