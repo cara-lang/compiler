@@ -378,6 +378,10 @@ function letStatement(state: State): {i: number, match: Stmt} {
         mod = 'Private';
         i++;
     }
+    // prevent _
+    if (tagIs('UNDERSCORE',i,state.tokens)) {
+        throw err('E0013','Assignment of expression to underscore',i,state.tokens);
+    }
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
@@ -419,6 +423,10 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
     if (tagIs('PRIVATE',i,state.tokens)) {
         mod = 'Private';
         i++;
+    }
+    // prevent _
+    if (tagIs('UNDERSCORE',i,state.tokens)) {
+        throw err('E0013','Assignment of bang expression to underscore',i,state.tokens);
     }
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
@@ -1866,10 +1874,12 @@ function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): 
             try {
                 return option.parser(state);
             } catch (e) {
-                if (compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
+                const isProperErr = e.code.match(/E[0-9]{4}/);
+                if (isProperErr || compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
                     furthestErr = e;
                     furthestRow = e.loc.row;
                     furthestCol = e.loc.col;
+                    if (isProperErr) break;
                 }
                 state.i = iBefore;
             }
@@ -2010,11 +2020,11 @@ function err(code: string, message: string, i: number, tokens: Token[]): CaraErr
 }
 
 function todo(what: string, state: State): CaraError {
-    return rawErr('E9999',`TODO ${what}`,state.tokens[state.i].loc);
+    return rawErr('EYYYY',`TODO ${what}`,state.tokens[state.i].loc);
 }
 
 function bug(what: string, extra: any): CaraError {
-    return rawErr('E9998',`BUG: ${what}, ${extra}`,{row:0,col:0});
+    return rawErr('EZZZZ',`BUG: ${what}, ${extra}`,{row:0,col:0});
 }
 
 function isAtEnd(state: State): boolean {
