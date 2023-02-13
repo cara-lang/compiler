@@ -1439,7 +1439,7 @@ function unaryOpExpr(desc: string, tokenTag: TokenTag, op: UnaryOp): Parser<Expr
     }
 }
 
-//: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ type
+//: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ EOL* type
 //= type alias Foo = Int
 //= private type alias Bar[a,b] = Result[a,b]
 function typeAliasDecl(state: State): {i: number, match: Decl} {
@@ -1475,6 +1475,8 @@ function typeAliasDecl(state: State): {i: number, match: Decl} {
     }
     //: EQ
     i = expect('EQ',desc,i,state.tokens);
+    //: EOL*
+    i = skipEolBeforeIndented({...state,i});
     //: type
     const typeResult = type({...state, i});
     i = typeResult.i;
