@@ -29,6 +29,7 @@ export type Expr =
     | {expr:'closure', args:Pattern[], body:Expr, env:Map<LowerIdentifier,Expr>} // not creatable via syntax, only by the interpreter
     | {expr:'record-getter', field:string} // .a
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
+    | {expr:'case',subject:Expr, branches:CaseBranch[]}
 
 export type Type =
     | {type:'named',  qualifiers:string[], name:string} // Int, Base.Maybe
@@ -78,6 +79,7 @@ export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(I
 export type ConstructorArg =  {name:string|null, type:Type}      // a:Int, Int
 export type FnTypedArg =      {name:string|null, type:Type|null} // a:Int, Int, a
 export type Typevar =         string;
+export type CaseBranch =      {orPatterns:Pattern[], body:Expr} // 1 -> "hello", 1 | 2 -> "hello"
 
 export type LetModifier =
     | 'NoModifier'

@@ -40,6 +40,8 @@ export type SimpleTokenType =
     | 'DOTDOT'
     | 'DOTDOTDOT'
     | 'TILDE'
+    | 'CASE'
+    | 'OF'
     | 'IF'
     | 'THEN'
     | 'ELSE'

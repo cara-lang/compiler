@@ -235,15 +235,17 @@ function nextToken(state: State): { token: Token, state: State } {
                 state.col--;
                 const result = lowerName(state);
                 switch (result.match) {
-                    case 'if': return simple('IF', result.state);
-                    case 'then': return simple('THEN', result.state);
-                    case 'else': return simple('ELSE', result.state);
-                    case 'type': return simple('TYPE', result.state);
-                    case 'alias': return simple('ALIAS', result.state);
-                    case 'module': return simple('MODULE', result.state);
+                    case 'case':    return simple('CASE',    result.state);
+                    case 'of':      return simple('OF',      result.state);
+                    case 'if':      return simple('IF',      result.state);
+                    case 'then':    return simple('THEN',    result.state);
+                    case 'else':    return simple('ELSE',    result.state);
+                    case 'type':    return simple('TYPE',    result.state);
+                    case 'alias':   return simple('ALIAS',   result.state);
+                    case 'module':  return simple('MODULE',  result.state);
                     case 'private': return simple('PRIVATE', result.state);
-                    case 'opaque': return simple('OPAQUE', result.state);
-                    case 'extend': return simple('EXTEND', result.state);
+                    case 'opaque':  return simple('OPAQUE',  result.state);
+                    case 'extend':  return simple('EXTEND',  result.state);
                     case null: throw err("EXXXX", "Bug: we definitely should have got a LOWER_NAME", result.state);
                     default: {
                         const { row, col } = result.state;
