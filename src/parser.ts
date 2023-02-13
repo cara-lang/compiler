@@ -542,7 +542,7 @@ function expr(state: State): {i: number, match: Expr} {
 
 function exprAux(precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
     return pratt({
-        skipEol: true,
+        skipEolBeforeIndented: true,
         isRight,
         precedence,
         prefix: prefixExpr,
@@ -1699,7 +1699,7 @@ function type(state: State): {i: number, match: Type} {
 
 function typeAux(precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
     return pratt({
-        skipEol: false,
+        skipEolBeforeIndented: false,
         isRight,
         precedence,
         prefix: prefixType,
@@ -1709,7 +1709,7 @@ function typeAux(precedence: number, isRight: boolean, state: State): {i: number
 }
 
 type PrattConfig<T> = {
-    skipEol: boolean,
+    skipEolBeforeIndented: boolean,
     isRight: boolean,
     precedence: number, 
     prefix: Parser<T>, 
@@ -1727,7 +1727,7 @@ function pratt<T>(c: PrattConfig<T>): {i: number, match: T} {
     let left = prefixResult.match;
 
     // infix or postfix
-    if (c.skipEol) i = skipEol({...c.state,i});
+    if (c.skipEolBeforeIndented) i = skipEolBeforeIndented({...c.state,i});
     let nextToken = c.state.tokens[i];
     let next: {precedence: number, isRight: boolean, parser: InfixParser<T>} | null = c.infix(nextToken.type.type);
 
@@ -1736,7 +1736,7 @@ function pratt<T>(c: PrattConfig<T>): {i: number, match: T} {
         const nextResult = next.parser(left, next.precedence, next.isRight, {...c.state, i});
         i = nextResult.i;
         left = nextResult.match;
-        if (c.skipEol) i = skipEol({...c.state,i});
+        if (c.skipEolBeforeIndented) i = skipEolBeforeIndented({...c.state,i});
         nextToken = c.state.tokens[i];
         next = c.infix(nextToken.type.type);
     }
@@ -1897,6 +1897,15 @@ function tupleOrParenthesizedType(state: State): {i: number, match: Type} {
 function skipEol(state: State): number {
     let {i} = state;
     while (tagIs('EOL',i,state.tokens)) {
+        i++;
+    }
+    return i;
+}
+
+//: EOL*
+function skipEolBeforeIndented(state: State): number {
+    let {i} = state;
+    while (tagIs('EOL',i,state.tokens) && state.tokens[i+1].loc.col > 1) {
         i++;
     }
     return i;
