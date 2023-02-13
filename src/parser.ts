@@ -1596,7 +1596,7 @@ function recordType(state: State): {i: number, match: Type} {
         state,
         parsedItem: desc,
         skipEol: true,
-        allowTrailingSep: false,
+        allowTrailingSep: true,
     });
     return {
         i: listResult.i,
