@@ -246,6 +246,7 @@ function nextToken(state: State): { token: Token, state: State } {
                     case 'private': return simple('PRIVATE', result.state);
                     case 'opaque':  return simple('OPAQUE',  result.state);
                     case 'extend':  return simple('EXTEND',  result.state);
+                    case 'where':   return simple('WHERE',   result.state);
                     case null: throw err("EXXXX", "Bug: we definitely should have got a LOWER_NAME", result.state);
                     default: {
                         const { row, col } = result.state;

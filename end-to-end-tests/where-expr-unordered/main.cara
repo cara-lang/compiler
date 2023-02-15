@@ -1,0 +1,6 @@
+x = a + b
+  where
+    b = a + 1
+    a = 1
+
+IO.println!(x)
