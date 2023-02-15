@@ -1280,9 +1280,17 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
         case 'record':
             return analyzeHolesList(expr.fields.map((x: RecordExprField) => analyzeHoles(x.value)));
         case 'call':
-            return combineHoles(analyzeHoles(expr.fn),analyzeHolesList(expr.args.map(analyzeHoles)));
+            return combineHoles(
+                analyzeHoles(expr.fn),
+                analyzeHolesList(expr.args.map(analyzeHoles)),
+            );
         case 'if':
             return analyzeHolesList([expr.cond,expr.then,expr.else].map(analyzeHoles));
+        case 'case':
+            return combineHoles(
+                analyzeHoles(expr.subject),
+                analyzeHolesList(expr.branches.map((branch: CaseBranch) => analyzeHoles(branch.body))),
+            );
         case 'binary-op':
             return analyzeHolesList([expr.left,expr.right].map(analyzeHoles));
         case 'block':
