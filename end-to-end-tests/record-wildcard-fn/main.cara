@@ -1,7 +1,9 @@
-f({..}) =
+f({..}) = IO {
   IO.println!(a)
   IO.println!(b)
+}
 
-main() =
+main() = IO {
   x = {a: 1, b: "Hello"}
-  f(x)
+  f!(x)
+}
