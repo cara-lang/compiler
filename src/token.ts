@@ -7,6 +7,7 @@ export type TokenType =
     | {type:'FLOAT',float:number}
     | {type:'CHAR',char:string}
     | {type:'STRING',string:string}
+    | {type:'BACKTICK_STRING',string:string}
     | {type:'GETTER',field:string}
     | {type:'QUALIFIER',name:string}
     | {type:'LOWER_NAME',name:string}

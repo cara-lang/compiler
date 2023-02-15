@@ -494,7 +494,7 @@ function multilineString(state: State): {token: Token, state: State} {
         switch (nextChar) {
             case '`':
                 const {row,col} = state;
-                return {token:{type:{type:'STRING',string:content},loc:{row,col}},state};
+                return {token:{type:{type:'BACKTICK_STRING',string:content},loc:{row,col}},state};
             case '\\':
                 const second = state.source[state.i++];
                 state.col++;

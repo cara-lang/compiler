@@ -69,10 +69,12 @@ export type Decl =
     | {decl:'type',               mod:TypeModifier,      name:string, vars:Typevar[], constructors:Constructor[]}
     | {decl:'module',             mod:ModuleModifier,    name:string, decls:Decl[]}
     | {decl:'extend-module',      module:UpperIdentifier, decls:Decl[]}
-    | {decl:'function',           mod:LetModifier, name:string, args:Pattern[], body:Expr} // only the non-block, simple expression kind
+    | {decl:'function',           mod:LetModifier, name:string, args:FnArg[], resultType:Type|null, body:Expr}
+    | {decl:'binary-operator',    mod:LetModifier, op:BinaryOp, left:FnArg, right:FnArg, resultType:Type|null, body:Expr}
+    | {decl:'unary-operator',     mod:LetModifier, op:UnaryOp, arg:FnArg, resultType:Type|null, body:Expr}
     | {decl:'statement',          stmt:Stmt}
     | {decl:'value-annotation',   name:string, type:Type}
-    | {decl:'function-annotation',mod:LetModifier, name:string, args:FnTypedArg[], resultType:Type|null}
+    | {decl:'function-annotation',mod:LetModifier, name:string, args:FnTypeArg[], resultType:Type|null}
 
 export type Block =           {stmts:Stmt[], ret:Expr|null}
 export type LowerIdentifier = {qualifiers:string[], name:string} // x, IO.println
@@ -80,7 +82,8 @@ export type UpperIdentifier = {qualifiers:string[], name:string} // X, IO.Printl
 export type RecordTypeField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(Int), Baz(n: Int, verbose: Bool)
 export type ConstructorArg =  {name:string|null, type:Type}      // a:Int, Int
-export type FnTypedArg =      {name:string|null, type:Type|null} // a:Int, Int, a
+export type FnTypeArg =       {name:string|null, type:Type|null} // a:Int, Int, a
+export type FnArg =           {pattern:Pattern, type:Type|null}  // a, _, a:Int
 export type Typevar =         string;
 export type CaseBranch =      {orPatterns:Pattern[], body:Expr} // 1 -> "hello", 1 | 2 -> "hello"
 export type WhereBinding =    {left:Pattern, right:Expr} // a = 1, {a} = myRecord

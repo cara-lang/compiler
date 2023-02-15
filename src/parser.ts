@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnTypedArg, CaseBranch, WhereBinding} from './ast.ts';
+import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnArg, FnTypeArg, CaseBranch, WhereBinding} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -108,7 +108,11 @@ function declaration(state: State): {i: number, match: Decl} {
 
             // f(a,b) = expr
             // private f(a,b) = expr
+            // `-`(a,b) = expr
+            // `-`(a) = expr
             {prefix: null, parser: functionDecl},
+            {prefix: null, parser: binaryOperatorDecl},
+            {prefix: null, parser: unaryOperatorDecl},
 
             // f(a:Int, b:Int): Bool
             // private f(a:Int, b:Int): Bool
@@ -119,8 +123,12 @@ function declaration(state: State): {i: number, match: Decl} {
     );
 }
 
-//: PRIVATE? LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
+//: PRIVATE? LOWER_NAME LPAREN (fnArg (COMMA fnArg)*)? RPAREN (COLON type)? EQ EOL* expr
 //= f(a,b) = a + b
+//= f(a,b): Int = a + b
+//= f(a: Int, b: Int) = a + b
+//= f(a: Int, b: Int): Int = a + b
+//= private f(a,b) = a + b
 function functionDecl(state: State): {i: number, match: Decl} {
     let {i} = state;
     const desc = 'function decl';
@@ -133,18 +141,28 @@ function functionDecl(state: State): {i: number, match: Decl} {
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
-    //: LPAREN (pattern (COMMA pattern)*)? RPAREN
+    //: LPAREN (fnArg (COMMA fnArg)*)? RPAREN
     const argsResult = list({
         left:  'LPAREN',
         right: 'RPAREN',
         sep:   'COMMA',
-        item:  pattern,
+        item:  fnArg,
         state: {...state, i},
         parsedItem: `${desc} argument list`,
         skipEol: false,
         allowTrailingSep: false,
     });
     i = argsResult.i;
+    //: (COLON type)?
+    let typeVal: Type|null = null;
+    if (tagIs('COLON',i,state.tokens)) {
+        //: COLON
+        i = expect('COLON',desc,i,state.tokens);
+        //: type
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    }
     //: EQ
     i = expect('EQ',desc,i,state.tokens);
     //: EOL*
@@ -160,12 +178,201 @@ function functionDecl(state: State): {i: number, match: Decl} {
             mod,
             name: nameResult.match,
             args: argsResult.match,
+            resultType: typeVal,
             body: bodyResult.match,
         },
     };
 }
 
-//: PRIVATE? LOWER_NAME LPAREN (fnTypedArg (COMMA fnTypedArg)*)? RPAREN (COLON type)?
+const unaryOps: Map<String,UnaryOp> = new Map([
+    ["-","NegateNum"],
+    ["!","NegateBool"],
+    ["~","NegateBin"],
+    ["..","InfiniteRangeInclusive"],
+]);
+
+//: PRIVATE? BACKTICK_STRING LPAREN fnArg RPAREN (COLON type)? EQ EOL* expr
+//           ^^^^^^^^^^^^^^^ needs to be UnaryOp
+//= `-`(a) = a + 5
+//= `-`(a): Int = a + 5
+//= `-`(a: Int) = a + 5
+//= private `-`(a: Int) = a + 5
+function unaryOperatorDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'unary operator decl';
+    //: PRIVATE?
+    let mod: LetModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
+    //: BACKTICK_STRING
+    const nameResult = getBacktickString(desc,i,state.tokens);
+    i = nameResult.i;
+    const op = unaryOps.get(nameResult.match);
+    if (op == null) {
+        throw err('EXXXX','Unsupported unary operator',i,state.tokens);
+    }
+    //: LPAREN
+    i = expect('LPAREN',desc,i,state.tokens);
+    //: fnArg
+    const argResult = fnArg({...state,i});
+    i = argResult.i;
+    //: RPAREN
+    i = expect('RPAREN',desc,i,state.tokens);
+    //: (COLON type)?
+    let typeVal: Type|null = null;
+    if (tagIs('COLON',i,state.tokens)) {
+        //: COLON
+        i = expect('COLON',desc,i,state.tokens);
+        //: type
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    }
+    //: EQ
+    i = expect('EQ',desc,i,state.tokens);
+    //: EOL*
+    i = skipEol({...state, i});
+    //: expr
+    const bodyResult = expr({...state, i});
+    i = bodyResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            decl: 'unary-operator',
+            mod,
+            op,
+            arg: argResult.match,
+            resultType: typeVal,
+            body: bodyResult.match,
+        },
+    };
+}
+
+const binaryOps: Map<String,BinaryOp> = new Map([
+    ['+','Plus'],
+    ['-','Minus'],
+    ['*','Times'],
+    ['/','Div'],
+    ['%','Mod'],
+    ['**','Pow'],
+    ['|','OrBin'],
+    ['&','AndBin'],
+    ['^','XorBin'],
+    ['<<','ShiftL'],
+    ['>>','ShiftR'],
+    ['>>>','ShiftRU'],
+    ['<=','Lte'],
+    ['<','Lt'],
+    ['==','Eq'],
+    ['!=','Neq'],
+    ['>','Gt'],
+    ['>=','Gte'],
+    ['||','OrBool'],
+    ['&&','AndBool'],
+    ['++','Append'],
+    ['..','RangeInclusive'],
+    ['...','RangeExclusive'],
+]);
+
+//: PRIVATE? BACKTICK_STRING LPAREN fnArg COMMA fnArg RPAREN (COLON type)? EQ EOL* expr
+//           ^^^^^^^^^^^^^^^ needs to be BinaryOp
+//= `-`(a,b) = a * 2 + b
+//= `-`(a,b): Int = a * 2 + b
+//= `-`(a: Int, b: Int) = a * 2 + b
+//= private `-`(a: Int, b: Int) = a * 2 + b
+function binaryOperatorDecl(state: State): {i: number, match: Decl} {
+    let {i} = state;
+    const desc = 'binary operator decl';
+    //: PRIVATE?
+    let mod: LetModifier = 'NoModifier';
+    if (tagIs('PRIVATE',i,state.tokens)) {
+        mod = 'Private';
+        i++;
+    }
+    //: BACKTICK_STRING
+    const nameResult = getBacktickString(desc,i,state.tokens);
+    i = nameResult.i;
+    const op = binaryOps.get(nameResult.match);
+    if (op == null) {
+        throw err('EXXXX','Unsupported binary operator',i,state.tokens);
+    }
+    //: LPAREN
+    i = expect('LPAREN',desc,i,state.tokens);
+    //: fnArg
+    const leftResult = fnArg({...state,i});
+    i = leftResult.i;
+    //: COMMA
+    i = expect('COMMA',desc,i,state.tokens);
+    //: fnArg
+    const rightResult = fnArg({...state,i});
+    i = rightResult.i;
+    //: RPAREN
+    i = expect('RPAREN',desc,i,state.tokens);
+    //: (COLON type)?
+    let typeVal: Type|null = null;
+    if (tagIs('COLON',i,state.tokens)) {
+        //: COLON
+        i = expect('COLON',desc,i,state.tokens);
+        //: type
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    }
+    //: EQ
+    i = expect('EQ',desc,i,state.tokens);
+    //: EOL*
+    i = skipEol({...state, i});
+    //: expr
+    const bodyResult = expr({...state, i});
+    i = bodyResult.i;
+    // Done!
+    return {
+        i,
+        match: {
+            decl: 'binary-operator',
+            mod,
+            op,
+            left: leftResult.match,
+            right: rightResult.match,
+            resultType: typeVal,
+            body: bodyResult.match,
+        },
+    };
+}
+
+//: pattern (COLON type)?
+//= a
+//= a: Int
+function fnArg(state: State): {i: number, match: FnArg} {
+    let {i} = state;
+    const desc = 'function argument';
+    //: pattern
+    const patternResult = pattern({...state,i});
+    i = patternResult.i;
+    //: (COLON type)?
+    let typeVal: Type | null = null;
+    if (tagIs('COLON',i,state.tokens)) {
+        //: COLON
+        i = expect('COLON',desc,i,state.tokens);
+        //: type
+        const typeResult = type({...state, i});
+        i = typeResult.i;
+        typeVal = typeResult.match;
+    }
+    // Done!
+    return {
+        i,
+        match: {
+            pattern: patternResult.match,
+            type: typeVal,
+        },
+    };
+}
+
+//: PRIVATE? LOWER_NAME LPAREN (fnTypeArg (COMMA fnTypeArg)*)? RPAREN (COLON type)?
 //= f(a: Int, b: Int): Bool
 //= f(a: Int, b: Int)
 //= f(a, b): Bool
@@ -184,12 +391,12 @@ function functionAnnotationDecl(state: State): {i: number, match: Decl} {
     //: LOWER_NAME
     const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
-    //: LPAREN (fnTypedArg (COMMA fnTypedArg)*)? RPAREN
+    //: LPAREN (fnTypeArg (COMMA fnTypeArg)*)? RPAREN
     const argsResult = list({
         left:  'LPAREN',
         right: 'RPAREN',
         sep:   'COMMA',
-        item:  fnTypedArg,
+        item:  fnTypeArg,
         state: {...state, i},
         parsedItem: `${desc} argument list`,
         skipEol: false,
@@ -209,7 +416,7 @@ function functionAnnotationDecl(state: State): {i: number, match: Decl} {
         i = iBeforeResult;
     }
     // Done!
-    if (resultType == null && args.every((arg: FnTypedArg) => arg.type == null)) {
+    if (resultType == null && args.every((arg: FnTypeArg) => arg.type == null)) {
         throw err('EXXXX','Function annotation needs more types',i,state.tokens);
     }
     return {
@@ -562,22 +769,23 @@ function exprAux(precedence: number, isRight: boolean, state: State): {i: number
 function prefixExpr(state: State): {i: number, match: Expr} {
     return oneOf(
         [
-            {prefix: ['INT'],                         parser: intExpr},
-            {prefix: ['FLOAT'],                       parser: floatExpr},
-            {prefix: ['CHAR'],                        parser: charExpr},
-            {prefix: ['STRING'],                      parser: stringExpr},
-            {prefix: ['GETTER'],                      parser: recordGetterExpr},
-            {prefix: ['TRUE'],                        parser: boolExpr},
-            {prefix: ['FALSE'],                       parser: boolExpr},
-            {prefix: ['LPAREN','RPAREN'],             parser: unitExpr},
-            {prefix: ['LPAREN'],                      parser: tupleOrParenthesizedExpr},
-            {prefix: ['LBRACKET'],                    parser: listExpr},
-            {prefix: ['IF'],                          parser: ifExpr},
-            {prefix: ['CASE'],                        parser: caseExpr},
-            {prefix: ['BACKSLASH'],                   parser: lambdaExpr},
-            {prefix: ['LHOLE'],                       parser: holeLambdaExpr},
-            {prefix: ['UNDERSCORE'],                  parser: holeExpr},
-            {prefix: ['HOLE'],                        parser: holeExpr},
+            {prefix: ['INT'],             parser: intExpr},
+            {prefix: ['FLOAT'],           parser: floatExpr},
+            {prefix: ['CHAR'],            parser: charExpr},
+            {prefix: ['STRING'],          parser: stringExpr},
+            {prefix: ['BACKTICK_STRING'], parser: backtickStringExpr},
+            {prefix: ['GETTER'],          parser: recordGetterExpr},
+            {prefix: ['TRUE'],            parser: boolExpr},
+            {prefix: ['FALSE'],           parser: boolExpr},
+            {prefix: ['LPAREN','RPAREN'], parser: unitExpr},
+            {prefix: ['LPAREN'],          parser: tupleOrParenthesizedExpr},
+            {prefix: ['LBRACKET'],        parser: listExpr},
+            {prefix: ['IF'],              parser: ifExpr},
+            {prefix: ['CASE'],            parser: caseExpr},
+            {prefix: ['BACKSLASH'],       parser: lambdaExpr},
+            {prefix: ['LHOLE'],           parser: holeLambdaExpr},
+            {prefix: ['UNDERSCORE'],      parser: holeExpr},
+            {prefix: ['HOLE'],            parser: holeExpr},
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
@@ -843,9 +1051,16 @@ function charExpr(state: State): {i: number, match: Expr} {
 }
 
 //: STRING
-//= 123.45
+//= "abc"
 function stringExpr(state: State): {i: number, match: Expr} {
     const stringResult = getString('string expr',state.i,state.tokens);
+    return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
+}
+
+//: BACKTICK_STRING
+//= `abc`
+function backtickStringExpr(state: State): {i: number, match: Expr} {
+    const stringResult = getBacktickString('backtick string expr',state.i,state.tokens);
     return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
 }
 
@@ -1430,6 +1645,11 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
                 expr.block.ret ? analyzeHoles(expr.block.ret) : {type:'no-holes'},
                 analyzeHolesList(expr.block.stmts.map(analyzeHolesStmt)),
             );
+        case 'where':
+            return combineHoles(
+                analyzeHoles(expr.body),
+                analyzeHolesList(expr.bindings.map((binding: WhereBinding) => analyzeHoles(binding.right))),
+            );
     }
 }
 
@@ -1978,7 +2198,7 @@ function constructorArg(state: State): {i: number, match: ConstructorArg} {
 //= n
 //= Int
 //= n: Int
-function fnTypedArg(state: State): {i: number, match: FnTypedArg} {
+function fnTypeArg(state: State): {i: number, match: FnTypeArg} {
     let {i} = state;
     const desc = 'typed function argument';
     let name: string|null = null;
@@ -2008,7 +2228,7 @@ function fnTypedArg(state: State): {i: number, match: FnTypedArg} {
     }
     // Done!
     if (name == null && typeVal == null) {
-        throw todo('Bug: fnTypedArg',{...state,i});
+        throw todo('Bug: fnTypeArg',{...state,i});
     }
     return { i, match: { name, type: typeVal } };
 }
@@ -2529,6 +2749,17 @@ function getString(parsedItem: string, i: number, tokens: Token[]): {i: number, 
     };
 }
 
+function getBacktickString(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
+    const stringToken = tokens[i];
+    if (stringToken.type.type !== 'BACKTICK_STRING') {
+        throw err('EXXXX',`Expected BACKTICK_STRING for a ${parsedItem}`,i,tokens);
+    }
+    return {
+        i: i + 1, 
+        match: stringToken.type.string,
+    };
+}
+
 function getRecordGetter(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const getterToken = tokens[i];
     if (getterToken.type.type !== 'GETTER') {
@@ -2630,16 +2861,6 @@ function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
         throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,i,tokens);
     }
     return i + 1;
-}
-
-function map<A,B>(p: Parser<A>, fn: (match: A) => B): Parser<B> {
-    return function(state: State): {i: number, match: B} {
-        const result = p(state);
-        return {
-            i: result.i,
-            match: fn(result.match),
-        };
-    }
 }
 
 function compareLoc(a:Loc, b:Loc): number {
