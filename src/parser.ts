@@ -31,7 +31,7 @@ function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser
 
         case 'PIPELINE': return {precedence:  4, isRight: false, parser: pipelineExpr};                   // |>
 
-        case 'DOTDOT':   return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeInclusive')}; // ..
+        case 'DOTDOT':   return {precedence:  5, isRight: false, parser: rangeInclusiveExpr};             // ..
         case 'DOTDOTDOT':return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeExclusive')}; // ...
 
         case 'PIPE':     return {precedence:  6, isRight: false, parser: binaryOpExpr('OrBin')};          // |
@@ -672,6 +672,26 @@ function pipeline({left,right}:PipelineOptions): Expr {
     return right.expr == 'call'
             ? { ...right, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case, we inline!)
             : { expr: 'call', fn: right,args: [left] };   // 3 |> f      ==> f(3)
+}
+
+//: expr DOTDOT expr?
+//  ^^^^^^^^^^^ already parsed
+//= a..b
+//= a..
+function rangeInclusiveExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
+    let {i} = state;
+    // expr?
+    let right: Expr|null = null;
+    try {
+        const rightResult = exprAux(precedence, isRight, state);
+        i = rightResult.i;
+        right = rightResult.match;
+    } catch (e) {}
+    // Done!
+    const match: Expr = right == null
+                            ? {expr: 'binary-op', op: 'RangeInclusive', left, right}
+                            : {expr: 'unary-op', op: 'InfiniteRangeInclusive', arg: left};
+    return { i, match };
 }
 
 //: expr LPAREN (expr (COMMA expr)*)? RPAREN

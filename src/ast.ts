@@ -105,9 +105,10 @@ export type ModuleModifier =
     | 'Private'
 
 export type UnaryOp =
-    | 'NegateNum'  // -
-    | 'NegateBool' // !
-    | 'NegateBin'  // ~
+    | 'NegateNum'  // -e
+    | 'NegateBool' // !e
+    | 'NegateBin'  // ~e
+    | 'InfiniteRangeInclusive' // e..
 
 export type BinaryOp =
     // arithmetic
