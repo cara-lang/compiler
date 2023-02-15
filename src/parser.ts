@@ -1394,15 +1394,17 @@ function combineHoles(a: HoleAnalysis, b: HoleAnalysis): HoleAnalysis {
 function pattern(state: State): {i: number, match: Pattern} {
     return oneOf(
         [
-            {prefix: ['LPAREN','RPAREN'], parser: unitPattern},
-            {prefix: ['LOWER_NAME'],      parser: varPattern},
-            {prefix: ['INT'],             parser: intPattern},
-            {prefix: ['FLOAT'],           parser: floatPattern},
-            {prefix: ['LPAREN'],          parser: tuplePattern},
-            {prefix: ['LBRACKET'],        parser: listPattern},
-            {prefix: ['MINUS'],           parser: negatedPattern},
-            {prefix: ['UNDERSCORE'],      parser: wildcardPattern},
-            {prefix: ['DOTDOTDOT'],       parser: spreadPattern},
+            {prefix: ['LPAREN','RPAREN'],     parser: unitPattern},
+            {prefix: ['LOWER_NAME'],          parser: varPattern},
+            {prefix: ['INT'],                 parser: intPattern},
+            {prefix: ['FLOAT'],               parser: floatPattern},
+            {prefix: ['LPAREN'],              parser: tuplePattern},
+            {prefix: ['LBRACKET'],            parser: listPattern},
+            {prefix: ['MINUS'],               parser: negatedPattern},
+            {prefix: ['UNDERSCORE'],          parser: wildcardPattern},
+            {prefix: ['DOTDOTDOT'],           parser: spreadPattern},
+            {prefix: ['LBRACE','DOTDOT'],     parser: recordSpreadPattern},
+            {prefix: ['LBRACE','LOWER_NAME'], parser: recordFieldsPattern},
             // TODO other patterns
         ],
         'pattern',
@@ -1565,6 +1567,40 @@ function spreadPattern(state: State): {i: number, match: Pattern} {
             ? varResult.match.var
             : null;
     return {i, match: {pattern:'spread', var:varName}};
+}
+
+//: LBRACE DOTDOT RBRACE
+//= {..}
+function recordSpreadPattern(state: State): {i: number, match: Pattern} {
+    let {i} = state;
+    const desc = 'record spread pattern';
+    i = expect('LBRACE',desc,i,state.tokens);
+    i = expect('DOTDOT',desc,i,state.tokens);
+    i = expect('RBRACE',desc,i,state.tokens);
+    return {i, match: {pattern:'record-spread'}};
+}
+
+//: LBRACE LOWER_NAME (COMMA LOWER_NAME)* RBRACE
+//= {..}
+function recordFieldsPattern(state: State): {i: number, match: Pattern} {
+    const desc = 'record fields pattern';
+    const fieldsResult = nonemptyList({
+        left:  'LBRACE',
+        right: 'RBRACE',
+        sep:   'COMMA',
+        item:  lowerName,
+        state: state,
+        parsedItem: `${desc} field list`,
+        skipEol: false,
+        allowTrailingSep: false,
+    });
+    return {
+        i: fieldsResult.i,
+        match: {
+            pattern: 'record-fields',
+            fields: fieldsResult.match,
+        },
+    };
 }
 
 //: ${tokenTag} expr
@@ -2371,6 +2407,11 @@ function getRecordGetter(parsedItem: string, i: number, tokens: Token[]): {i: nu
         match: getterToken.type.field,
     };
 }
+
+function lowerName(state:State): {i: number, match: string} {
+    return getLowerName('lower name', state.i, state.tokens);
+}
+
 
 function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const nameToken = tokens[i];
