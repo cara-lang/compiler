@@ -81,6 +81,7 @@ export type Typevar =         string;
 export type CaseBranch =      {orPatterns:Pattern[], body:Expr} // 1 -> "hello", 1 | 2 -> "hello"
 export type RecordExprContent = 
     | {recordContent:'field',  field:string, value:Expr} // a:123
+    | {recordContent:'pun',    field:string}             // a
     | {recordContent:'spread', recordId:LowerIdentifier} // ...b
 
 export type LetModifier =

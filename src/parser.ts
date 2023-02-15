@@ -876,8 +876,9 @@ function recordExpr(state: State): {i: number, match: Expr} {
 function recordExprContent(state: State): {i: number, match: RecordExprContent} {
     return oneOf(
         [
-            {prefix: ['LOWER_NAME'], parser: recordExprFieldContent},
-            {prefix: ['DOTDOTDOT'],  parser: recordExprSpreadContent},
+            {prefix: ['LOWER_NAME','COLON'], parser: recordExprFieldContent},
+            {prefix: ['LOWER_NAME'],         parser: recordExprPunContent},
+            {prefix: ['DOTDOTDOT'],          parser: recordExprSpreadContent},
         ],
         'record expr content',
         state,
@@ -899,6 +900,18 @@ function recordExprFieldContent(state: State): {i: number, match: RecordExprCont
     i = exprResult.i;
     // Done!
     return {i, match: {recordContent:'field', field: lowerNameResult.match, value: exprResult.match}};
+}
+
+//: LOWER_NAME
+//= a
+function recordExprPunContent(state: State): {i: number, match: RecordExprContent} {
+    let {i} = state;
+    const desc = 'record expr pun content';
+    //: LOWER_NAME
+    const lowerNameResult = getLowerName(desc, i, state.tokens);
+    i = lowerNameResult.i;
+    // Done!
+    return {i, match: {recordContent:'pun', field: lowerNameResult.match}};
 }
 
 //: DOTDOTDOT lowerIdentifier
@@ -1346,6 +1359,7 @@ function analyzeHolesBang(bang: Bang): HoleAnalysis {
 function analyzeHolesRecordContent(content: RecordExprContent): HoleAnalysis {
     switch (content.recordContent) {
         case 'field':  return analyzeHoles(content.value);
+        case 'pun':    return {type:'no-holes'};
         case 'spread': return {type:'no-holes'};
     }
 }
