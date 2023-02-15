@@ -458,6 +458,8 @@ function letStatement(state: State): {i: number, match: Stmt} {
     }
     //: EQ
     i = expect('EQ',desc,i,state.tokens);
+    //: EOL*
+    i = skipEolBeforeIndented({...state,i});
     //: expr
     const exprResult = expr({...state, i});
     i = exprResult.i;
@@ -505,6 +507,8 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
     }
     //: EQ
     i = expect('EQ',desc,i,state.tokens);
+    //: EOL*
+    i = skipEolBeforeIndented({...state,i});
     //: bang
     const bangResult = bang({...state, i});
     i = bangResult.i;
