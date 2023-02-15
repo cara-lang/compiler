@@ -760,9 +760,9 @@ function rangeInclusiveExpr(left: Expr, precedence: number, isRight: boolean, st
         right = rightResult.match;
     } catch (e) {}
     // Done!
-    const match: Expr = right == null
-                            ? {expr: 'binary-op', op: 'RangeInclusive', left, right}
-                            : {expr: 'unary-op', op: 'InfiniteRangeInclusive', arg: left};
+    const match: Expr = (right == null)
+                            ? {expr: 'unary-op', op: 'InfiniteRangeInclusive', arg: left}
+                            : {expr: 'binary-op', op: 'RangeInclusive', left, right};
     return { i, match };
 }
 
