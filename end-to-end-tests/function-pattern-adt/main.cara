@@ -1,0 +1,6 @@
+type Foo = Foo(Int)
+
+f(Foo(x)) = x + 1
+y = f(Foo(5))
+
+IO.println!(y)

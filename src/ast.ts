@@ -42,13 +42,14 @@ export type Type =
 
 export type Pattern =
     | {pattern:'unit'}                           // ()
-    | {pattern:'var',   var:string}              // a
-    | {pattern:'int',   int:number}              // 1
+    | {pattern:'var', var:string}                // a
+    | {pattern:'constructor', id:UpperIdentifier, args:Pattern[]} // Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
+    | {pattern:'int', int:number}                // 1
     | {pattern:'float', float:number}            // 1.2345
     | {pattern:'list',  elements:Pattern[]}      // [1,a]
     | {pattern:'tuple', elements:Pattern[]}      // (1,a)
     | {pattern:'wildcard'}                       // _
-    | {pattern:'spread',var:string|null}         // ...a, ..._
+    | {pattern:'spread', var:string|null}        // ...a, ..._
     | {pattern:'record-spread'}                  // {..}
     | {pattern:'record-fields', fields:string[]} // {a}, {a,b}
     // TODO other patterns

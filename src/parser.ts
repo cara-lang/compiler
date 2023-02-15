@@ -1396,6 +1396,8 @@ function pattern(state: State): {i: number, match: Pattern} {
         [
             {prefix: ['LPAREN','RPAREN'],     parser: unitPattern},
             {prefix: ['LOWER_NAME'],          parser: varPattern},
+            {prefix: ['UPPER_NAME'],          parser: constructorPattern},
+            {prefix: ['QUALIFIER'],           parser: constructorPattern},
             {prefix: ['INT'],                 parser: intPattern},
             {prefix: ['FLOAT'],               parser: floatPattern},
             {prefix: ['LPAREN'],              parser: tuplePattern},
@@ -1422,6 +1424,44 @@ function varPattern(state: State): {i: number, match: Pattern} {
         match: {
             pattern: 'var',
             var: varResult.match,
+        },
+    };
+}
+
+//: QUALIFIER* UPPER_NAME (LPAREN pattern (COMMA pattern)* RPAREN)?
+//= Foo
+//= Base.Foo
+//= Foo(1)
+//= Foo(_)
+function constructorPattern(state: State): {i: number, match: Pattern} {
+    let {i} = state;
+    const desc = 'constructor pattern';
+    //: QUALIFIER* UPPER_NAME
+    const idResult = upperIdentifier({...state,i});
+    i = idResult.i;
+    //: (LPAREN pattern (COMMA pattern)* RPAREN)?
+    let args: Pattern[] = [];
+    try {
+        const argsResult = nonemptyList({
+            left:  'LPAREN',
+            right: 'RPAREN',
+            sep:   'COMMA',
+            item:  pattern,
+            state: {...state, i},
+            parsedItem: `${desc} arguments`,
+            skipEol: false,
+            allowTrailingSep: false,
+        });
+        i = argsResult.i;
+        args = argsResult.match;
+    } catch (e) {}
+    // Done!
+    return {
+        i,
+        match: {
+            pattern: 'constructor',
+            id: idResult.match,
+            args,
         },
     };
 }
