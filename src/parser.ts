@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprField, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnTypedArg, CaseBranch} from './ast.ts';
+import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnTypedArg, CaseBranch} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -852,15 +852,16 @@ function listExpr(state: State): {i: number, match: Expr} {
     return {i: listResult.i, match: {expr:'list', elements: listResult.match}};
 }
 
-//: LBRACE (recordExprField (COMMA recordExprField)*)? RBRACE
-//= {a:1,b:True}
+//: LBRACE (recordExprContent (COMMA recordExprContent)*)? RBRACE
+//= {a:1, b:True}
+//= {...a, x:123}
 function recordExpr(state: State): {i: number, match: Expr} {
     const desc = 'record expr';
     const listResult = list({
         left:  'LBRACE',
         right: 'RBRACE',
         sep:   'COMMA',
-        item:  recordExprField,
+        item:  recordExprContent,
         state,
         parsedItem: desc,
         skipEol: true,
@@ -868,15 +869,26 @@ function recordExpr(state: State): {i: number, match: Expr} {
     });
     return {
         i: listResult.i,
-        match: {expr: 'record', fields: listResult.match},
+        match: {expr: 'record', contents: listResult.match},
     }
+}
+
+function recordExprContent(state: State): {i: number, match: RecordExprContent} {
+    return oneOf(
+        [
+            {prefix: ['LOWER_NAME'], parser: recordExprFieldContent},
+            {prefix: ['DOTDOTDOT'],  parser: recordExprSpreadContent},
+        ],
+        'record expr content',
+        state,
+    );
 }
 
 //: LOWER_NAME COLON expr
 //= a: 1
-function recordExprField(state: State): {i: number, match: RecordExprField} {
+function recordExprFieldContent(state: State): {i: number, match: RecordExprContent} {
     let {i} = state;
-    const desc = 'record expr field';
+    const desc = 'record expr field content';
     //: LOWER_NAME
     const lowerNameResult = getLowerName(desc, i, state.tokens);
     i = lowerNameResult.i;
@@ -886,7 +898,21 @@ function recordExprField(state: State): {i: number, match: RecordExprField} {
     const exprResult = expr({...state, i});
     i = exprResult.i;
     // Done!
-    return {i, match: {field: lowerNameResult.match, value: exprResult.match}};
+    return {i, match: {recordContent:'field', field: lowerNameResult.match, value: exprResult.match}};
+}
+
+//: DOTDOTDOT lowerIdentifier
+//= ...a, ...Foo.a
+function recordExprSpreadContent(state: State): {i: number, match: RecordExprContent} {
+    let {i} = state;
+    const desc = 'record expr spread content';
+    //: DOTDOTDOT
+    i = expect('DOTDOTDOT',desc,i,state.tokens);
+    //: lowerIdentifier
+    const idResult = lowerIdentifier({...state, i});
+    i = idResult.i;
+    // Done!
+    return {i, match: {recordContent:'spread', recordId: idResult.match}};
 }
 
 //: moduleName? block
@@ -1278,7 +1304,7 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
         case 'list':
             return analyzeHolesList(expr.elements.map(analyzeHoles));
         case 'record':
-            return analyzeHolesList(expr.fields.map((x: RecordExprField) => analyzeHoles(x.value)));
+            return analyzeHolesList(expr.contents.map(analyzeHolesRecordContent));
         case 'call':
             return combineHoles(
                 analyzeHoles(expr.fn),
@@ -1314,6 +1340,13 @@ function analyzeHolesBang(bang: Bang): HoleAnalysis {
     switch (bang.bang) {
         case 'value': return {type:'no-holes'};
         case 'call':  return analyzeHolesList(bang.args.map(analyzeHoles));
+    }
+}
+
+function analyzeHolesRecordContent(content: RecordExprContent): HoleAnalysis {
+    switch (content.recordContent) {
+        case 'field':  return analyzeHoles(content.value);
+        case 'spread': return {type:'no-holes'};
     }
 }
 

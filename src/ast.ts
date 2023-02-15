@@ -10,7 +10,7 @@ export type Expr =
     // collections
     | {expr:'tuple',  elements:Expr[]}      // (1,True)
     | {expr:'list',   elements:Expr[]}      // [1,2]
-    | {expr:'record', fields:RecordExprField[]} // {a:1,b:True}
+    | {expr:'record', contents:RecordExprContent[]} // {a:1, ...b, c:True}
 
     // calls
     | {expr:'unary-op',   op:UnaryOp,  arg:Expr}
@@ -73,13 +73,15 @@ export type Decl =
 export type Block =           {stmts:Stmt[], ret:Expr|null}
 export type LowerIdentifier = {qualifiers:string[], name:string} // x, IO.println
 export type UpperIdentifier = {qualifiers:string[], name:string} // X, IO.Println
-export type RecordExprField = {field:string, value:Expr} // a:123
 export type RecordTypeField = {field:string, type:Type}  // a:Int
 export type Constructor =     {name:string, args:ConstructorArg[]} // Foo, Bar(Int), Baz(n: Int, verbose: Bool)
 export type ConstructorArg =  {name:string|null, type:Type}      // a:Int, Int
 export type FnTypedArg =      {name:string|null, type:Type|null} // a:Int, Int, a
 export type Typevar =         string;
 export type CaseBranch =      {orPatterns:Pattern[], body:Expr} // 1 -> "hello", 1 | 2 -> "hello"
+export type RecordExprContent = 
+    | {recordContent:'field',  field:string, value:Expr} // a:123
+    | {recordContent:'spread', recordId:LowerIdentifier} // ...b
 
 export type LetModifier =
     | 'NoModifier'
