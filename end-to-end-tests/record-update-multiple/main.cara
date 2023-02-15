@@ -1,0 +1,5 @@
+x = {a: 1, b: "Hello"}
+y = {b: "World", c: 'a'}
+z = {c: 'b'}
+final = {...x, ...y, a: 5, ...z}
+IO.println!(final)
