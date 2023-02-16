@@ -30,7 +30,6 @@ export type Expr =
     | {expr:'record-getter', field:string} // .a
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
     | {expr:'case',subject:Expr, branches:CaseBranch[]}
-    | {expr:'where',body:Expr, bindings: WhereBinding[]}
 
 export type Type =
     | {type:'named',  qualifiers:string[], name:string} // Int, Base.Maybe
@@ -86,7 +85,6 @@ export type FnTypeArg =       {name:string|null, type:Type|null} // a:Int, Int, 
 export type FnArg =           {pattern:Pattern, type:Type|null}  // a, _, a:Int
 export type Typevar =         string;
 export type CaseBranch =      {orPatterns:Pattern[], body:Expr} // 1 -> "hello", 1 | 2 -> "hello"
-export type WhereBinding =    {left:Pattern, right:Expr} // a = 1, {a} = myRecord
 export type RecordExprContent = 
     | {recordContent:'field',  field:string, value:Expr} // a:123
     | {recordContent:'pun',    field:string}             // a

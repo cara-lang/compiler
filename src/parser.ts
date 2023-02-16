@@ -1,5 +1,5 @@
 import {Token, TokenTag} from './token.ts';
-import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnArg, FnTypeArg, CaseBranch, WhereBinding} from './ast.ts';
+import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnArg, FnTypeArg, CaseBranch} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
 
@@ -23,49 +23,47 @@ export function parse(tokens: Token[]): Decl[] {
 
 function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser: InfixParser<Expr>} | null {
     switch (tag) {
-        case 'WHERE':      return {precedence:  1, isRight: false, parser: eolWhereExpr};                   // where
+        case 'ANDAND':     return {precedence:  1, isRight: false, parser: binaryOpExpr('AndBool')};        // &&
 
-        case 'ANDAND':     return {precedence:  2, isRight: false, parser: binaryOpExpr('AndBool')};        // &&
+        case 'OROR':       return {precedence:  2, isRight: false, parser: binaryOpExpr('OrBool')};         // ||
 
-        case 'OROR':       return {precedence:  3, isRight: false, parser: binaryOpExpr('OrBool')};         // ||
+        case 'PLUSPLUS':   return {precedence:  3, isRight: false, parser: binaryOpExpr('Append')};         // ++
 
-        case 'PLUSPLUS':   return {precedence:  4, isRight: false, parser: binaryOpExpr('Append')};         // ++
+        case 'PIPELINE':   return {precedence:  4, isRight: false, parser: pipelineExpr};                   // |>
 
-        case 'PIPELINE':   return {precedence:  5, isRight: false, parser: pipelineExpr};                   // |>
+        case 'DOTDOT':     return {precedence:  5, isRight: false, parser: rangeInclusiveExpr};             // ..
+        case 'DOTDOTDOT':  return {precedence:  5, isRight: false, parser: binaryOpExpr('RangeExclusive')}; // ...
 
-        case 'DOTDOT':     return {precedence:  6, isRight: false, parser: rangeInclusiveExpr};             // ..
-        case 'DOTDOTDOT':  return {precedence:  6, isRight: false, parser: binaryOpExpr('RangeExclusive')}; // ...
+        case 'PIPE':       return {precedence:  6, isRight: false, parser: binaryOpExpr('OrBin')};          // |
 
-        case 'PIPE':       return {precedence:  7, isRight: false, parser: binaryOpExpr('OrBin')};          // |
+        case 'CARET':      return {precedence:  7, isRight: false, parser: binaryOpExpr('XorBin')};         // ^
 
-        case 'CARET':      return {precedence:  8, isRight: false, parser: binaryOpExpr('XorBin')};         // ^
+        case 'AND':        return {precedence:  8, isRight: false, parser: binaryOpExpr('AndBin')};         // &
 
-        case 'AND':        return {precedence:  9, isRight: false, parser: binaryOpExpr('AndBin')};         // &
+        case 'EQEQ':       return {precedence:  9, isRight: false, parser: binaryOpExpr('Eq')};             // ==
+        case 'NEQ':        return {precedence:  9, isRight: false, parser: binaryOpExpr('Neq')};            // !=
 
-        case 'EQEQ':       return {precedence: 10, isRight: false, parser: binaryOpExpr('Eq')};             // ==
-        case 'NEQ':        return {precedence: 10, isRight: false, parser: binaryOpExpr('Neq')};            // !=
+        case 'LTE':        return {precedence: 10, isRight: false, parser: binaryOpExpr('Lte')};            // <=
+        case 'LT':         return {precedence: 10, isRight: false, parser: binaryOpExpr('Lt')};             // <
+        case 'GT':         return {precedence: 10, isRight: false, parser: binaryOpExpr('Gt')};             // >
+        case 'GTE':        return {precedence: 10, isRight: false, parser: binaryOpExpr('Gte')};            // >=
 
-        case 'LTE':        return {precedence: 11, isRight: false, parser: binaryOpExpr('Lte')};            // <=
-        case 'LT':         return {precedence: 11, isRight: false, parser: binaryOpExpr('Lt')};             // <
-        case 'GT':         return {precedence: 11, isRight: false, parser: binaryOpExpr('Gt')};             // >
-        case 'GTE':        return {precedence: 11, isRight: false, parser: binaryOpExpr('Gte')};            // >=
+        case 'SHL':        return {precedence: 11, isRight: false, parser: binaryOpExpr('ShiftL')};         // <<
+        case 'SHR':        return {precedence: 11, isRight: false, parser: binaryOpExpr('ShiftR')};         // >>
+        case 'SHRU':       return {precedence: 11, isRight: false, parser: binaryOpExpr('ShiftRU')};        // >>>
 
-        case 'SHL':        return {precedence: 12, isRight: false, parser: binaryOpExpr('ShiftL')};         // <<
-        case 'SHR':        return {precedence: 12, isRight: false, parser: binaryOpExpr('ShiftR')};         // >>
-        case 'SHRU':       return {precedence: 12, isRight: false, parser: binaryOpExpr('ShiftRU')};        // >>>
+        case 'PLUS':       return {precedence: 12, isRight: false, parser: binaryOpExpr('Plus')};           // +
+        case 'MINUS':      return {precedence: 12, isRight: false, parser: binaryOpExpr('Minus')};          // -
 
-        case 'PLUS':       return {precedence: 13, isRight: false, parser: binaryOpExpr('Plus')};           // +
-        case 'MINUS':      return {precedence: 13, isRight: false, parser: binaryOpExpr('Minus')};          // -
+        case 'TIMES':      return {precedence: 13, isRight: false, parser: binaryOpExpr('Times')};          // *
+        case 'DIV':        return {precedence: 13, isRight: false, parser: binaryOpExpr('Div')};            // /
+        case 'PERCENT':    return {precedence: 13, isRight: false, parser: binaryOpExpr('Mod')};            // %
 
-        case 'TIMES':      return {precedence: 14, isRight: false, parser: binaryOpExpr('Times')};          // *
-        case 'DIV':        return {precedence: 14, isRight: false, parser: binaryOpExpr('Div')};            // /
-        case 'PERCENT':    return {precedence: 14, isRight: false, parser: binaryOpExpr('Mod')};            // %
+        case 'POWER':      return {precedence: 14, isRight: true,  parser: binaryOpExpr('Pow')};            // **
 
-        case 'POWER':      return {precedence: 15, isRight: true,  parser: binaryOpExpr('Pow')};            // **
+        case 'LPAREN':     return {precedence: 15, isRight: true,  parser: callExpr};                       // (
 
-        case 'LPAREN':     return {precedence: 16, isRight: true,  parser: callExpr};                       // (
-
-        case 'GETTER':     return {precedence: 17, isRight: false, parser: recordGetExpr};                  // .abc
+        case 'GETTER':     return {precedence: 16, isRight: false, parser: recordGetExpr};                  // .abc
 
         default:           return null;
     }
@@ -880,71 +878,6 @@ function pipeline({left,right}:PipelineOptions): Expr {
             : { expr: 'call', fn: right,args: [left] };   // 3 |> f      ==> f(3)
 }
 
-//: expr WHERE EOL* whereBinding (EOL+ whereBinding)*
-//  ^^^^^^^^^^ already parsed
-//= x*2 where x = 123
-function eolWhereExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-    let {i} = state;
-    const desc = 'where expr';
-    //: EOL*
-    i = skipEolBeforeIndented({...state, i});
-    //: whereBinding (EOL+ whereBinding)*
-    const firstBindingResult = whereBinding({...state, i});
-    i = firstBindingResult.i;
-    const bindings: WhereBinding[] = [firstBindingResult.match];
-    while (!isAtEnd({...state,i})) {
-        const iBeforeLoop = i;
-        try {
-            //: EOL
-            i = expect('EOL',desc,i,state.tokens);
-            //: EOL*
-            i = skipEolBeforeIndented({...state,i});
-            //: whereBinding
-            const nextBindingResult = whereBinding({...state, i});
-            i = nextBindingResult.i;
-            bindings.push(nextBindingResult.match);
-        } catch (e) {
-            i = iBeforeLoop;
-            break;
-        }
-    }
-    // Done!
-    return {
-        i,
-        match: {
-            expr: 'where',
-            body: left,
-            bindings,
-        },
-    };
-}
-
-//: pattern EQ expr
-//= a = 1
-//= {a} = myRecord
-function whereBinding(state: State): {i: number, match: WhereBinding} {
-    let {i} = state;
-    const desc = 'where binding';
-    //: pattern
-    const patternResult = pattern({...state,i});
-    i = patternResult.i;
-    //: EQ
-    i = expect('EQ',desc,i,state.tokens);
-    //: expr
-    const exprResult = expr({...state,i});
-    i = exprResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            left: patternResult.match,
-            right: exprResult.match,
-        },
-    };
-}
-
-
-
 //: expr DOTDOT expr?
 //  ^^^^^^^^^^^ already parsed
 //= a..b
@@ -1635,11 +1568,6 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
             return combineHoles(
                 expr.block.ret ? analyzeHoles(expr.block.ret) : {type:'no-holes'},
                 analyzeHolesList(expr.block.stmts.map(analyzeHolesStmt)),
-            );
-        case 'where':
-            return combineHoles(
-                analyzeHoles(expr.body),
-                analyzeHolesList(expr.bindings.map((binding: WhereBinding) => analyzeHoles(binding.right))),
             );
     }
 }

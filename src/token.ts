@@ -46,7 +46,6 @@ export type SimpleTokenType =
     | 'IF'
     | 'THEN'
     | 'ELSE'
-    | 'WHERE'
     | 'TRUE'
     | 'FALSE'
     | 'TYPE'
