@@ -37,7 +37,7 @@ async function allSynchronously<T>(resolvables: (() => Promise<T>)[]): Promise<T
 }
 
 const test = async (test:string): Promise<TestResult> => {
-  const specificTest: string | null = null;
+  const specificTest: string | null = 'int';
   if (specificTest != null && test != specificTest) return {status:'skip',test};
   if (test.startsWith('test-')) return {status:'skip',test}; // TODO handle test tests
   const source = await fs.readFile(`${testsDir}/${test}/main.cara`, 'utf-8');

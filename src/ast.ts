@@ -76,6 +76,7 @@ export type Decl =
     | {decl:'function-annotation',mod:LetModifier, name:string, args:FnTypeArg[], resultType:Type|null}
 
 export type Block =           {stmts:Stmt[], ret:Expr|null}
+export type Identifier =      {qualifiers:string[], name:string}
 export type LowerIdentifier = {qualifiers:string[], name:string} // x, IO.println
 export type UpperIdentifier = {qualifiers:string[], name:string} // X, IO.Println
 export type RecordTypeField = {field:string, type:Type}  // a:Int
