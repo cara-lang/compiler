@@ -562,7 +562,7 @@ function number(state: State): {token: Token, state: State} {
             const regex = /[0-9a-fA-F_]+/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
-            const int = parseInt(rest[0].replace('_',''),16);
+            const int = BigInt(rest[0].replace('_',''));
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
@@ -581,7 +581,7 @@ function number(state: State): {token: Token, state: State} {
             const regex = /[0-7_]+/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
-            const int = parseInt(rest[0].replace('_',''),8);
+            const int = BigInt(rest[0].replace('_',''));
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
@@ -598,7 +598,7 @@ function number(state: State): {token: Token, state: State} {
             const regex = /[0-1_]+/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
-            const int = parseInt(rest[0].replace('_',''),2);
+            const int = BigInt(rest[0].replace('_',''));
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
@@ -633,7 +633,7 @@ function number(state: State): {token: Token, state: State} {
         const { row, col } = state;
         return {token: {type: {type: 'FLOAT', float},loc:{row,col}},state};
     } else {
-        const int = parseInt(intString,10);
+        const int = BigInt(intString);
         const { row, col } = state;
         return {token: {type: {type: 'INT', int},loc:{row,col}},state};
     }

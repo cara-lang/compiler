@@ -3,7 +3,7 @@ import {Loc} from './loc.ts';
 export type Token = {type:TokenType, loc: Loc}
 
 export type TokenType =
-    | {type:'INT',int:number}
+    | {type:'INT',int:bigint}
     | {type:'FLOAT',float:number}
     | {type:'CHAR',char:string}
     | {type:'STRING',string:string}

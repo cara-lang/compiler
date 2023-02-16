@@ -1793,8 +1793,8 @@ function negatedPattern(state: State): {i: number, match: Pattern} {
     i = expect('MINUS',desc,i,state.tokens);
     const numResult = oneOf(
         [
-            {prefix: ['INT'], parser: intPattern},
-            {prefix: ['INT'], parser: floatPattern},
+            {prefix: ['INT'],   parser: intPattern},
+            {prefix: ['FLOAT'], parser: floatPattern},
         ],
         desc,
         {...state,i},
@@ -2621,7 +2621,7 @@ function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): 
     }
 }
 
-function getInt(parsedItem: string, i: number, tokens: Token[]): {i: number, match: number} {
+function getInt(parsedItem: string, i: number, tokens: Token[]): {i: number, match: bigint} {
     const intToken = tokens[i];
     if (intToken.type.type !== 'INT') {
         throw err('EXXXX',`Expected INT for a ${parsedItem}`,i,tokens);

@@ -1,6 +1,6 @@
 export type Expr =
     // literals
-    | {expr:'int',    int:number}
+    | {expr:'int',    int:bigint}
     | {expr:'float',  float:number}
     | {expr:'char',   char:string} // It's holding a string because of extended grapheme clusters.
     | {expr:'string', string:string}
@@ -44,7 +44,7 @@ export type Pattern =
     | {pattern:'unit'}                           // ()
     | {pattern:'var', var:string}                // a
     | {pattern:'constructor', id:UpperIdentifier, args:Pattern[]} // Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
-    | {pattern:'int', int:number}                // 1
+    | {pattern:'int', int:bigint}                // 1
     | {pattern:'float', float:number}            // 1.2345
     | {pattern:'list',  elements:Pattern[]}      // [1,a]
     | {pattern:'tuple', elements:Pattern[]}      // (1,a)
