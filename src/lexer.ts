@@ -562,7 +562,7 @@ function number(state: State): {token: Token, state: State} {
             const regex = /[0-9a-fA-F_]+/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
-            const int = BigInt(rest[0].replace('_',''));
+            const int = BigInt("0x" + rest[0].replace('_',''));
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
@@ -581,7 +581,7 @@ function number(state: State): {token: Token, state: State} {
             const regex = /[0-7_]+/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
-            const int = BigInt(rest[0].replace('_',''));
+            const int = BigInt("0o" + rest[0].replace('_',''));
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
@@ -598,7 +598,7 @@ function number(state: State): {token: Token, state: State} {
             const regex = /[0-1_]+/y;
             regex.lastIndex = state.i;
             const rest = state.source.match(regex)!;
-            const int = BigInt(rest[0].replace('_',''));
+            const int = BigInt("0b" + rest[0].replace('_',''));
             const { row, col } = state;
             state.col += regex.lastIndex - state.i;
             state.i = regex.lastIndex;
