@@ -1,4 +1,3 @@
-import process from 'node:process';
 import {Decl, Stmt, Bang, Expr, Identifier} from './ast.ts';
 import {CaraError} from './error.ts';
 import {Loc} from './loc.ts';
@@ -48,11 +47,19 @@ function interpretBang(env: Env, bang: Bang): Env {
     }
 }
 
+async function print(x: string) {
+    await Deno.stdout.write(new TextEncoder().encode(x));
+}
+
+async function println(x: string) {
+    await print(`${x}\n`);
+}
+
 const ioPrintlnId: Identifier = {qualifiers:['IO'],name:'println'};
-function ioPrintln(_env: Env, expr: Expr) {
-    const print = process.stdout.write;
+async function ioPrintln(_env: Env, expr: Expr) {
     switch (expr.expr) {
-        case 'int': print(``);
+        case 'int': await println(expr.int.toString()); break;
+        default: throw todo(`IO.println(${expr.expr})`);
     }
 }
 
