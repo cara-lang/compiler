@@ -5,6 +5,7 @@ import {argv} from 'node:process';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
 
+// deno-lint-ignore no-explicit-any
 const log = (data: any) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
 
 const program = argv[2];

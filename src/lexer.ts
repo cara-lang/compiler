@@ -39,7 +39,7 @@ function simple(type: SimpleTokenType, state: State): { token: Token, state: Sta
 }
 
 function eol(state: State): { token: Token, state: State } {
-    let { row, col } = state;
+    const { row, col } = state;
     state.row++;
     state.col = 1;
     while (isWhitespace(state.source[state.i])) { state.col++; state.i++; } // without this we tracked tokens right after newline wrongly (col was 1 instead of eg. 3). This has to do with the way we fix row,col in lex()
@@ -210,13 +210,13 @@ function nextToken(state: State): { token: Token, state: State } {
             return { token: { type: { type: 'HOLE', n: result.match }, loc: {row, col} }, state: result.state };
         }
         case '.': {
-            let first = match('.', state);
+            const first = match('.', state);
             if (first.matches) {
-                let second = match('.', first.state);
+                const second = match('.', first.state);
                 if (second.matches) return simple('DOTDOTDOT', second.state); // ...
                 return simple('DOTDOT', first.state) // ..
             }
-            let lower = lowerName(state);
+            const lower = lowerName(state);
             if (lower.match == null) throw err("EXXXX", "Unexpected character: '.'", lower.state);
             const { row, col } = lower.state;
             return { token: { type: { type: 'GETTER', field: lower.match }, loc: {row, col} }, state: lower.state };
@@ -266,9 +266,10 @@ function nextToken(state: State): { token: Token, state: State } {
                 switch (result.match) {
                     case 'True':  return simple('TRUE',  state);
                     case 'False': return simple('FALSE', state);
-                    default: 
+                    default:  {
                         const { row, col } = state;
                         return { token: { type: { type: 'UPPER_NAME', name: result.match! }, loc: {row, col} }, state };
+                    }
                 }
             } else if (c.match(/[0-9]/)) {
                 state.i--;
@@ -277,7 +278,6 @@ function nextToken(state: State): { token: Token, state: State } {
             }
             throw err("EXXXX", `Unexpected character '${c}'`, state);
     }
-    throw err("EXXXX", `Bug: Didn't handle '${c}' for some reason`, state);
 }
 
 function lineComment(state: State): { token: Token, state: State } {
@@ -313,9 +313,10 @@ function blockComment(state: State): State {
                 }
                 break;
             }
-            case '\r':
+            case '\r': 
                 // optionally read '\n' as well
                 if (state.source[state.i] == '\n') state.i++;
+                /* falls through */
             case '\n':
                 state.row++;
                 state.col = 1;
@@ -354,7 +355,7 @@ function skipUntilNewline(state: State): State {
 }
 
 function simpleInt(state: State): { match: number | null, state: State } {
-    let origI = state.i;
+    const origI = state.i;
     while (!isAtEnd(state)) {
         const nextChar = state.source[state.i];
         if (!nextChar.match(/[0-9]/)) break;
@@ -368,7 +369,7 @@ function simpleInt(state: State): { match: number | null, state: State } {
 }
 
 function lowerName(state: State): { match: string | null, state: State } {
-    let origI = state.i;
+    const origI = state.i;
     // 1st can be [a-z] only
     const firstChar = state.source[state.i];
     if (!firstChar.match(/[a-z]/)) return { match: null, state };
@@ -386,7 +387,7 @@ function lowerName(state: State): { match: string | null, state: State } {
 }
 
 function upperName(state: State): { match: string | null, state: State } {
-    let origI = state.i;
+    const origI = state.i;
     // 1st can be [A-Z] only
     const firstChar = state.source[state.i];
     if (!firstChar.match(/[A-Z]/)) return { match: null, state };
@@ -418,7 +419,7 @@ function char(state: State): {token: Token, state: State} {
                 }
             case '\t':
                 throw err('E0018', 'Unescaped tab in a char', state);
-            case '\\':
+            case '\\': {
                 const second = state.source[state.i++];
                 state.col++;
                 switch (second) {
@@ -432,9 +433,11 @@ function char(state: State): {token: Token, state: State} {
                     default: throw err('E0028', 'Unexpected escaped character in a character', state);
                 }
                 break;
+            }
             case '\r':
                 // optionally read '\n' as well
                 if (state.source[state.i] == '\n') state.i++;
+                /* falls through */
             case '\n':
                 state.row++;
                 state.col = 1;
@@ -453,10 +456,11 @@ function string(state: State): {token: Token, state: State} {
         const nextChar = state.source[state.i++];
         state.col++;
         switch (nextChar) {
-            case '"':
+            case '"': {
                 const {row,col} = state;
                 return {token:{type:{type:'STRING',string:content},loc:{row,col}},state};
-            case '\\':
+            }
+            case '\\': {
                 const second = state.source[state.i++];
                 state.col++;
                 switch (second) {
@@ -470,9 +474,11 @@ function string(state: State): {token: Token, state: State} {
                     default: throw err('E0014', 'Unexpected escaped character in a single-line string', state);
                 }
                 break;
+            }
             case '\r':
                 // optionally read '\n' as well
                 if (state.source[state.i] == '\n') state.i++;
+                /* falls through */
             case '\n':
                 state.row++;
                 state.col = 1;
@@ -491,10 +497,11 @@ function multilineString(state: State): {token: Token, state: State} {
         const nextChar = state.source[state.i++];
         state.col++;
         switch (nextChar) {
-            case '`':
+            case '`': {
                 const {row,col} = state;
                 return {token:{type:{type:'BACKTICK_STRING',string:content},loc:{row,col}},state};
-            case '\\':
+            }
+            case '\\': {
                 const second = state.source[state.i++];
                 state.col++;
                 switch (second) {
@@ -508,9 +515,11 @@ function multilineString(state: State): {token: Token, state: State} {
                     default: throw err('E0029', 'Unexpected escaped character in a multi-line string', state);
                 }
                 break;
+            }
             case '\r':
                 // optionally read '\n' as well
                 if (state.source[state.i] == '\n') state.i++;
+                /* falls through */
             case '\n':
                 state.row++;
                 state.col = 1;

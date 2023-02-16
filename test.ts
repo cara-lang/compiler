@@ -4,11 +4,13 @@ import fs from 'node:fs/promises';
 import {inspect} from 'node:util';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
+import {interpret} from './src/interpreter.ts';
 import {isCaraError,Stage} from './src/error.ts';
 import {Loc} from './src/loc.ts';
 import {Token} from './src/token.ts';
 import {Decl} from './src/ast.ts';
 
+// deno-lint-ignore no-explicit-any
 const log = (data: any) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
 
 const testsDir = 'end-to-end-tests';
@@ -25,6 +27,7 @@ type TestResult =
   | {status:'pass',test:string}
   | {status:'fail',test:string,loc:number[],stage:Stage,msg:string}
 
+// deno-lint-ignore no-unused-vars
 async function allSynchronously<T>(resolvables: (() => Promise<T>)[]): Promise<T[]> {
   const results = [];
   for (const resolvable of resolvables) {
@@ -47,12 +50,14 @@ const test = async (test:string): Promise<TestResult> => {
       log({tokens});
       const ast: Decl[] = parse(tokens);
       log({ast});
+      interpret(ast);
       return {status:'pass',test};
 
     } else {
 
       const tokens: Token[] = lex(source);
       const ast: Decl[] = parse(tokens);
+      interpret(ast);
       return {status:'pass',test};
 
     }
@@ -81,7 +86,8 @@ function sort(results: TestResult[]): TestResult[] {
   })
 }
 
-const results: TestResult[] = await allSynchronously(dirs.map(dir => () => test(dir)));
+//const results: TestResult[] = await allSynchronously(dirs.map(dir => () => test(dir)));
+const results: TestResult[] = await Promise.all(dirs.map(test));
 const skipped = sort(results.filter((x) => x.status == 'skip'));
 const passed  = sort(results.filter((x) => x.status == 'pass'));
 const failed  = sort(results.filter((x) => x.status == 'fail'));

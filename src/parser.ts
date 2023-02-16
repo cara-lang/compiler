@@ -67,7 +67,7 @@ function infixExpr(tag: TokenTag): {precedence: number, isRight: boolean, parser
 
         default:           return null;
     }
-};
+}
 
 function infixType(tag: TokenTag): {precedence: number, isRight: boolean, parser: InfixParser<Type>} | null {
     switch (tag) {
@@ -75,7 +75,7 @@ function infixType(tag: TokenTag): {precedence: number, isRight: boolean, parser
         case 'LBRACKET': return {precedence: 2, isRight: true, parser: callType}; // [
         default:         return null;
     }
-};
+}
 
 function declaration(state: State): {i: number, match: Decl} {
     return oneOf(
@@ -182,7 +182,7 @@ function functionDecl(state: State): {i: number, match: Decl} {
     };
 }
 
-const unaryOps: Map<String,UnaryOp> = new Map([
+const unaryOps: Map<string,UnaryOp> = new Map([
     ["-","NegateNum"],
     ["!","NegateBool"],
     ["~","NegateBin"],
@@ -249,7 +249,7 @@ function unaryOperatorDecl(state: State): {i: number, match: Decl} {
     };
 }
 
-const binaryOps: Map<String,BinaryOp> = new Map([
+const binaryOps: Map<string,BinaryOp> = new Map([
     ['+','Plus'],
     ['-','Minus'],
     ['*','Times'],
@@ -410,7 +410,7 @@ function functionAnnotationDecl(state: State): {i: number, match: Decl} {
         const resultTypeResult = type({...state,i});
         i = resultTypeResult.i;
         resultType = resultTypeResult.match;
-    } catch (e) {
+    } catch (_) {
         i = iBeforeResult;
     }
     // Done!
@@ -500,12 +500,12 @@ function moduleDecl(state: State): {i: number, match: Decl} {
     //: MODULE
     i = expect('MODULE',desc,i,state.tokens);
     //: UPPER_NAME
-    let nameResult = getUpperName(desc,i,state.tokens);
+    const nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
     //: LBRACE
     i = expect('LBRACE', desc,i,state.tokens);
     //: (EOL+ declaration)+
-    let decls: Decl[] = [];
+    const decls: Decl[] = [];
     while (!isAtEnd({...state, i})) {
         const iBeforeLoop = i;
         try {
@@ -517,7 +517,7 @@ function moduleDecl(state: State): {i: number, match: Decl} {
             const declResult = declaration({...state, i});
             i = declResult.i;
             decls.push(declResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
@@ -560,13 +560,13 @@ function upperIdentifier(state: State): {i: number, match: UpperIdentifier} {
             const qualifierResult = getQualifier(desc,i,state.tokens);
             i = qualifierResult.i;
             qualifiers.push(qualifierResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
     }
     //: UPPER_NAME
-    let nameResult = getUpperName(desc,i,state.tokens);
+    const nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
     // Done!
     return {
@@ -594,13 +594,13 @@ function lowerIdentifier(state: State): {i: number, match: LowerIdentifier} {
             const qualifierResult = getQualifier(desc,i,state.tokens);
             i = qualifierResult.i;
             qualifiers.push(qualifierResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
     }
     //: LOWER_NAME
-    let nameResult = getLowerName(desc,i,state.tokens);
+    const nameResult = getLowerName(desc,i,state.tokens);
     i = nameResult.i;
     // Done!
     return {
@@ -890,7 +890,7 @@ function rangeInclusiveExpr(left: Expr, precedence: number, isRight: boolean, st
         const rightResult = exprAux(precedence, isRight, state);
         i = rightResult.i;
         right = rightResult.match;
-    } catch (e) {}
+    } catch (_) {/**/}
     // Done!
     const match: Expr = (right == null)
                             ? {expr: 'unary-op', op: 'InfiniteRangeInclusive', arg: left}
@@ -903,7 +903,7 @@ function rangeInclusiveExpr(left: Expr, precedence: number, isRight: boolean, st
 //= x()
 //= x(1)
 //= x(1,2)
-function callExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
+function callExpr(left: Expr, _precedence: number, _isRight: boolean, state: State): {i: number, match: Expr} {
     let {i} = state;
     const desc = 'call expr'
     //: LPAREN (expr (COMMA expr)*)? RPAREN
@@ -935,7 +935,7 @@ function callExpr(left: Expr, precedence: number, isRight: boolean, state: State
 //  ^^^^^^^^^^^ already parsed, we need to i-- to access the GETTER!
 //= foo.abc
 //= getRecord(123).abc
-function recordGetExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
+function recordGetExpr(left: Expr, _precedence: number, _isRight: boolean, state: State): {i: number, match: Expr} {
     let {i} = state;
     const desc = 'record access';
     //: GETTER
@@ -1172,7 +1172,6 @@ function recordExprSpreadContent(state: State): {i: number, match: RecordExprCon
 //  }
 function blockExpr(state: State): {i: number, match: Expr} {
     let {i} = state;
-    const desc = 'block expr';
     //: moduleName?
     let monadModule: UpperIdentifier|null = null;
     const iBeforeMonadModule = i;
@@ -1180,7 +1179,7 @@ function blockExpr(state: State): {i: number, match: Expr} {
         const moduleResult = moduleName({...state, i});
         i = moduleResult.i;
         monadModule = moduleResult.match;
-    } catch (e) {
+    } catch (_) {
         i = iBeforeMonadModule;
     }
     //: block
@@ -1227,7 +1226,7 @@ function block(state: State): {i: number, match: Block} {
             const stmtResult = statement({...state, i});
             i = stmtResult.i;
             stmts.push(stmtResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
@@ -1244,7 +1243,7 @@ function block(state: State): {i: number, match: Block} {
         const exprResult = expr({...state, i});
         i = exprResult.i;
         ret = exprResult.match;
-    } catch (e) {
+    } catch (_) {
         i = iBeforeRet;
     }
     //: EOL
@@ -1324,7 +1323,7 @@ function caseExpr(state: State): {i: number, match: Expr} {
     //: OF
     i = expect('OF',desc,i,state.tokens);
     //: (EOL+ caseBranch)*
-    let branches: CaseBranch[] = [];
+    const branches: CaseBranch[] = [];
     while (!isAtEnd({...state,i})) {
         const iBeforeLoop = i;
         try {
@@ -1336,7 +1335,7 @@ function caseExpr(state: State): {i: number, match: Expr} {
             const branchResult = caseBranch({...state,i});
             i = branchResult.i;
             branches.push(branchResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
@@ -1374,7 +1373,7 @@ function caseBranch(state: State): {i: number, match: CaseBranch} {
             const nextPatternResult = pattern({...state, i});
             i = nextPatternResult.i;
             orPatterns.push(nextPatternResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
@@ -1501,7 +1500,7 @@ function lambdaWithHoles(body: Expr, state: State): Expr {
                 args: [{pattern: 'var', var: '_'}],
                 body,
             };
-        case 'only-numbered':
+        case 'only-numbered': {
             const args: Pattern[] = 
                 [...Array(analyzed.maxHole).keys()]
                     .map(n => ({pattern: 'var', var: `_${n+1}`}));
@@ -1509,10 +1508,11 @@ function lambdaWithHoles(body: Expr, state: State): Expr {
                 expr: 'lambda',
                 args,
                 body,
-            }
+            };
+        }
         case 'mixed':
             throw err('E0020','Anonymous function shorthand with mixed holes',state.i,state.tokens);
-    };
+    }
 }
 
 function analyzeHoles(expr: Expr): HoleAnalysis {
@@ -1685,7 +1685,7 @@ function constructorPattern(state: State): {i: number, match: Pattern} {
         });
         i = argsResult.i;
         args = argsResult.match;
-    } catch (e) {}
+    } catch (_) {/**/}
     // Done!
     return {
         i,
@@ -1731,13 +1731,12 @@ function floatPattern(state: State): {i: number, match: Pattern} {
 //= [1,a]
 function listPattern(state: State): {i: number, match: Pattern} {
     const desc = 'list pattern';
-    let {i} = state;
     const listResult = list({
         left:  'LBRACKET',
         right: 'RBRACKET',
         sep:   'COMMA',
         item:  pattern,
-        state: {...state, i},
+        state,
         parsedItem: `${desc} elements`,
         skipEol: false,
         allowTrailingSep: false,
@@ -1766,13 +1765,12 @@ function unitPattern(state: State): {i: number, match: Pattern} {
 //= (1,a)
 function tuplePattern(state: State): {i: number, match: Pattern} {
     const desc = 'tuple pattern';
-    let {i} = state;
     const listResult = nonemptyList({
         left:  'LPAREN',
         right: 'RPAREN',
         sep:   'COMMA',
         item:  pattern,
-        state: {...state, i},
+        state,
         parsedItem: `${desc} elements`,
         skipEol: false,
         allowTrailingSep: false,
@@ -1911,7 +1909,7 @@ function typeAliasDecl(state: State): {i: number, match: Decl} {
     i = expect('TYPE', desc,i,state.tokens);
     i = expect('ALIAS',desc,i,state.tokens);
     //: UPPER_NAME
-    let nameResult = getUpperName(desc,i,state.tokens);
+    const nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
     //: (LBRACKET typevar (COMMA typevar)* RBRACKET)?
     let vars: Typevar[] = [];
@@ -1968,7 +1966,7 @@ function typeDecl(state: State): {i: number, match: Decl} {
     //: TYPE
     i = expect('TYPE',desc,i,state.tokens);
     //: UPPER_NAME
-    let nameResult = getUpperName(desc,i,state.tokens);
+    const nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
     //: (LBRACKET typevar (COMMA typevar)* RBRACKET)?
     let vars: Typevar[] = [];
@@ -2017,7 +2015,7 @@ function constructorList(state: State): {i: number, match: Constructor[]} {
         i = skipEol({...state, i});
         //: PIPE
         i = expect('PIPE',desc,i,state.tokens);
-    } catch (e) {
+    } catch (_) {
         i = iBeforeOptional;
     }
     //: EOL*
@@ -2040,7 +2038,7 @@ function constructorList(state: State): {i: number, match: Constructor[]} {
             const constructorResult = constructor({...state, i});
             i = constructorResult.i;
             constructors.push(constructorResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
@@ -2122,7 +2120,7 @@ function fnTypeArg(state: State): {i: number, match: FnTypeArg} {
     const desc = 'typed function argument';
     let name: string|null = null;
     let typeVal: Type|null = null;
-    let needsType: boolean = false;
+    let needsType = false;
     //: (LOWER_NAME COLON?)?
     if (tagIs('LOWER_NAME',i,state.tokens)) {
         const nameResult = getLowerName(desc,i,state.tokens);
@@ -2143,7 +2141,7 @@ function fnTypeArg(state: State): {i: number, match: FnTypeArg} {
             const typeResult = type({...state, i});
             i = typeResult.i;
             typeVal = typeResult.match;
-        } catch (e) {}
+        } catch (_) {/**/}
     }
     // Done!
     if (name == null && typeVal == null) {
@@ -2244,7 +2242,7 @@ function fnType(left: Type, precedence: number, isRight: boolean, state: State):
 //: type LBRACKET type (COMMA type)* RBRACKET
 //  ^^^^^^^^^^^^^ already parsed
 //= List[a]
-function callType(left: Type, precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
+function callType(left: Type, _precedence: number, _isRight: boolean, state: State): {i: number, match: Type} {
     let {i} = state;
     const desc = 'call type';
     i--; // we'll parse LBRACKET as part of the list
@@ -2291,13 +2289,13 @@ function namedType(state: State): {i: number, match: Type} {
             const qualifierResult = getQualifier(desc,i,state.tokens);
             i = qualifierResult.i;
             qualifiers.push(qualifierResult.match);
-        } catch (e) {
+        } catch (_) {
             i = iBeforeLoop;
             break;
         }
     }
     //: UPPER_NAME
-    let nameResult = getUpperName(desc,i,state.tokens);
+    const nameResult = getUpperName(desc,i,state.tokens);
     i = nameResult.i;
     const name = nameResult.match;
     // Done!
@@ -2418,13 +2416,12 @@ function list<T>(c: ListConfig<T>): {i: number, match: T[]} {
 //: left item* right
 function nonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     let {i} = c.state;
-    const sep = c.sep!; // we're guaranteed this by the condition in list()
     //: left
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
     if (c.skipEol) i = skipEol({...c.state,i});
     //: item*
     const items: T[] = [];
-    let iBeforeItems = i;
+    const iBeforeItems = i;
     try {
         while (!isAtEnd({...c.state,i})) {
             if (tagIs(c.right,i,c.state.tokens)) {
@@ -2436,7 +2433,7 @@ function nonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                 if (c.skipEol) i = skipEol({...c.state,i});
             }
         }
-    } catch (e) {
+    } catch (_) {
         i = iBeforeItems;
     }
     //: right
@@ -2453,9 +2450,9 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     if (c.skipEol) i = skipEol({...c.state,i});
     //: (item (sep item)*)?
     const items: T[] = [];
-    let iBeforeItems = i;
+    const iBeforeItems = i;
     try {
-        let firstItem = c.item({...c.state,i});
+        const firstItem = c.item({...c.state,i});
         i = firstItem.i;
         items.push(firstItem.match);
         if (c.skipEol) i = skipEol({...c.state,i});
@@ -2472,7 +2469,7 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                         i = nextItem.i;
                         items.push(nextItem.match);
                         if (c.skipEol) i = skipEol({...c.state,i});
-                    } catch (e) {
+                    } catch (_) {
                         i = iBeforeItem;
                         if (c.skipEol) i = skipEol({...c.state,i});
                         break;
@@ -2488,7 +2485,7 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                 throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
             }
         }
-    } catch (e) {
+    } catch (_) {
         i = iBeforeItems;
     }
     //: right
@@ -2510,7 +2507,7 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
     if (c.skipEol) i = skipEol({...c.state, i});
     //: item
-    let firstItem = c.item({...c.state,i});
+    const firstItem = c.item({...c.state,i});
     i = firstItem.i;
     const items: T[] = [firstItem.match];
     let endedCorrectly = false;
@@ -2530,7 +2527,7 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                     i = nextItem.i;
                     items.push(nextItem.match);
                     if (c.skipEol) i = skipEol({...c.state, i});
-                } catch (e) {
+                } catch (_) {
                     i = iBeforeItem;
                     if (c.skipEol) i = skipEol({...c.state, i});
                     break;
@@ -2559,7 +2556,7 @@ function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} 
     i = expect(c.left,c.parsedItem,i,c.state.tokens);
     if (c.skipEol) i = skipEol({...c.state, i});
     //: item
-    let firstItem = c.item({...c.state,i});
+    const firstItem = c.item({...c.state,i});
     i = firstItem.i;
     const items: T[] = [firstItem.match];
     //: item*
@@ -2591,7 +2588,7 @@ type OneOfOption<T> = {
 
 function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): {i: number, match: T} {
     const iBefore = state.i;
-    let loc = state.tokens[state.i].loc;
+    const loc = state.tokens[state.i].loc;
     let furthestRow = loc.row;
     let furthestCol = loc.col;
     let furthestErr = null;
@@ -2766,7 +2763,7 @@ function todo(what: string, state: State): CaraError {
     return rawErr('EYYYY',`TODO ${what}`,state.tokens[state.i].loc);
 }
 
-function bug(what: string, extra: any): CaraError {
+function bug(what: string, extra: Record<string,unknown>): CaraError {
     return rawErr('EZZZZ',`BUG: ${what}, ${extra}`,{row:0,col:0});
 }
 
