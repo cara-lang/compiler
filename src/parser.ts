@@ -803,12 +803,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
 }
 
 //: expr BANG (LPAREN expr (COMMA expr)* RPAREN)?
-//  ^ where this expr is a `call` or `identifier`
-/* ^ TODO: This likely allows things like `x(1)!` and `x(1)!(2) - is there a way
-           to get rid of that? One solution might be to have bangExpr parsers
-           that are basically expr types but more constrained / allowing
-           the `foo!()` expr
-*/
 //= foo!
 //= foo!()
 //= Bar.foo!(123,456)
@@ -820,9 +814,6 @@ function bang(state: State): {i: number, match: Bang} {
     //: expr
     const exprResult = expr({...state,i});
     i = exprResult.i;
-    if (exprResult.match.expr != 'call' && exprResult.match.expr != 'identifier') {
-        throw err('EXXXX','Only calls and identifiers allowed in bangs',i,state.tokens);
-    }
     //: BANG
     i = expect('BANG',desc,i,state.tokens);
     //: (LPAREN expr (COMMA expr)* RPAREN)?
