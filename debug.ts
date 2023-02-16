@@ -4,6 +4,7 @@ import {inspect} from 'node:util';
 import {argv} from 'node:process';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
+import {interpret} from './src/interpreter.ts';
 
 // deno-lint-ignore no-explicit-any
 const log = (data: any) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
@@ -17,3 +18,4 @@ log(tokens);
 const ast = parse(tokens);
 console.log('AST:');
 log(ast);
+interpret(ast);
