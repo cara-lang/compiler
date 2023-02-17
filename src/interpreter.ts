@@ -46,14 +46,24 @@ function interpretBang(env: Env, bang: Bang): Env {
     }
 }
 
+function show(e: Expr): string {
+    switch (e.expr) {
+        case 'int':    return e.int.toString();
+        case 'float':  return e.float.toString();
+        case 'char':   return e.char;
+        case 'string': return e.string;
+        case 'bool':   return e.bool ? 'True' : 'False';
+        case 'unit':   return '()';
+        case 'tuple':  return `(${e.elements.map(show).join(',')})`;
+        case 'list':   return `[${e.elements.map(show).join(',')}]`;
+        default: err(`show(${e.expr})`);
+    }
+}
 
 const ioPrintlnId: Identifier = {qualifiers:['IO'],name:'println'};
 async function ioPrintln(env: Env, expr: Expr) {
     const e = interpretExpr(env,expr);
-    switch (e.expr) {
-        case 'int': await println(e.int.toString()); break;
-        default: err(`IO.println(${e.expr})`);
-    }
+    await println(show(e));
 }
 
 const specialIds: Identifier[] = [
@@ -70,7 +80,15 @@ function isSpecial(id: Identifier): boolean {
 
 function interpretExpr(env: Env, expr: Expr): Expr {
     switch (expr.expr) {
-        case 'int': return expr;
+        case 'int':
+        case 'float':
+        case 'char': 
+        case 'string': 
+        case 'unit': 
+        case 'bool': 
+        case 'closure': 
+        case 'record-getter': 
+        case 'constructor': return expr;
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
             err(`interpretExpr id ${expr.id}`);
