@@ -1,7 +1,6 @@
 import {Decl, Stmt, Bang, Expr, Identifier} from './ast.ts';
-import {CaraError} from './error.ts';
-import {Loc} from './loc.ts';
-import {arrayEquals} from './util.ts';
+import {arrayEquals,println} from './util.ts';
+import {err} from './error.ts';
 
 type Env = Map<Identifier,Expr>;
 
@@ -13,14 +12,14 @@ export function interpret(ast: Decl[]) {
 function interpretDecl(env: Env, decl: Decl): Env {
     switch (decl.decl) {
         case 'statement': return interpretStmt(env, decl.stmt);
-        default: throw todo(`interpretDecl ${decl.decl}`);
+        default: err(`interpretDecl ${decl.decl}`);
     }
 }
 
 function interpretStmt(env: Env, stmt: Stmt): Env {
     switch (stmt.stmt) {
         case 'bang': return interpretBang(env, stmt.bang);
-        default: throw todo(`interpretStmt ${stmt.stmt}`);
+        default: err(`interpretStmt ${stmt.stmt}`);
     }
 }
 
@@ -34,32 +33,25 @@ function interpretBang(env: Env, bang: Bang): Env {
                     if (bang.args.length == 1) {
                         ioPrintln(env,bang.args[0]);
                     } else {
-                        throw todo(`interpretBang IO.println with ${bang.args.length} args`);
+                        err(`interpretBang IO.println with ${bang.args.length} args`);
                     }
                     return env;
                 } else {
-                    throw todo(`interpretBang id ${fn.id}`);
+                    err(`interpretBang id ${fn.id}`);
                 }
             } else {
-                throw todo(`interpretBang ${bang.bang} ${bang.fn}`);
+                err(`interpretBang ${bang.bang} ${bang.fn}`);
             }
         }
     }
 }
 
-async function print(x: string) {
-    await Deno.stdout.write(new TextEncoder().encode(x));
-}
-
-async function println(x: string) {
-    await print(`${x}\n`);
-}
 
 const ioPrintlnId: Identifier = {qualifiers:['IO'],name:'println'};
 async function ioPrintln(_env: Env, expr: Expr) {
     switch (expr.expr) {
         case 'int': await println(expr.int.toString()); break;
-        default: throw todo(`IO.println(${expr.expr})`);
+        default: err(`IO.println(${expr.expr})`);
     }
 }
 
@@ -79,16 +71,9 @@ function interpretExpr(_env: Env, expr: Expr): Expr {
     switch (expr.expr) {
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
-            throw todo(`interpretExpr id ${expr.id}`);
+            err(`interpretExpr id ${expr.id}`);
+            break;
         }
-        default: throw todo(`interpretExpr ${expr.expr}`);
+        default: err(`interpretExpr ${expr.expr}`);
     }
-}
-
-function todo(what: string): CaraError {
-    return rawErr('EYYYY',`TODO ${what}`,{row:0,col:0});
-}
-
-function rawErr(code: string, message: string, loc: Loc): CaraError {
-    return { stage: 'interpreter', code, message, loc };
 }

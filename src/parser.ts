@@ -1,6 +1,6 @@
 import {Token, TokenTag} from './token.ts';
 import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnArg, FnTypeArg, CaseBranch} from './ast.ts';
-import {CaraError} from './error.ts';
+import {err} from './error.ts';
 import {Loc} from './loc.ts';
 
 type State = { tokens: Token[], i: number };
@@ -13,10 +13,14 @@ export function parse(tokens: Token[]): Decl[] {
     const decls: Decl[] = [];
     i = skipEol({tokens,i});
     while (!isAtEnd({tokens,i})) {
-        const declResult = declaration({tokens,i});
-        i = declResult.i;
-        decls.push(declResult.match);
-        i = skipEol({tokens,i});
+        try {
+            const declResult = declaration({tokens,i});
+            i = declResult.i;
+            decls.push(declResult.match);
+            i = skipEol({tokens,i});
+        } catch (e) {
+            err(e.message);
+        }
     }
     return decls;
 }
@@ -209,7 +213,7 @@ function unaryOperatorDecl(state: State): {i: number, match: Decl} {
     i = nameResult.i;
     const op = unaryOps.get(nameResult.match);
     if (op == null) {
-        throw err('EXXXX','Unsupported unary operator',i,state.tokens);
+        throw error('Unsupported unary operator',i,state.tokens);
     }
     //: LPAREN
     i = expect('LPAREN',desc,i,state.tokens);
@@ -295,7 +299,7 @@ function binaryOperatorDecl(state: State): {i: number, match: Decl} {
     i = nameResult.i;
     const op = binaryOps.get(nameResult.match);
     if (op == null) {
-        throw err('EXXXX','Unsupported binary operator',i,state.tokens);
+        throw error('Unsupported binary operator',i,state.tokens);
     }
     //: LPAREN
     i = expect('LPAREN',desc,i,state.tokens);
@@ -415,7 +419,7 @@ function functionAnnotationDecl(state: State): {i: number, match: Decl} {
     }
     // Done!
     if (resultType == null && args.every((arg: FnTypeArg) => arg.type == null)) {
-        throw err('EXXXX','Function annotation needs more types',i,state.tokens);
+        throw error('Function annotation needs more types',i,state.tokens);
     }
     return {
         i,
@@ -550,7 +554,7 @@ function moduleName(state: State): {i: number, match: UpperIdentifier} {
 //= Foo.Bar.Baz
 function upperIdentifier(state: State): {i: number, match: UpperIdentifier} {
     let {i} = state;
-    const desc = 'module name';
+    const desc = 'upper identifier';
     //: QUALIFIER*
     const qualifiers = [];
     while (!isAtEnd({...state, i})) {
@@ -649,7 +653,7 @@ function letStatement(state: State): {i: number, match: Stmt} {
     // prevent _
     // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
-        throw err('E0013','Assignment of expression to underscore',i,state.tokens);
+        err('E0013: Assignment of expression to underscore');
     }
     //: pattern
     const lhsResult = pattern({...state, i});
@@ -698,7 +702,7 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
     // prevent _
     // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
-        throw err('E0013','Assignment of bang expression to underscore',i,state.tokens);
+        err('E0013: Assignment of bang expression to underscore');
     }
     //: pattern
     const lhsResult = pattern({...state,i});
@@ -1003,7 +1007,7 @@ function boolExpr(state: State): {i: number, match: Expr} {
     switch (tag) {
         case 'TRUE':  return {i: state.i + 1, match: {expr: 'bool', bool: true}};
         case 'FALSE': return {i: state.i + 1, match: {expr: 'bool', bool: false}};
-        default:      throw err('EXXXX','Expected TRUE or FALSE',state.i,state.tokens);
+        default:      throw error('Expected TRUE or FALSE',state.i,state.tokens);
     }
 }
 
@@ -1283,7 +1287,7 @@ function ifExpr(state: State): {i: number, match: Expr} {
     i = skipEolBeforeIndented({...state,i});
     //: ELSE
     if (!tagIs('ELSE',i,state.tokens)) {
-        throw err('E0021','If expression without an else branch',i,state.tokens);
+        err('E0021: If expression without an else branch');
     }
     i = expect('ELSE',desc,i,state.tokens);
     i = skipEolBeforeIndented({...state,i});
@@ -1511,7 +1515,7 @@ function lambdaWithHoles(body: Expr, state: State): Expr {
             };
         }
         case 'mixed':
-            throw err('E0020','Anonymous function shorthand with mixed holes',state.i,state.tokens);
+            err('E0020: Anonymous function shorthand with mixed holes');
     }
 }
 
@@ -1619,7 +1623,7 @@ function combineHoles(a: HoleAnalysis, b: HoleAnalysis): HoleAnalysis {
             maxHole: Math.max(a.maxHole,b.maxHole)
         };
     }
-    throw bug('combineHoles: fell through all the options', {a,b});
+    bug('combineHoles: fell through all the options', {a,b});
 }
 
 function pattern(state: State): {i: number, match: Pattern} {
@@ -2145,7 +2149,7 @@ function fnTypeArg(state: State): {i: number, match: FnTypeArg} {
     }
     // Done!
     if (name == null && typeVal == null) {
-        throw todo('Bug: fnTypeArg',{...state,i});
+        bug('fnTypeArg',null,{...state,i});
     }
     return { i, match: { name, type: typeVal } };
 }
@@ -2482,7 +2486,7 @@ function separatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                     if (c.skipEol) i = skipEol({...c.state,i});
                 }
             } else {
-                throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
+                throw error(`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
             }
         }
     } catch (_) {
@@ -2540,11 +2544,11 @@ function nonemptySeparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} {
                 if (c.skipEol) i = skipEol({...c.state, i});
             }
         } else {
-            throw err('EXXXX',`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
+            throw error(`Expected ${c.right} or ${sep} in the ${c.parsedItem}`,i,c.state.tokens);
         }
     }
     if (!endedCorrectly) {
-        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,i,c.state.tokens);
+        throw error(`Unterminated list in ${c.parsedItem}`,i,c.state.tokens);
     }
     return {i, match: items};
 }
@@ -2576,7 +2580,7 @@ function nonemptyNonseparatedList<T>(c: ListConfig<T>): {i: number, match: T[]} 
         }
     }
     if (!endedCorrectly) {
-        throw err('EXXXX',`Unterminated list in ${c.parsedItem}`,i,c.state.tokens);
+        throw error(`Unterminated list in ${c.parsedItem}`,i,c.state.tokens);
     }
     return {i, match: items};
 }
@@ -2598,12 +2602,10 @@ function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): 
             try {
                 return option.parser(state);
             } catch (e) {
-                const isProperErr = e.code.match(/E[0-9]{4}/);
-                if (isProperErr || compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
+                if (compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
                     furthestErr = e;
                     furthestRow = e.loc.row;
                     furthestCol = e.loc.col;
-                    if (isProperErr) break;
                 }
                 state.i = iBefore;
             }
@@ -2615,7 +2617,7 @@ function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): 
         }
     }
     if (furthestErr == null) {
-        throw err('EXXXX',`Expected ${parsedItem}`,state.i,state.tokens);
+        throw error(`Expected ${parsedItem}`,state.i,state.tokens);
     } else {
         throw furthestErr;
     }
@@ -2624,7 +2626,7 @@ function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): 
 function getInt(parsedItem: string, i: number, tokens: Token[]): {i: number, match: bigint} {
     const intToken = tokens[i];
     if (intToken.type.type !== 'INT') {
-        throw err('EXXXX',`Expected INT for a ${parsedItem}`,i,tokens);
+        throw error(`Expected INT for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2635,7 +2637,7 @@ function getInt(parsedItem: string, i: number, tokens: Token[]): {i: number, mat
 function getFloat(parsedItem: string, i: number, tokens: Token[]): {i: number, match: number} {
     const floatToken = tokens[i];
     if (floatToken.type.type !== 'FLOAT') {
-        throw err('EXXXX',`Expected FLOAT for a ${parsedItem}`,i,tokens);
+        throw error(`Expected FLOAT for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2646,7 +2648,7 @@ function getFloat(parsedItem: string, i: number, tokens: Token[]): {i: number, m
 function getChar(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const charToken = tokens[i];
     if (charToken.type.type !== 'CHAR') {
-        throw err('EXXXX',`Expected CHAR for a ${parsedItem}`,i,tokens);
+        throw error(`Expected CHAR for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2657,7 +2659,7 @@ function getChar(parsedItem: string, i: number, tokens: Token[]): {i: number, ma
 function getString(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const stringToken = tokens[i];
     if (stringToken.type.type !== 'STRING') {
-        throw err('EXXXX',`Expected STRING for a ${parsedItem}`,i,tokens);
+        throw error(`Expected STRING for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2668,7 +2670,7 @@ function getString(parsedItem: string, i: number, tokens: Token[]): {i: number, 
 function getBacktickString(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const stringToken = tokens[i];
     if (stringToken.type.type !== 'BACKTICK_STRING') {
-        throw err('EXXXX',`Expected BACKTICK_STRING for a ${parsedItem}`,i,tokens);
+        throw error(`Expected BACKTICK_STRING for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2679,7 +2681,7 @@ function getBacktickString(parsedItem: string, i: number, tokens: Token[]): {i: 
 function getRecordGetter(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const getterToken = tokens[i];
     if (getterToken.type.type !== 'GETTER') {
-        throw err('EXXXX',`Expected GETTER for a ${parsedItem}`,i,tokens);
+        throw error(`Expected GETTER for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2695,7 +2697,7 @@ function lowerName(state:State): {i: number, match: string} {
 function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const nameToken = tokens[i];
     if (nameToken.type.type !== 'LOWER_NAME') {
-        throw err('EXXXX',`Expected LOWER_NAME for a ${parsedItem}`,i,tokens);
+        throw error(`Expected LOWER_NAME for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2706,7 +2708,7 @@ function getLowerName(parsedItem: string, i: number, tokens: Token[]): {i: numbe
 function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const nameToken = tokens[i];
     if (nameToken.type.type !== 'UPPER_NAME') {
-        throw err('EXXXX',`Expected UPPER_NAME for a ${parsedItem}`,i,tokens);
+        throw error(`Expected UPPER_NAME for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2717,7 +2719,7 @@ function getUpperName(parsedItem: string, i: number, tokens: Token[]): {i: numbe
 function getQualifier(parsedItem: string, i: number, tokens: Token[]): {i: number, match: string} {
     const qualifierToken = tokens[i];
     if (qualifierToken.type.type !== 'QUALIFIER') {
-        throw err('EXXXX',`Expected QUALIFIER for a ${parsedItem}`,i,tokens);
+        throw error(`Expected QUALIFIER for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2728,7 +2730,7 @@ function getQualifier(parsedItem: string, i: number, tokens: Token[]): {i: numbe
 function getHole(parsedItem: string, i: number, tokens: Token[]): {i: number, match: number} {
     const holeToken = tokens[i];
     if (holeToken.type.type !== 'HOLE') {
-        throw err('EXXXX',`Expected HOLE for a ${parsedItem}`,i,tokens);
+        throw error(`Expected HOLE for a ${parsedItem}`,i,tokens);
     }
     return {
         i: i + 1, 
@@ -2748,23 +2750,30 @@ function tagsAre(tags: TokenTag[], i:number, tokens: Token[]): boolean {
     return arrayEquals(tags,getTags(tags.length,{tokens,i}));
 }
 
-function rawErr(code: string, message: string, loc: Loc): CaraError {
-    return { stage: 'parser', code, message, loc };
+type Error = {
+    message: string,
+    loc: Loc,
 }
 
-function err(code: string, message: string, i: number, tokens: Token[]): CaraError {
+function parserError(message: string, loc: Loc): Error {
+    return { message, loc };
+}
+
+function error(message: string, i: number, tokens: Token[]): Error {
     const token = tokens[i];
     const tokenTag = token.type.type;
     const loc = token.loc;
-    return rawErr(code,`Unexpected ${tokenTag}. ${message}`,loc);
+    return parserError(`Unexpected ${tokenTag}. ${message}`,loc);
 }
 
-function todo(what: string, state: State): CaraError {
-    return rawErr('EYYYY',`TODO ${what}`,state.tokens[state.i].loc);
+function showLoc(loc: Loc): string {
+    return `${loc.row}:${loc.col}`;
 }
 
-function bug(what: string, extra: Record<string,unknown>): CaraError {
-    return rawErr('EZZZZ',`BUG: ${what}, ${extra}`,{row:0,col:0});
+function bug(message: string, extra: Record<string,unknown>|null, state?: State): never {
+    const shownLoc = state ? ` @ ${showLoc(state.tokens[state.i].loc)}` : '';
+    const shownExtra = extra ? `, ${extra}` : '';
+    err(`BUG: ${message}${shownLoc}${shownExtra}`);
 }
 
 function isAtEnd(state: State): boolean {
@@ -2774,7 +2783,7 @@ function isAtEnd(state: State): boolean {
 
 function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
     if (!tagIs(tag,i,tokens)) {
-        throw err('EXXXX',`Expected ${tag} for a ${parsedItem}`,i,tokens);
+        throw error(`Expected ${tag} for a ${parsedItem}`,i,tokens);
     }
     return i + 1;
 }

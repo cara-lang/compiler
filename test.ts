@@ -11,9 +11,10 @@ const dirs =
 type TestResult =
   | {status:'skip',test:string}
   | {status:'pass',test:string}
-  | {status:'fail-stdout',test:string,actual:string}
-  | {status:'fail-stderr',test:string/*,actual:string*/}
-  | {status:'fail-retval',test:string}
+  | {status:'fail-different-out',test:string,actual:string}
+  | {status:'fail-different-err',test:string/*,actual:string*/}
+  | {status:'fail-unexpected-err',test:string,actual:string}
+  | {status:'fail-unexpected-ok', test:string,actual:string}
 
 
 const test = async (test:string): Promise<TestResult> => {
@@ -29,9 +30,6 @@ const test = async (test:string): Promise<TestResult> => {
   })
 
   const { code } = await p.status();
-
-  if ((code != 0 && !shouldErr) || (code == 0 && shouldErr)) return {status:'fail-retval',test};
-
   const actualOutput = textDecoder.decode(await p.output());
   const actualError  = textDecoder.decode(await p.stderrOutput());
 
@@ -39,9 +37,12 @@ const test = async (test:string): Promise<TestResult> => {
   let expectedError  = "";
   try { expectedOutput = await Deno.readTextFile(`./${testsDir}/${test}/stdout.txt`); } catch (_) {/**/}
   try { expectedError  = await Deno.readTextFile(`./${testsDir}/${test}/stderr.txt`); } catch (_) {/**/}
+
+  if (code != 0 && !shouldErr) return {status:'fail-unexpected-err',test,actual:actualError};
+  if (code == 0 && shouldErr)  return {status:'fail-unexpected-ok', test,actual:actualOutput};
   
-  if (actualOutput !== expectedOutput) return {status:'fail-stdout',test,actual:actualOutput};
-  if (actualError  !== expectedError)  return {status:'fail-stderr',test/*,actual:actualError*/};
+  if (actualOutput !== expectedOutput) return {status:'fail-different-out',test,actual:actualOutput};
+  if (actualError  !== expectedError)  return {status:'fail-different-err',test/*,actual:actualError*/};
 
   return {status:'pass',test};
 };
@@ -63,8 +64,8 @@ function sort(results: TestResult[]): TestResult[] {
   })
 }
 
-//const results: TestResult[] = await allSynchronously(dirs.map(dir => () => test(dir)));
-const results: TestResult[] = await Promise.all(dirs.map(test));
+const results: TestResult[] = await allSynchronously(dirs.map(dir => () => test(dir)));
+//const results: TestResult[] = await Promise.all(dirs.map(test));
 const skipped = sort(results.filter((x) => x.status == 'skip'));
 const passed  = sort(results.filter((x) => x.status == 'pass'));
 const failed  = sort(results.filter((x) => x.status.startsWith('fail')));
