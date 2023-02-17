@@ -48,10 +48,11 @@ function interpretBang(env: Env, bang: Bang): Env {
 
 
 const ioPrintlnId: Identifier = {qualifiers:['IO'],name:'println'};
-async function ioPrintln(_env: Env, expr: Expr) {
-    switch (expr.expr) {
-        case 'int': await println(expr.int.toString()); break;
-        default: err(`IO.println(${expr.expr})`);
+async function ioPrintln(env: Env, expr: Expr) {
+    const e = interpretExpr(env,expr);
+    switch (e.expr) {
+        case 'int': await println(e.int.toString()); break;
+        default: err(`IO.println(${e.expr})`);
     }
 }
 
@@ -67,11 +68,33 @@ function isSpecial(id: Identifier): boolean {
     return specialIds.some(specialId => idEquals(id,specialId));
 }
 
-function interpretExpr(_env: Env, expr: Expr): Expr {
+function interpretExpr(env: Env, expr: Expr): Expr {
     switch (expr.expr) {
+        case 'int': return expr;
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
             err(`interpretExpr id ${expr.id}`);
+            break;
+        }
+        case 'unary-op': {
+            const arg = interpretExpr(env,expr.arg);
+            switch (expr.op) {
+                case 'NegateNum': {
+                    switch (arg.expr) {
+                        case 'int': {
+                            arg.int = -arg.int;
+                            return arg;
+                        }
+                        case 'float': {
+                            arg.float = -arg.float;
+                            return arg;
+                        }
+                        default: err("Can't NegateNum something that isn't int or float");
+                    }
+                    break;
+                }
+                default: err(`interpretExpr unary-op ${expr.op}`);
+            }
             break;
         }
         default: err(`interpretExpr ${expr.expr}`);

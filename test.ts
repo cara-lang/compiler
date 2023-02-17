@@ -1,6 +1,8 @@
 #!/usr/bin/env deno run --allow-read --allow-run
 import fs from 'node:fs/promises';
 
+const selectedTest = null;
+
 const textDecoder = new TextDecoder();
 const testsDir = 'end-to-end-tests';
 const dirs =
@@ -18,6 +20,7 @@ type TestResult =
 
 
 const test = async (test:string): Promise<TestResult> => {
+  if (selectedTest != null && test != selectedTest) return {status:'skip',test};
   if (test.startsWith('test-')) return {status:'skip',test}; // TODO handle test tests
 
   const shouldErr = test.match(/-err/);
@@ -37,6 +40,16 @@ const test = async (test:string): Promise<TestResult> => {
   let expectedError  = "";
   try { expectedOutput = await Deno.readTextFile(`./${testsDir}/${test}/stdout.txt`); } catch (_) {/**/}
   try { expectedError  = await Deno.readTextFile(`./${testsDir}/${test}/stderr.txt`); } catch (_) {/**/}
+
+  if (selectedTest != null) {
+    console.log('STDOUT');
+    console.log('------');
+    console.log(actualOutput);
+    console.log('');
+    console.log('STDERR');
+    console.log('------');
+    console.log(actualError);
+  }
 
   if (code != 0 && !shouldErr) return {status:'fail-unexpected-err',test,actual:actualError};
   if (code == 0 && shouldErr)  return {status:'fail-unexpected-ok', test,actual:actualOutput};

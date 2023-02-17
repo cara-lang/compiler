@@ -1479,7 +1479,7 @@ function holeLambdaExpr(state: State): {i: number, match: Expr} {
     // Done!
     return {
         i,
-        match: lambdaWithHoles(bodyResult.match, {...state,i})
+        match: lambdaWithHoles(bodyResult.match)
     };
 }
 
@@ -1489,7 +1489,7 @@ type HoleAnalysis =
     | {type: 'only-numbered', maxHole: number}
     | {type: 'mixed'};
 
-function lambdaWithHoles(body: Expr, state: State): Expr {
+function lambdaWithHoles(body: Expr): Expr {
     const analyzed = analyzeHoles(body);
     switch (analyzed.type) {
         case 'no-holes':
