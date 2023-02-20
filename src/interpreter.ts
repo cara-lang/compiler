@@ -88,11 +88,15 @@ function interpretExpr(env: Env, expr: Expr): Expr {
         case 'bool': 
         case 'closure': 
         case 'record-getter': 
-        case 'constructor': return expr;
+        case 'constructor':
+            return expr;
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
             err(`interpretExpr id ${expr.id}`);
             break;
+        }
+        case 'tuple': {
+            return {...expr, elements: expr.elements.map((e) => interpretExpr(env,e))};
         }
         case 'unary-op': {
             const arg = interpretExpr(env,expr.arg);
