@@ -1,31 +1,59 @@
-import {Decl, Stmt, Bang, Expr, Identifier} from './ast.ts';
+import {inspect} from 'node:util';
+import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern} from './ast.ts';
 import {arrayEquals,println} from './util.ts';
 import {err} from './error.ts';
 
-type Env = Map<Identifier,Expr>;
+type Env = Map<string,Expr>;
+type Envs = {
+    public: Env,
+    private: Env,
+};
 
-export function interpret(ast: Decl[]) {
-    const initEnv: Env = new Map();
-    ast.reduce(interpretDecl, initEnv);
+function combineEnvs(envs: Envs): Env {
+    return envAdd(envs.public, envs.private);
 }
 
-function interpretDecl(env: Env, decl: Decl): Env {
+// `a` with items from `b` added. On collision, `b` wins.
+function envAdd(a: Env, b: Env): Env {
+    return new Map([
+        ...a,
+        ...b,
+    ]);
+}
+
+function envGet(id: Identifier, env: Env): Expr | undefined {
+    const str = idToString(id);
+    return env.get(str);
+}
+
+function idToString(id: Identifier): string {
+    return id.qualifiers.join('.') + id.name;
+}
+
+export function interpret(ast: Decl[]) {
+    const envs: Envs = {public: new Map(), private: new Map()};
+    ast.reduce(interpretDecl, envs);
+}
+
+function interpretDecl(envs: Envs, decl: Decl): Envs {
     switch (decl.decl) {
-        case 'statement': return interpretStmt(env, decl.stmt);
+        case 'statement': return interpretStmt(envs, decl.stmt);
         default: err(`interpretDecl ${decl.decl}`);
     }
 }
 
-function interpretStmt(env: Env, stmt: Stmt): Env {
+function interpretStmt(envs: Envs, stmt: Stmt): Envs {
     switch (stmt.stmt) {
-        case 'bang': return interpretBang(env, stmt.bang);
+        case 'bang': return interpretBang(envs, stmt.bang);
+        case 'let': return interpretLet(envs, stmt.mod, stmt.type, stmt.lhs, stmt.body);
         default: err(`interpretStmt ${stmt.stmt}`);
     }
 }
 
-function interpretBang(env: Env, bang: Bang): Env {
+function interpretBang(envs: Envs, bang: Bang): Envs {
+    const env = combineEnvs(envs);
     switch (bang.bang) {
-        case 'value': interpretExpr(env, bang.val); return env;
+        case 'value': interpretExpr(env, bang.val); return envs;
         case 'call': {
             const fn = interpretExpr(env, bang.fn);
             if (fn.expr == 'identifier') {
@@ -35,13 +63,44 @@ function interpretBang(env: Env, bang: Bang): Env {
                     } else {
                         err(`interpretBang IO.println with ${bang.args.length} args`);
                     }
-                    return env;
+                    return envs;
                 } else {
                     err(`interpretBang id ${fn.id}`);
                 }
             } else {
                 err(`interpretBang ${bang.bang} ${bang.fn}`);
             }
+        }
+    }
+}
+
+function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Pattern, body: Expr): Envs {
+    if (type != null) {
+        // TODO typecheck the env against the type
+    }
+    switch (mod) {
+        case 'Private': {
+            // TODO do something else than NoModifier does?
+            err(`interpretLet 1 ${mod} ${type} ${inspect(lhs)} ${inspect(body)}`);
+            break;
+        }
+        case 'NoModifier': {
+            const publicEnvAdditions = interpretPattern(lhs, body);
+            return {...envs, public: envAdd(envs.public, publicEnvAdditions)};
+        }
+    }
+}
+
+// Returns env additions, instead of the whole env
+function interpretPattern(lhs: Pattern, body: Expr): Env {
+    switch (lhs.pattern) {
+        case 'var': {
+            return new Map([
+                [idToString({qualifiers: [], name: lhs.var}), body],
+            ]);
+        }
+        default: {
+            err(`interpretPattern ${inspect(lhs)} ${inspect(body)}`);
         }
     }
 }
@@ -92,8 +151,11 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             return expr;
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
-            err(`interpretExpr id ${expr.id}`);
-            break;
+            const item = envGet(expr.id, env);
+            if (item == null) {
+                err(`Unknown identifier: ${inspect(expr.id)}. Env: ${inspect(env)}`);
+            }
+            return item;
         }
         case 'tuple': {
             return {...expr, elements: expr.elements.map((e) => interpretExpr(env,e))};
@@ -119,6 +181,44 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             }
             break;
         }
+        case 'record-get': {
+            const record = interpretExpr(env,expr.record);
+            switch (record.expr) {
+                case 'tuple': {
+                    const index = tupleIndex(expr.field);
+                    if (index == null) {
+                        err(`Unsupported tuple getter: ${expr.field}`);
+                    }
+                    return record.elements[index];
+                }
+                default: err(`interpretExpr record-get ${record.expr} ${expr.field}`);
+            }
+            break;
+        }
         default: err(`interpretExpr ${expr.expr}`);
+    }
+}
+
+function tupleIndex(field: string): number|null {
+    switch (field) {
+        case 'first':   return 0;
+        case 'second':  return 1;
+        case 'third':   return 2;
+        case 'fourth':  return 3;
+        case 'fifth':   return 4;
+        case 'sixth':   return 5;
+        case 'seventh': return 6;
+        case 'eighth':  return 7;
+        case 'ninth':   return 8;
+        case 'tenth':   return 9;
+        default: {
+            const match = field.match(/el(\d+)/);
+            if (match == null) return null;
+            const num = parseInt(match[1],10);
+            if (num == 0) {
+                err(`Tuple index el0 is unsupported: they start at el1`);
+            }
+            return num - 1;
+        }
     }
 }
