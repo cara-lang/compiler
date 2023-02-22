@@ -1,4 +1,3 @@
-import {err} from './error.ts';
 import {Token, SimpleTokenType} from './token.ts';
 
 type State = {
@@ -191,7 +190,7 @@ function nextToken(state: State): { token: Token, state: State } {
             result = match('(', state); // #(
             if (result.matches) return simple('LHOLE', result.state);
 
-            throw err("EXXXX: Unespected character: '#'");
+            throw "EXXXX: Unespected character: '#'";
         }
         case '\n':
             return eol(state);
@@ -212,7 +211,7 @@ function nextToken(state: State): { token: Token, state: State } {
                 return simple('DOTDOT', first.state) // ..
             }
             const lower = lowerName(state);
-            if (lower.match == null) throw err("EXXXX: Unexpected character: '.'");
+            if (lower.match == null) throw "EXXXX: Unexpected character: '.'";
             const { row, col } = lower.state;
             return { token: { type: { type: 'GETTER', field: lower.match }, loc: {row, col} }, state: lower.state };
         }
@@ -241,7 +240,7 @@ function nextToken(state: State): { token: Token, state: State } {
                     case 'private': return simple('PRIVATE', result.state);
                     case 'opaque':  return simple('OPAQUE',  result.state);
                     case 'extend':  return simple('EXTEND',  result.state);
-                    case null: throw err("EXXXX: Bug: we definitely should have got a LOWER_NAME");
+                    case null: throw "EXXXX: Bug: we definitely should have got a LOWER_NAME";
                     default: {
                         const { row, col } = result.state;
                         return { token: { type: { type: 'LOWER_NAME', name: result.match }, loc: {row, col} }, state: result.state };
@@ -271,7 +270,7 @@ function nextToken(state: State): { token: Token, state: State } {
                 state.col--;
                 return number(state);
             }
-            throw err(`EXXXX: Unexpected character '${c}'`);
+            throw `EXXXX: Unexpected character '${c}'`;
     }
 }
 
@@ -319,11 +318,11 @@ function blockComment(state: State): State {
             // default: just continue
         }
     }
-    throw err('E0009: Unfinished block comment');
+    throw 'E0009: Unfinished block comment';
 }
 
 function shebang(state: State): {token: Token, state: State} {
-    if (state.i != 2) throw err('E0015: Shebang comment is not first');
+    if (state.i != 2) throw 'E0015: Shebang comment is not first';
     const newState = skipUntilNewline(state);
     return simple('EOL', newState);
 }
@@ -407,13 +406,13 @@ function char(state: State): {token: Token, state: State} {
         switch (nextChar) {
             case "'":
                 if (content.length == 0) {
-                    throw err('E0019: Empty character');
+                    throw 'E0019: Empty character';
                 } else {
                     const {row,col} = state;
                     return {token:{type:{type:'CHAR',char:content},loc:{row,col}},state};
                 }
             case '\t':
-                throw err('E0018: Unescaped tab in a char');
+                throw 'E0018: Unescaped tab in a char';
             case '\\': {
                 const second = state.source[state.i++];
                 state.col++;
@@ -425,7 +424,7 @@ function char(state: State): {token: Token, state: State} {
                     case "'":  content += "'";  break;
                     // TODO \u{....}
                     // TODO \x{..}
-                    default: throw err('E0028: Unexpected escaped character in a character');
+                    default: throw 'E0028: Unexpected escaped character in a character';
                 }
                 break;
             }
@@ -436,13 +435,13 @@ function char(state: State): {token: Token, state: State} {
             case '\n':
                 state.row++;
                 state.col = 1;
-                throw err('E0017: Unescaped newline in a character');
+                throw 'E0017: Unescaped newline in a character';
             default: 
                 // any other char needs to be saved!
                 content += nextChar;
         }
     }
-    throw err('EXXXX: Unterminated char at EOF');
+    throw 'EXXXX: Unterminated char at EOF';
 }
 
 function string(state: State): {token: Token, state: State} {
@@ -466,7 +465,7 @@ function string(state: State): {token: Token, state: State} {
                     case '"':  content += '"';  break;
                     // TODO \u{....}
                     // TODO \x{..}
-                    default: throw err('E0014: Unexpected escaped character in a single-line string');
+                    default: throw 'E0014: Unexpected escaped character in a single-line string';
                 }
                 break;
             }
@@ -477,13 +476,13 @@ function string(state: State): {token: Token, state: State} {
             case '\n':
                 state.row++;
                 state.col = 1;
-                throw err('E0012: Unescaped newline in a single-line string');
+                throw 'E0012: Unescaped newline in a single-line string';
             default: 
                 // any other char needs to be saved!
                 content += nextChar;
         }
     }
-    throw err('EXXXX: Unterminated single-line string at EOF');
+    throw 'EXXXX: Unterminated single-line string at EOF';
 }
 
 function multilineString(state: State): {token: Token, state: State} {
@@ -507,7 +506,7 @@ function multilineString(state: State): {token: Token, state: State} {
                     case '`':  content += '`';  break;
                     // TODO \u{....}
                     // TODO \x{..}
-                    default: throw err('E0029: Unexpected escaped character in a multi-line string');
+                    default: throw 'E0029: Unexpected escaped character in a multi-line string';
                 }
                 break;
             }
@@ -525,7 +524,7 @@ function multilineString(state: State): {token: Token, state: State} {
                 content += nextChar;
         }
     }
-    throw err('EXXXX: Unterminated multi-line string at EOF');
+    throw 'EXXXX: Unterminated multi-line string at EOF';
 }
 
 function number(state: State): {token: Token, state: State} {
@@ -535,17 +534,17 @@ function number(state: State): {token: Token, state: State} {
     if (c == '0' && next == 'X') {
         state.i++;
         state.col++;
-        throw err('E0024: Hexadecimal integer started with 0X');
+        throw 'E0024: Hexadecimal integer started with 0X';
     } 
     if (c == '0' && next == 'B') {
         state.i++;
         state.col++;
-        throw err('E0025: Binary integer started with 0B');
+        throw 'E0025: Binary integer started with 0B';
     } 
     if (c == '0' && next == 'O') {
         state.i++;
         state.col++;
-        throw err('E0026: Octal integer started with 0O');
+        throw 'E0026: Octal integer started with 0O';
     } 
     if (c == '0' && next == 'x') {
         state.i++;
@@ -561,7 +560,7 @@ function number(state: State): {token: Token, state: State} {
             state.i = regex.lastIndex;
             return { token: { type: { type: 'INT', int }, loc: {row, col} }, state };
         } else {
-            throw err(`EXXXX: Hexadecimal integer: unexpected character ${first}`);
+            throw `EXXXX: Hexadecimal integer: unexpected character ${first}`;
         }
     } 
     if (c == '0' && next == 'o') {
@@ -578,7 +577,7 @@ function number(state: State): {token: Token, state: State} {
             state.i = regex.lastIndex;
             return { token: { type: { type: 'INT', int }, loc: {row, col} }, state };
         } else {
-            throw err(`EXXXX: Octal integer: unexpected character ${first}`);
+            throw `EXXXX: Octal integer: unexpected character ${first}`;
         }
     } 
     if (c == '0' && next == 'b') {
@@ -595,7 +594,7 @@ function number(state: State): {token: Token, state: State} {
             state.i = regex.lastIndex;
             return { token: { type: { type: 'INT', int }, loc: {row, col} }, state };
         } else {
-            throw err(`EXXXX: Binary integer: unexpected character ${first}`);
+            throw `EXXXX: Binary integer: unexpected character ${first}`;
         }
     } 
     // Base 10!
@@ -615,7 +614,7 @@ function number(state: State): {token: Token, state: State} {
         regex.lastIndex = state.i;
         const restMatch = state.source.match(regex);
         if (restMatch == null) {
-            throw err('EXXXX: Float: expected numbers after decimal dot');
+            throw 'EXXXX: Float: expected numbers after decimal dot';
         }
         const restString = restMatch[0].replace(/_/g,'');
         state.col += regex.lastIndex - state.i;

@@ -1,9 +1,14 @@
-#!/usr/bin/env deno run --allow-read --allow-run
+#!/usr/bin/env deno run --allow-read --allow-write
 import fs from 'node:fs/promises';
+import {chdir} from 'node:process';
+import {lex} from './src/lexer.ts';
+import {parse} from './src/parser.ts';
+import {interpret} from './src/interpreter.ts';
+import {Token} from './src/token.ts';
 
 const selectedTest = null;
 
-const textDecoder = new TextDecoder();
+const originalCwd = Deno.cwd();
 const testsDir = 'end-to-end-tests';
 const dirs =
   [...await fs.readdir(testsDir, {withFileTypes: true})]
@@ -13,8 +18,9 @@ const dirs =
 type TestResult =
   | {status:'skip',test:string}
   | {status:'pass',test:string}
+  | {status:'fail-bug',test:string}
   | {status:'fail-different-out',test:string,actual:string}
-  | {status:'fail-different-err',test:string/*,actual:string*/}
+  | {status:'fail-different-err',test:string}
   | {status:'fail-unexpected-err',test:string,actual:string}
   | {status:'fail-unexpected-ok', test:string,actual:string}
 
@@ -22,40 +28,86 @@ type TestResult =
 const test = async (test:string): Promise<TestResult> => {
   if (selectedTest != null && test != selectedTest) return {status:'skip',test};
   if (test.startsWith('test-')) return {status:'skip',test}; // TODO handle test tests
+  const verbose = selectedTest != null;
 
   const shouldErr = test.match(/-err/);
 
-  const p = Deno.run({
-    cmd: ['../../run.ts', 'main.cara'],
-    cwd: `./${testsDir}/${test}`,
-    stdout: "piped",
-    stderr: "piped",
-  })
+  chdir(originalCwd);
+  const testCwd = `./${testsDir}/${test}`;
+  chdir(testCwd);
 
-  const { code } = await p.status();
-  const actualOutput = textDecoder.decode(await p.output());
-  const actualError  = textDecoder.decode(await p.stderrOutput());
+  let expectedOutput = '';
+  let expectedError  = '';
+  try { expectedOutput = await Deno.readTextFile(`stdout.txt`); } catch (_) {/**/}
+  try { expectedError  = await Deno.readTextFile(`stderr.txt`); } catch (_) {/**/}
 
-  let expectedOutput = "";
-  let expectedError  = "";
-  try { expectedOutput = await Deno.readTextFile(`./${testsDir}/${test}/stdout.txt`); } catch (_) {/**/}
-  try { expectedError  = await Deno.readTextFile(`./${testsDir}/${test}/stderr.txt`); } catch (_) {/**/}
+  if (verbose) console.log('SOURCE:');
+  const source = await Deno.readTextFile('main.cara');
+  if (verbose) console.log(source);
 
-  if (selectedTest != null) {
-    console.log('STDOUT');
+  let tokens: Token[] = [];
+  try {
+    if (verbose) console.log('TOKENS:');
+    tokens = lex(source);
+    if (verbose) console.log(tokens);
+  } catch (e) {
+    if (!shouldErr) return {status:'fail-unexpected-err',test,actual:e};
+    if (e !== expectedError) return {status:'fail-different-err',test};
+  }
+
+  let ast;
+  try {
+    if (verbose) console.log('AST:');
+    ast = parse(tokens);
+    if (verbose) console.log(ast);
+  } catch (e) {
+    if (!shouldErr) return {status:'fail-unexpected-err',test,actual:e};
+    if (e !== expectedError) return {status:'fail-different-err',test};
+  }
+
+  if (ast == null) return {status:'fail-bug',test};
+
+  if (verbose) console.log('INTERPRETING:');
+
+  const oldStdoutWrite = Deno.stdout.write;
+  const oldStderrWrite = Deno.stderr.write;
+  Deno.stdout.write = function(_): Promise<number> {return new Promise((resolve,_) => resolve(0));};
+  Deno.stderr.write = function(_): Promise<number> {return new Promise((resolve,_) => resolve(0));};
+
+  const result = await interpret(ast);
+
+  Deno.stdout.write = oldStdoutWrite;
+  Deno.stderr.write = oldStderrWrite;
+
+  const actualOutput = result.stdout;
+  const actualError  = result.stderr;
+
+  //console.log({actualOutput,expectedOutput});
+  //console.log({actualError, expectedError });
+
+  if (verbose) {
+    console.log('EXPECTED STDOUT');
+    console.log('------');
+    console.log(expectedOutput);
+    console.log('');
+    console.log('EXPECTED STDERR');
+    console.log('------');
+    console.log(expectedError);
+    console.log('');
+    console.log('ACTUAL STDOUT');
     console.log('------');
     console.log(actualOutput);
     console.log('');
-    console.log('STDERR');
+    console.log('ACTUAL STDERR');
     console.log('------');
     console.log(actualError);
   }
 
-  if (code != 0 && !shouldErr) return {status:'fail-unexpected-err',test,actual:actualError};
-  if (code == 0 && shouldErr)  return {status:'fail-unexpected-ok', test,actual:actualOutput};
+  if (result.code != 0 && !shouldErr) return {status:'fail-unexpected-err',test,actual:actualError};
+  if (result.code == 0 && shouldErr)  return {status:'fail-unexpected-ok', test,actual:actualOutput};
   
   if (actualOutput !== expectedOutput) return {status:'fail-different-out',test,actual:actualOutput};
-  if (actualError  !== expectedError)  return {status:'fail-different-err',test/*,actual:actualError*/};
+  if (actualError  !== expectedError)  return {status:'fail-different-err',test};
 
   return {status:'pass',test};
 };

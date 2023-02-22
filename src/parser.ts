@@ -1,6 +1,5 @@
 import {Token, TokenTag} from './token.ts';
 import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnArg, FnTypeArg, CaseBranch} from './ast.ts';
-import {err} from './error.ts';
 import {Loc} from './loc.ts';
 
 type State = { tokens: Token[], i: number };
@@ -19,7 +18,7 @@ export function parse(tokens: Token[]): Decl[] {
             decls.push(declResult.match);
             i = skipEol({tokens,i});
         } catch (e) {
-            err(e.message);
+            throw e.message;
         }
     }
     return decls;
@@ -653,7 +652,7 @@ function letStatement(state: State): {i: number, match: Stmt} {
     // prevent _
     // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
-        err('E0013: Assignment of expression to underscore');
+        throw 'E0013: Assignment of expression to underscore';
     }
     //: pattern
     const lhsResult = pattern({...state, i});
@@ -702,7 +701,7 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
     // prevent _
     // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
-        err('E0013: Assignment of bang expression to underscore');
+        throw 'E0013: Assignment of bang expression to underscore';
     }
     //: pattern
     const lhsResult = pattern({...state,i});
@@ -1287,7 +1286,7 @@ function ifExpr(state: State): {i: number, match: Expr} {
     i = skipEolBeforeIndented({...state,i});
     //: ELSE
     if (!tagIs('ELSE',i,state.tokens)) {
-        err('E0021: If expression without an else branch');
+        throw 'E0021: If expression without an else branch';
     }
     i = expect('ELSE',desc,i,state.tokens);
     i = skipEolBeforeIndented({...state,i});
@@ -1515,7 +1514,7 @@ function lambdaWithHoles(body: Expr): Expr {
             };
         }
         case 'mixed':
-            err('E0020: Anonymous function shorthand with mixed holes');
+            throw 'E0020: Anonymous function shorthand with mixed holes';
     }
 }
 
@@ -2773,7 +2772,7 @@ function showLoc(loc: Loc): string {
 function bug(message: string, extra: Record<string,unknown>|null, state?: State): never {
     const shownLoc = state ? ` @ ${showLoc(state.tokens[state.i].loc)}` : '';
     const shownExtra = extra ? `, ${extra}` : '';
-    err(`BUG: ${message}${shownLoc}${shownExtra}`);
+    throw `BUG: ${message}${shownLoc}${shownExtra}`;
 }
 
 function isAtEnd(state: State): boolean {

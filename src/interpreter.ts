@@ -1,12 +1,17 @@
 import {inspect} from 'node:util';
-import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern} from './ast.ts';
-import {arrayEquals,println} from './util.ts';
-import {err} from './error.ts';
+import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp} from './ast.ts';
+import {arrayEquals,print,eprintln} from './util.ts';
 
 type Env = Map<string,Expr>;
 type Envs = {
     public: Env,
     private: Env,
+};
+
+type State = {
+    envs: Envs,
+    stdout: string,
+    stderr: string,
 };
 
 function combineEnvs(envs: Envs): Env {
@@ -30,45 +35,57 @@ function idToString(id: Identifier): string {
     return id.qualifiers.join('.') + id.name;
 }
 
-export function interpret(ast: Decl[]) {
+export async function interpret(ast: Decl[]): Promise<{code: number, stdout: string, stderr: string}> {
     const envs: Envs = {public: new Map(), private: new Map()};
-    ast.reduce(interpretDecl, envs);
+    let state: State = {envs, stdout: '', stderr: ''};
+    for (const decl of ast) {
+        try {
+            state = await interpretDecl(state, decl);
+        } catch (e) {
+            await eprintln(e);
+            return {code: 1, stdout: state.stdout, stderr: state.stderr + e};
+        }
+    }
+    return {code: 0, stdout: state.stdout, stderr: state.stderr};
 }
 
-function interpretDecl(envs: Envs, decl: Decl): Envs {
+async function interpretDecl(state: State, decl: Decl): Promise<State> {
     switch (decl.decl) {
-        case 'statement': return interpretStmt(envs, decl.stmt);
-        default: err(`interpretDecl ${decl.decl}`);
+        case 'statement': return await interpretStmt(state, decl.stmt);
+        default: throw `interpretDecl ${decl.decl}`;
     }
 }
 
-function interpretStmt(envs: Envs, stmt: Stmt): Envs {
+async function interpretStmt(state: State, stmt: Stmt): Promise<State> {
     switch (stmt.stmt) {
-        case 'bang': return interpretBang(envs, stmt.bang);
-        case 'let': return interpretLet(envs, stmt.mod, stmt.type, stmt.lhs, stmt.body);
-        default: err(`interpretStmt ${stmt.stmt}`);
+        case 'bang': return await interpretBang(state, stmt.bang);
+        case 'let': {
+            const newEnvs = interpretLet(state.envs, stmt.mod, stmt.type, stmt.lhs, stmt.body);
+            return {...state, envs: newEnvs};
+        };
+        default: throw `interpretStmt ${stmt.stmt}`;
     }
 }
 
-function interpretBang(envs: Envs, bang: Bang): Envs {
-    const env = combineEnvs(envs);
+async function interpretBang(state: State, bang: Bang): Promise<State> {
+    const env = combineEnvs(state.envs);
     switch (bang.bang) {
-        case 'value': interpretExpr(env, bang.val); return envs;
+        case 'value': interpretExpr(env, bang.val); return state;
         case 'call': {
             const fn = interpretExpr(env, bang.fn);
             if (fn.expr == 'identifier') {
                 if (idEquals(fn.id,ioPrintlnId)) {
                     if (bang.args.length == 1) {
-                        ioPrintln(env,bang.args[0]);
+                        const newStdout = await ioPrintln(env,bang.args[0]);
+                        return {...state, stdout: state.stdout + newStdout};
                     } else {
-                        err(`interpretBang IO.println with ${bang.args.length} args`);
+                        throw `interpretBang IO.println with ${bang.args.length} args`;
                     }
-                    return envs;
                 } else {
-                    err(`interpretBang id ${fn.id}`);
+                    throw `interpretBang id ${fn.id}`;
                 }
             } else {
-                err(`interpretBang ${bang.bang} ${bang.fn}`);
+                throw `interpretBang ${bang.bang} ${bang.fn}`;
             }
         }
     }
@@ -81,8 +98,7 @@ function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Patter
     switch (mod) {
         case 'Private': {
             // TODO do something else than NoModifier does?
-            err(`interpretLet 1 ${mod} ${type} ${inspect(lhs)} ${inspect(body)}`);
-            break;
+            throw `interpretLet 1 ${mod} ${type} ${inspect(lhs)} ${inspect(body)}`;
         }
         case 'NoModifier': {
             const publicEnvAdditions = interpretPattern(lhs, body);
@@ -100,29 +116,80 @@ function interpretPattern(lhs: Pattern, body: Expr): Env {
             ]);
         }
         default: {
-            err(`interpretPattern ${inspect(lhs)} ${inspect(body)}`);
+            throw `interpretPattern ${inspect(lhs)} ${inspect(body)}`;
         }
     }
 }
 
 function show(e: Expr): string {
     switch (e.expr) {
-        case 'int':    return e.int.toString();
-        case 'float':  return e.float.toString();
-        case 'char':   return e.char;
-        case 'string': return e.string;
-        case 'bool':   return e.bool ? 'True' : 'False';
-        case 'unit':   return '()';
-        case 'tuple':  return `(${e.elements.map(show).join(',')})`;
-        case 'list':   return `[${e.elements.map(show).join(',')}]`;
-        default: err(`show(${e.expr})`);
+        case 'int':        return e.int.toString();
+        case 'float':      return e.float.toString();
+        case 'char':       return e.char;
+        case 'string':     return e.string;
+        case 'bool':       return e.bool ? 'True' : 'False';
+        case 'unit':       return '()';
+        case 'tuple':      return `(${e.elements.map(show).join(',')})`;
+        case 'list':       return `[${e.elements.map(show).join(',')}]`;
+        case 'call':       return `${show(e.fn)}(${e.args.map(show).join(',')})`;
+        case 'lambda':     return `\\${e.args.map(showPattern).join(',')} -> ${show(e.body)}`;
+        case 'binary-op':  return `(${show(e.left)} ${showBinaryOp(e.op)} ${show(e.right)})`;
+        case 'identifier': return showIdentifier(e.id);
+        default: throw `show(${e.expr})`;
+    }
+}
+
+function showIdentifier(id: Identifier): string {
+    if (id.qualifiers.length == 0) return id.name;
+    return `${id.qualifiers.join('.')}.${id.name}`;
+}
+
+function showPattern(p: Pattern): string {
+    switch (p.pattern) {
+        case 'int':   return p.int.toString();
+        case 'float': return p.float.toString();
+        case 'unit':  return '()';
+        case 'tuple': return `(${p.elements.map(showPattern).join(',')})`;
+        case 'list':  return `[${p.elements.map(showPattern).join(',')}]`;
+        case 'var':   return p.var;
+        default: throw `showPattern(${p.pattern})`;
+    }
+}
+
+function showBinaryOp(op: BinaryOp): string {
+    switch (op) {
+        case 'Plus':           return '+';
+        case 'Minus':          return '-';
+        case 'Times':          return '*';
+        case 'Div':            return '/';
+        case 'Mod':            return '%';
+        case 'Pow':            return '**';
+        case 'OrBin':          return '|  ';
+        case 'AndBin':         return '&  ';
+        case 'XorBin':         return '^  ';
+        case 'ShiftL':         return '<< ';
+        case 'ShiftR':         return '>> ';
+        case 'ShiftRU':        return '>>>';
+        case 'Lte':            return '<=';
+        case 'Lt':             return '<';
+        case 'Eq':             return '==';
+        case 'Neq':            return '!=';
+        case 'Gt':             return '>';
+        case 'Gte':            return '>=';
+        case 'OrBool':         return '||';
+        case 'AndBool':        return '&&';
+        case 'Append':         return '++';
+        case 'RangeInclusive': return '..';
+        case 'RangeExclusive': return '...';
     }
 }
 
 const ioPrintlnId: Identifier = {qualifiers:['IO'],name:'println'};
-async function ioPrintln(env: Env, expr: Expr) {
+async function ioPrintln(env: Env, expr: Expr): Promise<string> {
     const e = interpretExpr(env,expr);
-    await println(show(e));
+    const str = show(e) + "\n";
+    await print(str);
+    return str;
 }
 
 const specialIds: Identifier[] = [
@@ -153,7 +220,7 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             if (isSpecial(expr.id)) return expr;
             const item = envGet(expr.id, env);
             if (item == null) {
-                err(`Unknown identifier: ${inspect(expr.id)}. Env: ${inspect(env)}`);
+                throw `Unknown identifier: ${inspect(expr.id)}. Env: ${inspect(env)}`;
             }
             return item;
         }
@@ -173,13 +240,11 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                             arg.float = -arg.float;
                             return arg;
                         }
-                        default: err("Can't NegateNum something that isn't int or float");
+                        default: throw "Can't NegateNum something that isn't int or float";
                     }
-                    break;
                 }
-                default: err(`interpretExpr unary-op ${expr.op}`);
+                default: throw `interpretExpr unary-op ${expr.op}`;
             }
-            break;
         }
         case 'record-get': {
             return recordGet(env,expr.record,expr.field);
@@ -190,15 +255,14 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             switch (fn.expr) {
                 case 'record-getter': {
                     if (args.length !== 1) {
-                        err(`interpretExpr BUG: record getter called with more than onen argument`);
+                        throw `interpretExpr BUG: record getter called with more than onen argument`;
                     }
                     return recordGet(env,args[0],fn.field);
                 }
-                default: err(`interpretExpr call ${fn.expr} ${inspect(args)}`);
+                default: throw `interpretExpr call ${fn.expr} ${inspect(args)}`;
             }
-            break;
         }
-        default: err(`interpretExpr ${expr.expr}`);
+        default: throw `interpretExpr ${expr.expr}`;
     }
 }
 function recordGet(env: Env, record: Expr, field: string): Expr {
@@ -207,11 +271,11 @@ function recordGet(env: Env, record: Expr, field: string): Expr {
         case 'tuple': {
             const index = tupleIndex(field);
             if (index == null) {
-                err(`Unsupported tuple getter: ${field}`);
+                throw `Unsupported tuple getter: ${field}`;
             }
             return rec.elements[index];
         }
-        default: err(`recordGet ${rec.expr} ${field}`);
+        default: throw `recordGet ${rec.expr} ${field}`;
     }
 }
 
@@ -232,7 +296,7 @@ function tupleIndex(field: string): number|null {
             if (match == null) return null;
             const num = parseInt(match[1],10);
             if (num == 0) {
-                err(`Tuple index el0 is unsupported: they start at el1`);
+                throw `Tuple index el0 is unsupported: they start at el1`;
             }
             return num - 1;
         }
