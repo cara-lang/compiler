@@ -182,20 +182,36 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             break;
         }
         case 'record-get': {
-            const record = interpretExpr(env,expr.record);
-            switch (record.expr) {
-                case 'tuple': {
-                    const index = tupleIndex(expr.field);
-                    if (index == null) {
-                        err(`Unsupported tuple getter: ${expr.field}`);
+            return recordGet(env,expr.record,expr.field);
+        }
+        case 'call': {
+            const fn = interpretExpr(env,expr.fn);
+            const args = expr.args.map((e) => interpretExpr(env,e));
+            switch (fn.expr) {
+                case 'record-getter': {
+                    if (args.length !== 1) {
+                        err(`interpretExpr BUG: record getter called with more than onen argument`);
                     }
-                    return record.elements[index];
+                    return recordGet(env,args[0],fn.field);
                 }
-                default: err(`interpretExpr record-get ${record.expr} ${expr.field}`);
+                default: err(`interpretExpr call ${fn.expr} ${inspect(args)}`);
             }
             break;
         }
         default: err(`interpretExpr ${expr.expr}`);
+    }
+}
+function recordGet(env: Env, record: Expr, field: string): Expr {
+    const rec = interpretExpr(env,record);
+    switch (rec.expr) {
+        case 'tuple': {
+            const index = tupleIndex(field);
+            if (index == null) {
+                err(`Unsupported tuple getter: ${field}`);
+            }
+            return rec.elements[index];
+        }
+        default: err(`recordGet ${rec.expr} ${field}`);
     }
 }
 
