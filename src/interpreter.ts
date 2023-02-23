@@ -1,5 +1,5 @@
 import {inspect} from 'node:util';
-import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp} from './ast.ts';
+import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent} from './ast.ts';
 import {arrayEquals,print,eprintln} from './util.ts';
 
 type Env = Map<string,Expr>;
@@ -132,11 +132,20 @@ function show(e: Expr): string {
         case 'unit':       return '()';
         case 'tuple':      return `(${e.elements.map(show).join(',')})`;
         case 'list':       return `[${e.elements.map(show).join(',')}]`;
+        case 'record':     return `{${e.contents.map(showRecordExprContent).join(',')}}`;
         case 'call':       return `${show(e.fn)}(${e.args.map(show).join(',')})`;
         case 'lambda':     return `\\${e.args.map(showPattern).join(',')} -> ${show(e.body)}`;
         case 'binary-op':  return `(${show(e.left)} ${showBinaryOp(e.op)} ${show(e.right)})`;
         case 'identifier': return showIdentifier(e.id);
         default: throw `show(${e.expr})`;
+    }
+}
+
+function showRecordExprContent(c: RecordExprContent): string {
+    switch (c.recordContent) {
+        case 'field':  return `${c.field}:${show(c.value)}`;
+        case 'pun':    return c.field;
+        case 'spread': return `...${showIdentifier(c.recordId)}`;
     }
 }
 
