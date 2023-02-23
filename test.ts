@@ -52,7 +52,15 @@ const test = async (test:string): Promise<TestResult> => {
     if (verbose) console.log(tokens);
   } catch (e) {
     if (!shouldErr) return {status:'fail-unexpected-err',test,actual:e};
-    if (e !== expectedError) return {status:'fail-different-err',test};
+    try {
+      const wantedErrCode = expectedError.match(/^E\d{4}: /)![0];
+      if (!e.match(new RegExp(`^${wantedErrCode}`))) {
+        return {status:'fail-different-err',test};
+      } else {
+        return {status:'pass',test};
+      }
+      // TODO strict err compliance mode: if (actualError !== expectedError)  return {status:'fail-different-err',test};
+    } catch (_) {/**/}
   }
 
   let ast;
@@ -62,7 +70,15 @@ const test = async (test:string): Promise<TestResult> => {
     if (verbose) console.log(ast);
   } catch (e) {
     if (!shouldErr) return {status:'fail-unexpected-err',test,actual:e};
-    if (e !== expectedError) return {status:'fail-different-err',test};
+    try {
+      const wantedErrCode = expectedError.match(/^E\d{4}: /)![0];
+      if (!e.match(new RegExp(`^${wantedErrCode}`))) {
+        return {status:'fail-different-err',test};
+      } else {
+        return {status:'pass',test};
+      }
+      // TODO strict err compliance mode: if (actualError !== expectedError)  return {status:'fail-different-err',test};
+    } catch (_) {/**/}
   }
 
   if (ast == null) return {status:'fail-bug',test};

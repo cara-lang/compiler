@@ -11,3 +11,7 @@ export function arrayEquals<T>(a: T[], b: T[]): boolean {
         a.length === b.length &&
         a.every((val, index) => val === b[index]);
 }
+
+export function hasDuplicates<T>(array: T[]): boolean {
+    return (new Set(array)).size !== array.length;
+}

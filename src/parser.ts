@@ -1,6 +1,7 @@
 import {Token, TokenTag} from './token.ts';
 import {Decl, Type, Block, Pattern, UnaryOp, BinaryOp, Constructor, Typevar, TypeAliasModifier, TypeModifier, ModuleModifier, RecordTypeField, RecordExprContent, Stmt, LetModifier, Bang, Expr, LowerIdentifier, UpperIdentifier, ConstructorArg, FnArg, FnTypeArg, CaseBranch} from './ast.ts';
 import {Loc} from './loc.ts';
+import {hasDuplicates, arrayEquals} from './util.ts';
 
 type State = { tokens: Token[], i: number };
 type Parser<T> = (state: State) => {i: number, match: T}; // Parser<Decl> = (state: State) => {i: number, match: Decl}
@@ -652,7 +653,7 @@ function letStatement(state: State): {i: number, match: Stmt} {
     // prevent _
     // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
-        throw 'E0013: Assignment of expression to underscore';
+        throw stopTheWorldError('E0013: Assignment of expression to underscore');
     }
     //: pattern
     const lhsResult = pattern({...state, i});
@@ -701,7 +702,7 @@ function letBangStatement(state: State): {i: number, match: Stmt} {
     // prevent _
     // TODO maybe we could just parse the pattern and then check it's not the wildcard pattern?
     if (tagIs('UNDERSCORE',i,state.tokens)) {
-        throw 'E0013: Assignment of bang expression to underscore';
+        throw stopTheWorldError('E0013: Assignment of bang expression to underscore');
     }
     //: pattern
     const lhsResult = pattern({...state,i});
@@ -1101,6 +1102,9 @@ function recordExpr(state: State): {i: number, match: Expr} {
         skipEol: true,
         allowTrailingSep: true,
     });
+    if (hasDuplicates(listResult.match.map((c) => c.recordContent == 'spread' ? '...' : c.field).filter((f) => f !== '...'))) {
+        throw stopTheWorldError('E0006: Record created with duplicate fields');
+    }
     return {
         i: listResult.i,
         match: {expr: 'record', contents: listResult.match},
@@ -1286,7 +1290,7 @@ function ifExpr(state: State): {i: number, match: Expr} {
     i = skipEolBeforeIndented({...state,i});
     //: ELSE
     if (!tagIs('ELSE',i,state.tokens)) {
-        throw 'E0021: If expression without an else branch';
+        throw stopTheWorldError('E0021: If expression without an else branch');
     }
     i = expect('ELSE',desc,i,state.tokens);
     i = skipEolBeforeIndented({...state,i});
@@ -1514,7 +1518,7 @@ function lambdaWithHoles(body: Expr): Expr {
             };
         }
         case 'mixed':
-            throw 'E0020: Anonymous function shorthand with mixed holes';
+            throw stopTheWorldError('E0020: Anonymous function shorthand with mixed holes');
     }
 }
 
@@ -2589,6 +2593,7 @@ type OneOfOption<T> = {
     parser: Parser<T>,
 }
 
+// Throws {e | message: string}
 function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): {i: number, match: T} {
     const iBefore = state.i;
     const loc = state.tokens[state.i].loc;
@@ -2601,12 +2606,19 @@ function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): 
             try {
                 return option.parser(state);
             } catch (e) {
-                if (compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
-                    furthestErr = e;
-                    furthestRow = e.loc.row;
-                    furthestCol = e.loc.col;
+                switch (e.type) {
+                    case 'stop-the-world-error': throw e;
+                    case 'parser-error': {
+                        if (compareLoc(e.loc,{row:furthestRow,col:furthestCol}) > 0) {
+                            furthestErr = e;
+                            furthestRow = e.loc.row;
+                            furthestCol = e.loc.col;
+                        }
+                        state.i = iBefore;
+                        break;
+                    }
+                    default: throw e;
                 }
-                state.i = iBefore;
             }
         } else {
             // if the prefix agrees, commit!
@@ -2749,13 +2761,16 @@ function tagsAre(tags: TokenTag[], i:number, tokens: Token[]): boolean {
     return arrayEquals(tags,getTags(tags.length,{tokens,i}));
 }
 
-type Error = {
-    message: string,
-    loc: Loc,
-}
+type Error =
+    | {type:'parser-error',message:string,loc:Loc}
+    | {type:'stop-the-world-error',message:string}
 
 function parserError(message: string, loc: Loc): Error {
-    return { message, loc };
+    return {type: 'parser-error', message, loc};
+}
+
+function stopTheWorldError(message: string): Error {
+    return {type: 'stop-the-world-error', message};
 }
 
 function error(message: string, i: number, tokens: Token[]): Error {
@@ -2779,7 +2794,6 @@ function isAtEnd(state: State): boolean {
     return tagIs('EOF',state.i,state.tokens);
 }
 
-
 function expect(tag: TokenTag, parsedItem: string, i: number, tokens: Token[]) {
     if (!tagIs(tag,i,tokens)) {
         throw error(`Expected ${tag} for a ${parsedItem}`,i,tokens);
@@ -2793,11 +2807,4 @@ function compareLoc(a:Loc, b:Loc): number {
     if (a.col < b.col) return -1;
     if (a.col > b.col) return 1;
     return 0;
-}
-
-function arrayEquals<T>(a: T[], b: T[]): boolean {
-    return Array.isArray(a) &&
-        Array.isArray(b) &&
-        a.length === b.length &&
-        a.every((val, index) => val === b[index]);
 }
