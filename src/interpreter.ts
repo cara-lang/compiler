@@ -314,6 +314,19 @@ function recordGet(env: Env, record: Expr, field: string): Expr {
             if (index >= rec.elements.length) throw 'E0023: Trying to access a missing tuple field';
             return rec.elements[index];
         }
+        case 'record': {
+            for (const c of rec.contents) {
+                switch (c.recordContent) {
+                    case 'field': {
+                        if (c.field == field) return c.value;
+                        break;
+                    }
+                    case 'pun':    throw `recordGet BUG: got pun`;
+                    case 'spread': throw `recordGet BUG: got spread`;
+                }
+            }
+            throw `Unknown record field ${field}`;
+        }
         default: throw `recordGet ${rec.expr} ${field}`;
     }
 }
