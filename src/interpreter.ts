@@ -76,7 +76,8 @@ async function interpretBang(state: State, bang: Bang): Promise<State> {
             if (fn.expr == 'identifier') {
                 if (idEquals(fn.id,ioPrintlnId)) {
                     if (bang.args.length == 1) {
-                        const newStdout = await ioPrintln(env,bang.args[0]);
+                        const arg = bang.args[0];
+                        const newStdout = await ioPrintln(env,arg);
                         return {...state, stdout: state.stdout + newStdout};
                     } else {
                         throw `interpretBang IO.println with ${bang.args.length} args`;
@@ -273,6 +274,7 @@ function recordGet(env: Env, record: Expr, field: string): Expr {
             if (index == null) {
                 throw `Unsupported tuple getter: ${field}`;
             }
+            if (index >= rec.elements.length) throw `E0023: Trying to access a missing tuple field`;
             return rec.elements[index];
         }
         default: throw `recordGet ${rec.expr} ${field}`;

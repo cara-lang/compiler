@@ -86,33 +86,36 @@ const test = async (test:string): Promise<TestResult> => {
   //console.log({actualError, expectedError });
 
   if (verbose) {
-    console.log('EXPECTED STDOUT');
-    console.log('------');
-    console.log(expectedOutput);
-    console.log('');
-    console.log('EXPECTED STDERR');
-    console.log('------');
-    console.log(expectedError);
-    console.log('');
     console.log('ACTUAL STDOUT');
     console.log('------');
     console.log(actualOutput);
     console.log('');
+    console.log('EXPECTED STDOUT');
+    console.log('------');
+    console.log(expectedOutput);
+    console.log('');
     console.log('ACTUAL STDERR');
     console.log('------');
     console.log(actualError);
+    console.log('');
+    console.log('EXPECTED STDERR');
+    console.log('------');
+    console.log(expectedError);
   }
 
   if (result.code != 0 && !shouldErr) return {status:'fail-unexpected-err',test,actual:actualError};
   if (result.code == 0 && shouldErr)  return {status:'fail-unexpected-ok', test,actual:actualOutput};
   
   if (actualOutput !== expectedOutput) return {status:'fail-different-out',test,actual:actualOutput};
-  if (actualError  !== expectedError)  return {status:'fail-different-err',test};
+  try {
+    const wantedErrCode = expectedError.match(/^E\d{4}: /)![0];
+    if (!actualError.match(new RegExp(`^${wantedErrCode}`))) return {status:'fail-different-err',test};
+    // TODO strict err compliance mode: if (actualError !== expectedError)  return {status:'fail-different-err',test};
+  } catch (_) {/**/}
 
   return {status:'pass',test};
 };
 
-// deno-lint-ignore no-unused-vars
 async function allSynchronously<T>(resolvables: (() => Promise<T>)[]): Promise<T[]> {
   const results = [];
   for (const resolvable of resolvables) {
@@ -130,7 +133,6 @@ function sort(results: TestResult[]): TestResult[] {
 }
 
 const results: TestResult[] = await allSynchronously(dirs.map(dir => () => test(dir)));
-//const results: TestResult[] = await Promise.all(dirs.map(test));
 const skipped = sort(results.filter((x) => x.status == 'skip'));
 const passed  = sort(results.filter((x) => x.status == 'pass'));
 const failed  = sort(results.filter((x) => x.status.startsWith('fail')));

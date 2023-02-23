@@ -1,10 +1,14 @@
 #!/usr/bin/env deno run --allow-read
 
+import {chdir} from 'node:process';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
 import {interpret} from './src/interpreter.ts';
 
-const test = 'int-separators-anywhere';
+const test = 'tuple-10-el11-err';
 
-const source = await Deno.readTextFile(`./end-to-end-tests/${test}/main.cara`);
+const testCwd = `./end-to-end-tests/${test}`;
+chdir(testCwd);
+
+const source = await Deno.readTextFile(`./main.cara`);
 interpret(parse(lex(source)));
