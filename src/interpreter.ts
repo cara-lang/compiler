@@ -271,10 +271,8 @@ function recordGet(env: Env, record: Expr, field: string): Expr {
     switch (rec.expr) {
         case 'tuple': {
             const index = tupleIndex(field);
-            if (index == null) {
-                throw `Unsupported tuple getter: ${field}`;
-            }
-            if (index >= rec.elements.length) throw `E0023: Trying to access a missing tuple field`;
+            if (index == null)                throw 'E0023: Trying to access a missing tuple field';
+            if (index >= rec.elements.length) throw 'E0023: Trying to access a missing tuple field';
             return rec.elements[index];
         }
         default: throw `recordGet ${rec.expr} ${field}`;
