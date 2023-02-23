@@ -96,13 +96,14 @@ function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Patter
     if (type != null) {
         // TODO typecheck the env against the type
     }
+    const env = combineEnvs(envs);
     switch (mod) {
         case 'Private': {
             // TODO do something else than NoModifier does?
             throw `interpretLet 1 ${mod} ${type} ${inspect(lhs)} ${inspect(body)}`;
         }
         case 'NoModifier': {
-            const publicEnvAdditions = interpretPattern(lhs, body);
+            const publicEnvAdditions = interpretPattern(lhs, interpretExpr(env,body));
             return {...envs, public: envAdd(envs.public, publicEnvAdditions)};
         }
     }
@@ -237,6 +238,12 @@ function interpretExpr(env: Env, expr: Expr): Expr {
         case 'tuple': {
             return {...expr, elements: expr.elements.map((e) => interpretExpr(env,e))};
         }
+        case 'list': {
+            return {...expr, elements: expr.elements.map((e) => interpretExpr(env,e))};
+        }
+        case 'record': {
+            return {...expr, contents: expr.contents.flatMap((c) => interpretRecordExprContent(env,c))};
+        }
         case 'unary-op': {
             const arg = interpretExpr(env,expr.arg);
             switch (expr.op) {
@@ -275,6 +282,29 @@ function interpretExpr(env: Env, expr: Expr): Expr {
         default: throw `interpretExpr ${expr.expr}`;
     }
 }
+
+function interpretRecordExprContent(env: Env, content: RecordExprContent): RecordExprContent[] {
+    switch (content.recordContent) {
+        case 'field': return [content];
+        case 'pun':   return [{
+                                recordContent: 'field',
+                                field: content.field,
+                                value: interpretExpr(
+                                    env,
+                                    {
+                                        expr: 'identifier',
+                                        id: {qualifiers: [], name: content.field}
+                                    }
+                                )
+                            }];
+        case 'spread': {
+            const record = interpretExpr(env, {expr: 'identifier', id: content.recordId});
+            if (record.expr != 'record') throw `Tried to spread a non-record value when creating a record`;
+            return record.contents;
+        }
+    }
+}
+
 function recordGet(env: Env, record: Expr, field: string): Expr {
     const rec = interpretExpr(env,record);
     switch (rec.expr) {
