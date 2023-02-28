@@ -18,6 +18,10 @@ export function hasDuplicates<T>(array: T[]): boolean {
     return (new Set(array)).size !== array.length;
 }
 
+export function stringify(a: unknown): string {
+    return inspect(a, {depth:null, colors:true, breakLength: 200});
+}
+
 export function log(a: unknown) {
-    console.log(inspect(a, {depth:null, colors:true, breakLength: 200}));
+    console.log(stringify(a));
 }

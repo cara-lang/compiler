@@ -1,6 +1,5 @@
-import {inspect} from 'node:util';
 import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent} from './ast.ts';
-import {arrayEquals,print,eprintln} from './util.ts';
+import {stringify,arrayEquals,print,eprintln} from './util.ts';
 
 type Env = Map<string,Expr>;
 type Envs = {
@@ -108,7 +107,7 @@ function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Patter
     switch (mod) {
         case 'Private': {
             // TODO do something else than NoModifier does?
-            throw `interpretLet 1 ${mod} ${type} ${inspect(lhs)} ${inspect(body)}`;
+            throw `interpretLet 1 ${mod} ${type} ${stringify(lhs)} ${stringify(body)}`;
         }
         case 'NoModifier': {
             const publicEnvAdditions = interpretPattern(lhs, interpretExpr(env,body));
@@ -126,7 +125,7 @@ function interpretPattern(lhs: Pattern, body: Expr): Env {
             ]);
         }
         default: {
-            throw `interpretPattern ${inspect(lhs)} ${inspect(body)}`;
+            throw `interpretPattern ${stringify(lhs)} ${stringify(body)}`;
         }
     }
 }
@@ -239,7 +238,7 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             if (isSpecial(expr.id)) return expr;
             const item = envGet(expr.id, env);
             if (item == null) {
-                throw `Unknown identifier: ${inspect(expr.id)}. Env: ${inspect(env)}`;
+                throw `Unknown identifier: ${stringify(expr.id)}. Env: ${stringify(env)}`;
             }
             return item;
         }
@@ -298,7 +297,7 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                     }
                     return recordGet(env,args[0],fn.field);
                 }
-                default: throw `interpretExpr call ${fn.expr} ${inspect(args)}`;
+                default: throw `interpretExpr call ${fn.expr} ${stringify(args)}`;
             }
         }
         default: throw `interpretExpr ${expr.expr}`;
