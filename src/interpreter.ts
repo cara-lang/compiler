@@ -125,7 +125,7 @@ function interpretPattern(lhs: Pattern, body: Expr): Env {
             ]);
         }
         default: {
-            throw `interpretPattern ${stringify(lhs)} ${stringify(body)}`;
+            throw `interpretPattern ${stringify(lhs.pattern)}`;
         }
     }
 }
@@ -290,6 +290,12 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                     if (left.expr == 'int'   && right.expr == 'float') return {expr: 'float', float: Number(left.int) * right.float}; // TODO not ideal
                     if (left.expr == 'float' && right.expr == 'int')   return {expr: 'float', float: left.float * Number(right.int)}; // TODO not ideal
                     throw `interpretExpr binary-op Times ${left.expr} ${right.expr}`;
+                }
+                case 'Append': {
+                    if (left.expr == 'list' && right.expr == 'list') return {expr: 'list', elements: left.elements.concat(right.elements)};
+                    if (                       right.expr == 'list') return {expr: 'list', elements: [left].concat(right.elements)};
+                    if (left.expr == 'list'                        ) return {expr: 'list', elements: left.elements.concat(right)};
+                    throw `interpretExpr binary-op Append ${left.expr} ${right.expr}`;
                 }
                 default: throw `interpretExpr binary-op ${expr.op}`;
             }

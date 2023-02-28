@@ -19,9 +19,9 @@ export function hasDuplicates<T>(array: T[]): boolean {
 }
 
 export function stringify(a: unknown): string {
-    return inspect(a, {depth:null, colors:true, breakLength: 200});
+    return inspect(a, {depth:null, colors:false, breakLength: 200});
 }
 
 export function log(a: unknown) {
-    console.log(stringify(a));
+    console.log(inspect(a, {depth:null, colors:true, breakLength: 200}));
 }
