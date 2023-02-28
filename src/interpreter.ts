@@ -52,6 +52,14 @@ export async function interpret(ast: Decl[]): Promise<{code: number, stdout: str
 async function interpretDecl(state: State, decl: Decl): Promise<State> {
     switch (decl.decl) {
         case 'statement': return await interpretStmt(state, decl.stmt);
+        case 'type-alias': {
+            // TODO do something about the type alias. We can ignore it in the meantime while we have no type checking.
+            return Promise.resolve(state);
+        }
+        case 'value-annotation': {
+            // TODO do something about the value annotation. We can ignore it in the meantime while we have no type checking.
+            return Promise.resolve(state);
+        }
         default: throw `interpretDecl ${decl.decl}`;
     }
 }
