@@ -4,6 +4,7 @@ import {chdir} from 'node:process';
 import {lex} from './src/lexer.ts';
 import {parse} from './src/parser.ts';
 import {interpret} from './src/interpreter.ts';
+import {log} from './src/util.ts';
 import {Token} from './src/token.ts';
 
 const selectedTest = null;
@@ -49,7 +50,7 @@ const test = async (test:string): Promise<TestResult> => {
   try {
     if (verbose) console.log('TOKENS:');
     tokens = lex(source);
-    if (verbose) console.log(tokens);
+    if (verbose) log(tokens);
   } catch (e) {
     if (!shouldErr) return {status:'fail-unexpected-err',test,actual:e};
     try {
@@ -67,7 +68,7 @@ const test = async (test:string): Promise<TestResult> => {
   try {
     if (verbose) console.log('AST:');
     ast = parse(tokens);
-    if (verbose) console.log(ast);
+    if (verbose) log(ast);
   } catch (e) {
     if (!shouldErr) return {status:'fail-unexpected-err',test,actual:e};
     try {

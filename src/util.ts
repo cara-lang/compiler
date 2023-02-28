@@ -1,3 +1,5 @@
+import {inspect} from 'node:util';
+
 const textEncoder = new TextEncoder();
 
 export async function print(x: string)    { await Deno.stdout.write(textEncoder.encode(x)); }
@@ -14,4 +16,8 @@ export function arrayEquals<T>(a: T[], b: T[]): boolean {
 
 export function hasDuplicates<T>(array: T[]): boolean {
     return (new Set(array)).size !== array.length;
+}
+
+export function log(a: unknown) {
+    console.log(inspect(a, {depth:null, colors:true, breakLength: 200}));
 }
