@@ -277,11 +277,18 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             const left = interpretExpr(env,expr.left);
             const right = interpretExpr(env,expr.right);
             switch (expr.op) {
+                case 'Plus': {
+                    if (left.expr == 'int'   && right.expr == 'int')   return {expr: 'int',   int:   left.int + right.int};
+                    if (left.expr == 'float' && right.expr == 'float') return {expr: 'float', float: left.float + right.float};
+                    if (left.expr == 'int'   && right.expr == 'float') return {expr: 'float', float: Number(left.int) + right.float}; // TODO not ideal
+                    if (left.expr == 'float' && right.expr == 'int')   return {expr: 'float', float: left.float + Number(right.int)}; // TODO not ideal
+                    throw `interpretExpr binary-op Plus ${left.expr} ${right.expr}`;
+                }
                 case 'Times': {
                     if (left.expr == 'int'   && right.expr == 'int')   return {expr: 'int',   int:   left.int * right.int};
                     if (left.expr == 'float' && right.expr == 'float') return {expr: 'float', float: left.float * right.float};
-                    if (left.expr == 'int'   && right.expr == 'float') return {expr: 'float', float: Number(left.int) * right.float};
-                    if (left.expr == 'float' && right.expr == 'int')   return {expr: 'float', float: left.float * Number(right.int)};
+                    if (left.expr == 'int'   && right.expr == 'float') return {expr: 'float', float: Number(left.int) * right.float}; // TODO not ideal
+                    if (left.expr == 'float' && right.expr == 'int')   return {expr: 'float', float: left.float * Number(right.int)}; // TODO not ideal
                     throw `interpretExpr binary-op Times ${left.expr} ${right.expr}`;
                 }
                 default: throw `interpretExpr binary-op ${expr.op}`;
