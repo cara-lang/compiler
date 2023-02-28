@@ -26,7 +26,7 @@ export type Expr =
     | {expr:'constructor', id:UpperIdentifier} // Foo, Bar.Foo
     | {expr:'identifier',  id:LowerIdentifier} // foo, Bar.foo
     | {expr:'lambda',  args:Pattern[], body:Expr}
-    | {expr:'closure', args:Pattern[], body:Expr, env:Map<LowerIdentifier,Expr>} // not creatable via syntax, only by the interpreter
+    | {expr:'closure', args:Pattern[], body:Expr, env:Map<string,Expr>} // not creatable via syntax, only by the interpreter
     | {expr:'record-getter', field:string} // .a
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
     | {expr:'case',subject:Expr, branches:CaseBranch[]}
