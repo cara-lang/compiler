@@ -251,6 +251,9 @@ function interpretExpr(env: Env, expr: Expr): Expr {
         case 'record': {
             return {...expr, contents: expr.contents.flatMap((c) => interpretRecordExprContent(env,c))};
         }
+        case 'lambda': {
+            return {...expr, expr:'closure', env};
+        }
         case 'unary-op': {
             const arg = interpretExpr(env,expr.arg);
             switch (expr.op) {
@@ -297,11 +300,27 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                     }
                     return recordGet(env,args[0],fn.field);
                 }
+                case 'closure': {
+                    const innerEnv: Env = applyArgumentPatterns(
+                        fn.env, // lexical closure baby!
+                        fn.args,
+                        args
+                    ); 
+                    return interpretExpr(innerEnv, fn.body);
+                }
                 default: throw `interpretExpr call ${fn.expr} ${stringify(args)}`;
             }
         }
         default: throw `interpretExpr ${expr.expr}`;
     }
+}
+
+function applyArgumentPatterns(env:Env, argPatterns:Pattern[], argValues:Expr[]): Env {
+    if (argPatterns.length !== argValues.length) {
+        throw `Wrong number of arguments provided: ${argPatterns.length} needed, ${argValues.length} provided`;
+    }
+    const envAdditions: Env[] = argPatterns.map((pattern,i) => interpretPattern(pattern,argValues[i]));
+    return envAdditions.reduce(envAdd,env);
 }
 
 function interpretRecordExprContent(env: Env, content: RecordExprContent): RecordExprContent[] {
