@@ -108,19 +108,29 @@ function interpretTypeConstructor(env: Env, constructor: Constructor): Env {
 
 async function interpretStmt(state: State, stmt: Stmt): Promise<State> {
     switch (stmt.stmt) {
-        case 'bang': return await interpretBang(state, stmt.bang);
+        case 'bang': {
+            const result = await interpretBang(state, stmt.bang);
+            return result.state; // ignore the expr, it's going to be ()
+        }
+        case 'let-bang': {
+            const result = await interpretBang(state, stmt.body);
+            const newEnvs = interpretLet(result.state.envs, stmt.mod, stmt.type, stmt.lhs, result.expr);
+            return {...result.state, envs: newEnvs};
+        }
         case 'let': {
             const newEnvs = interpretLet(state.envs, stmt.mod, stmt.type, stmt.lhs, stmt.body);
             return {...state, envs: newEnvs};
         }
-        default: throw `interpretStmt ${stmt.stmt}`;
     }
 }
 
-async function interpretBang(state: State, bang: Bang): Promise<State> {
+async function interpretBang(state: State, bang: Bang): Promise<{state:State,expr:Expr}> {
     const env = combineEnvs(state.envs);
     switch (bang.bang) {
-        case 'value': interpretExpr(env, bang.val); return state;
+        case 'value': {
+            const expr = interpretExpr(env, bang.val);
+            return {state,expr};
+        }
         case 'call': {
             const fn = interpretExpr(env, bang.fn);
             if (fn.expr == 'identifier') {
@@ -128,7 +138,11 @@ async function interpretBang(state: State, bang: Bang): Promise<State> {
                     if (bang.args.length == 1) {
                         const arg = bang.args[0];
                         const newStdout = await ioPrintln(env,arg);
-                        return {...state, stdout: state.stdout + newStdout};
+                        const returnExpr: Expr = {expr:'unit'};
+                        return {
+                            state: {...state, stdout: state.stdout + newStdout},
+                            expr: returnExpr,
+                        };
                     } else {
                         throw `interpretBang IO.println with ${bang.args.length} args`;
                     }
@@ -293,7 +307,7 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             if (isSpecial(expr.id)) return expr;
             const item = envGet(expr.id, env);
             if (item == null) {
-                throw `Unknown identifier: ${stringify(expr.id)}. Env: ${stringify(env)}`;
+                throw `Unknown identifier: ${show(expr)}. Env: ${stringify([...env.entries()])}`;
             }
             return item;
         }
