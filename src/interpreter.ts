@@ -301,6 +301,11 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                     if (left.expr == 'list'                        ) return {expr: 'list', elements: left.elements.concat(right)};
                     throw `interpretExpr binary-op Append ${left.expr} ${right.expr}`;
                 }
+                case 'Eq': {
+                    if (left.expr != right.expr) throw 'Tried to compare values of different types (typechecker should have caught this!)';
+                    if (left.expr == 'int' && right.expr == 'int') return {expr: 'bool', bool: left.int == right.int};
+                    throw `interpretExpr binary-op Eq for two ${left.expr}s`;
+                }
                 default: throw `interpretExpr binary-op ${expr.op}`;
             }
         }
