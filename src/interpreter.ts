@@ -168,25 +168,34 @@ function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Patter
         }
         case 'NoModifier': {
             const publicEnvAdditions = interpretPattern(lhs, interpretExpr(env,body));
+            if (publicEnvAdditions == null) {
+                throw `Pattern didn't match the expr: ${showPattern(lhs)} = ${show(body)}`;
+            }
             return {...envs, public: envAdd(envs.public, publicEnvAdditions)};
         }
     }
 }
 
-// Returns (NEW) env additions, instead of the whole env
-function interpretPattern(lhs: Pattern, body: Expr): Env {
-    switch (lhs.pattern) {
+// Returns (NEW) env additions, instead of the whole env.
+// null is returned if the pattern doesn't match the expr
+function interpretPattern(pattern: Pattern, expr: Expr): Env|null {
+    switch (pattern.pattern) {
         case 'var': {
             return new Map([
-                [idToString({qualifiers: [], name: lhs.var}), body],
+                [idToString({qualifiers: [], name: pattern.var}), expr],
             ]);
         }
+        case 'int': {
+            if (expr.expr != 'int') return null;
+            if (expr.int != pattern.int) return null;
+            return new Map();
+        }
         case 'record-spread': {
-            if (body.expr != 'record') throw 'Tried to record-spread a non-record';
-            const fields = ensureRecordFieldsOnly(body.contents);
+            if (expr.expr != 'record') return null;
+            const fields = ensureRecordFieldsOnly(expr.contents);
             return new Map(fields.map(({field,value}) => [field,value]));
         }
-        default: throw `interpretPattern ${stringify(lhs.pattern)}`;
+        default: throw `interpretPattern ${stringify(pattern.pattern)}`;
     }
 }
 
@@ -381,6 +390,17 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             if (cond.bool) return interpretExpr(env,expr.then);
             else           return interpretExpr(env,expr.else);
         }
+        case 'case': {
+            const subject = interpretExpr(env, expr.subject);
+            for (const branch of expr.branches) {
+                const envAddition: Env|null = matchAnyPattern(subject, branch.orPatterns);
+                if (envAddition != null) {
+                    const newEnv = envAdd(env, envAddition);
+                    return interpretExpr(newEnv, branch.body);
+                }
+            }
+            throw `interpretExpr case - nothing matched! ${show(expr.subject)} ${stringify(expr.branches)}`;
+        }
         case 'record-get': {
             return recordGet(env,expr.record,expr.field);
         }
@@ -395,7 +415,7 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                     return recordGet(env,args[0],fn.field);
                 }
                 case 'closure': {
-                    const innerEnv: Env = applyArgumentPatterns(
+                    const innerEnv: Env = applyClosureArgumentPatterns(
                         fn.env, // lexical closure baby!
                         fn.args,
                         args
@@ -409,11 +429,24 @@ function interpretExpr(env: Env, expr: Expr): Expr {
     }
 }
 
-function applyArgumentPatterns(env:Env, argPatterns:Pattern[], argValues:Expr[]): Env {
+function matchAnyPattern(subject: Expr, patterns: Pattern[]): Env|null {
+    for (const pattern of patterns) {
+        const result = interpretPattern(pattern, subject);
+        if (result != null) return result;
+    }
+    return null;
+}
+
+function applyClosureArgumentPatterns(env:Env, argPatterns:Pattern[], argValues:Expr[]): Env {
     if (argPatterns.length !== argValues.length) {
         throw `Wrong number of arguments provided: ${argPatterns.length} needed, ${argValues.length} provided`;
     }
-    const envAdditions: Env[] = argPatterns.map((pattern,i) => interpretPattern(pattern,argValues[i]));
+    const envAdditions: Env[] = 
+        argPatterns
+            .flatMap((pattern,i) => {
+                const envAddition = interpretPattern(pattern,argValues[i]);
+                return envAddition == null ? [] : [envAddition];
+            });
     return envAdditions.reduce(envAdd,env);
 }
 
