@@ -23,7 +23,7 @@ export type Expr =
     | {expr:'effect-block', monadModule:UpperIdentifier, block:Block} // x = My.Monad { ... }
 
     // other
-    | {expr:'constructor', id:UpperIdentifier} // Foo, Bar.Foo
+    | {expr:'constructor', id:UpperIdentifier, args: Expr[]} // Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
     | {expr:'identifier',  id:LowerIdentifier} // foo, Bar.foo
     | {expr:'lambda',  args:Pattern[], body:Expr}
     | {expr:'closure', args:Pattern[], body:Expr, env:Map<string,Expr>} // not creatable via syntax, only by the interpreter

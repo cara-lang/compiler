@@ -25,3 +25,7 @@ export function stringify(a: unknown): string {
 export function log(a: unknown) {
     console.log(inspect(a, {depth:null, colors:true, breakLength: 200}));
 }
+
+export function addToMap<K,V>(map: Map<K,V>, key: K, val: V): Map<K,V> {
+    return new Map([...map.entries(),[key,val]]);
+}

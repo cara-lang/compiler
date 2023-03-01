@@ -1011,15 +1011,37 @@ function boolExpr(state: State): {i: number, match: Expr} {
     }
 }
 
-//: QUALIFIER* UPPER_NAME
-//= Foo.Bar
+//: QUALIFIER* UPPER_NAME (LPAREN (expr (COMMA expr)*)? RPAREN)?
+//= Bar
+//= Foo.Bar(1,2,3)
 function constructorExpr(state: State): {i: number, match: Expr} {
-    const upperIdentifierResult = upperIdentifier(state);
+    let {i} = state;
+    //: QUALIFIER* UPPER_NAME
+    const upperIdentifierResult = upperIdentifier({...state, i});
+    i = upperIdentifierResult.i;
+    //: (LPAREN (expr (COMMA expr)*)? RPAREN)?
+    let args: Expr[] = [];
+    try {
+        const argsResult = list({
+            left:  'LPAREN',
+            right: 'RPAREN',
+            sep:   'COMMA',
+            item:  expr,
+            state: {...state, i},
+            parsedItem: 'constructor arg',
+            skipEol: true,
+            allowTrailingSep: false,
+        });
+        args = argsResult.match;
+        i = argsResult.i;
+    } catch (_) {/**/}
+    // Done!
     return {
-        i: upperIdentifierResult.i,
+        i,
         match: {
             expr: 'constructor',
             id: upperIdentifierResult.match,
+            args,
         }
     };
 }
@@ -1542,8 +1564,9 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
         case 'bool':
         case 'unit':
         case 'record-getter':
-        case 'constructor':
             return {type:'no-holes'};
+        case 'constructor':
+            return analyzeHolesList(expr.args.map(analyzeHoles));
         case 'lambda':
         case 'closure':
             return analyzeHoles(expr.body);

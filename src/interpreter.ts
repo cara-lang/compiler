@@ -1,5 +1,5 @@
-import {Decl, Stmt, Bang, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent} from './ast.ts';
-import {stringify,arrayEquals,print,eprintln} from './util.ts';
+import {Decl, Stmt, Bang, Typevar, Constructor, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent, TypeModifier} from './ast.ts';
+import {stringify,arrayEquals,print,eprintln,addToMap} from './util.ts';
 
 type Env = Map<string,Expr>;
 type Envs = {
@@ -12,6 +12,8 @@ type State = {
     stdout: string,
     stderr: string,
 };
+
+let typeConstructorI = 0;
 
 function combineEnvs(envs: Envs): Env {
     return envAdd(envs.public, envs.private);
@@ -51,6 +53,7 @@ export async function interpret(ast: Decl[]): Promise<{code: number, stdout: str
 async function interpretDecl(state: State, decl: Decl): Promise<State> {
     switch (decl.decl) {
         case 'statement': return await interpretStmt(state, decl.stmt);
+        case 'type': return Promise.resolve(interpretType(state, decl.name, decl.mod, decl.vars, decl.constructors));
         case 'type-alias': {
             // TODO do something about the type alias. We can ignore it in the meantime while we have no type checking.
             return Promise.resolve(state);
@@ -66,6 +69,42 @@ async function interpretDecl(state: State, decl: Decl): Promise<State> {
         default: throw `interpretDecl ${decl.decl}`;
     }
 }
+function interpretType(state: State, _name: string, mod: TypeModifier, _vars: Typevar[], constructors: Constructor[]): State {
+    // TODO register the type somewhere
+    let newPublicEnv  = state.envs.public;
+    let newPrivateEnv = state.envs.private;
+    switch (mod) {
+        case 'NoModifier': {
+            newPublicEnv = constructors.reduce(interpretTypeConstructor,newPublicEnv);
+            break;
+        }
+        case 'Private': {
+            newPrivateEnv = constructors.reduce(interpretTypeConstructor,newPrivateEnv);
+            break;
+        }
+        case 'Opaque': break;
+    }
+    const newEnvs = {public: newPublicEnv, private: newPrivateEnv};
+    return {...state, envs: newEnvs};
+}
+
+function interpretTypeConstructor(env: Env, constructor: Constructor): Env {
+    const constructorId = {qualifiers:[], name: constructor.name};
+    if (constructor.args.length == 0) {
+        const expr: Expr = {expr:'constructor', id: constructorId, args: []};
+        return addToMap(env,constructor.name,expr);
+    } else {
+        const argNames: string[] = constructor.args.map(() => `#${typeConstructorI++}`);
+        const lambdaArgs: Pattern[] = argNames.map((argName) => ({pattern:'var', var: argName}));
+        const constructorArgs: Expr[] = argNames.map((argName) => ({expr:'identifier', id: {qualifiers:[], name: argName}}));
+        const expr: Expr = {
+            expr: 'lambda',
+            args: lambdaArgs,
+            body: {expr:'constructor', id: constructorId, args: constructorArgs},
+        };
+        return addToMap(env,constructor.name,expr);
+    }
+}
 
 async function interpretStmt(state: State, stmt: Stmt): Promise<State> {
     switch (stmt.stmt) {
@@ -73,7 +112,7 @@ async function interpretStmt(state: State, stmt: Stmt): Promise<State> {
         case 'let': {
             const newEnvs = interpretLet(state.envs, stmt.mod, stmt.type, stmt.lhs, stmt.body);
             return {...state, envs: newEnvs};
-        };
+        }
         default: throw `interpretStmt ${stmt.stmt}`;
     }
 }
@@ -139,19 +178,20 @@ function interpretPattern(lhs: Pattern, body: Expr): Env {
 
 function show(e: Expr): string {
     switch (e.expr) {
-        case 'int':        return e.int.toString();
-        case 'float':      return e.float.toString();
-        case 'char':       return e.char;
-        case 'string':     return e.string;
-        case 'bool':       return e.bool ? 'True' : 'False';
-        case 'unit':       return '()';
-        case 'tuple':      return `(${e.elements.map(show).join(',')})`;
-        case 'list':       return `[${e.elements.map(show).join(',')}]`;
-        case 'record':     return `{${e.contents.map(showRecordExprContent).join(',')}}`;
-        case 'call':       return `${show(e.fn)}(${e.args.map(show).join(',')})`;
-        case 'lambda':     return `\\${e.args.map(showPattern).join(',')} -> ${show(e.body)}`;
-        case 'binary-op':  return `(${show(e.left)} ${showBinaryOp(e.op)} ${show(e.right)})`;
-        case 'identifier': return showIdentifier(e.id);
+        case 'int':         return e.int.toString();
+        case 'float':       return e.float.toString();
+        case 'char':        return e.char;
+        case 'string':      return e.string;
+        case 'bool':        return e.bool ? 'True' : 'False';
+        case 'unit':        return '()';
+        case 'tuple':       return `(${e.elements.map(show).join(',')})`;
+        case 'list':        return `[${e.elements.map(show).join(',')}]`;
+        case 'record':      return `{${e.contents.map(showRecordExprContent).join(',')}}`;
+        case 'call':        return `${show(e.fn)}(${e.args.map(show).join(',')})`;
+        case 'lambda':      return `\\${e.args.map(showPattern).join(',')} -> ${show(e.body)}`;
+        case 'binary-op':   return `(${show(e.left)} ${showBinaryOp(e.op)} ${show(e.right)})`;
+        case 'identifier':  return showIdentifier(e.id);
+        case 'constructor': return showConstructor(e.id, e.args);
         default: throw `show(${e.expr})`;
     }
 }
@@ -167,6 +207,13 @@ function showRecordExprContent(c: RecordExprContent): string {
 function showIdentifier(id: Identifier): string {
     if (id.qualifiers.length == 0) return id.name;
     return `${id.qualifiers.join('.')}.${id.name}`;
+}
+
+function showConstructor(id: Identifier, args: Expr[]): string {
+    const idString = showIdentifier(id);
+    return args.length == 0
+        ? idString
+        : `${idString}(${args.map(show).join(',')})`;
 }
 
 function showPattern(p: Pattern): string {
@@ -239,8 +286,9 @@ function interpretExpr(env: Env, expr: Expr): Expr {
         case 'bool': 
         case 'closure': 
         case 'record-getter': 
-        case 'constructor':
             return expr;
+        case 'constructor':
+            return {...expr, args: expr.args.map((e) => interpretExpr(env,e))};
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
             const item = envGet(expr.id, env);
