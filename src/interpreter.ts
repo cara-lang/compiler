@@ -59,6 +59,10 @@ async function interpretDecl(state: State, decl: Decl): Promise<State> {
             // TODO do something about the value annotation. We can ignore it in the meantime while we have no type checking.
             return Promise.resolve(state);
         }
+        case 'function-annotation': {
+            // TODO do something about the function annotation. We can ignore it in the meantime while we have no type checking.
+            return Promise.resolve(state);
+        }
         default: throw `interpretDecl ${decl.decl}`;
     }
 }
