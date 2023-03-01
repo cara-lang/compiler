@@ -190,6 +190,9 @@ function interpretPattern(pattern: Pattern, expr: Expr): Env|null {
             if (expr.int != pattern.int) return null;
             return new Map();
         }
+        case 'wildcard': {
+            return new Map();
+        }
         case 'record-spread': {
             if (expr.expr != 'record') return null;
             const fields = ensureRecordFieldsOnly(expr.contents);
