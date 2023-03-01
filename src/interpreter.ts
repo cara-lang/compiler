@@ -193,6 +193,23 @@ function interpretPattern(pattern: Pattern, expr: Expr): Env|null {
         case 'wildcard': {
             return new Map();
         }
+        case 'record-fields': {
+            if (expr.expr != 'record') return null;
+            const exprFields = ensureRecordFieldsOnly(expr.contents);
+            const additions: Env = new Map();
+            for (const field of pattern.fields) {
+                let found = false;
+                for (const exprField of exprFields) {
+                    if (exprField.field == field) {
+                        found = true;
+                        additions.set(field, exprField.value);
+                        break;
+                    }
+                }
+                if (!found) return null;
+            }
+            return additions;
+        }
         case 'record-spread': {
             if (expr.expr != 'record') return null;
             const fields = ensureRecordFieldsOnly(expr.contents);
