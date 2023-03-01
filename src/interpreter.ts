@@ -120,7 +120,7 @@ function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Patter
     }
 }
 
-// Returns env additions, instead of the whole env
+// Returns (NEW) env additions, instead of the whole env
 function interpretPattern(lhs: Pattern, body: Expr): Env {
     switch (lhs.pattern) {
         case 'var': {
@@ -128,9 +128,12 @@ function interpretPattern(lhs: Pattern, body: Expr): Env {
                 [idToString({qualifiers: [], name: lhs.var}), body],
             ]);
         }
-        default: {
-            throw `interpretPattern ${stringify(lhs.pattern)}`;
+        case 'record-spread': {
+            if (body.expr != 'record') throw 'Tried to record-spread a non-record';
+            const fields = ensureRecordFieldsOnly(body.contents);
+            return new Map(fields.map(({field,value}) => [field,value]));
         }
+        default: throw `interpretPattern ${stringify(lhs.pattern)}`;
     }
 }
 
@@ -371,6 +374,13 @@ function interpretRecordExprContent(env: Env, content: RecordExprContent): Recor
             return record.contents;
         }
     }
+}
+
+function ensureRecordFieldsOnly(contents: RecordExprContent[]): {field:string, value:Expr}[] {
+    return contents.map((content) => {
+        if (content.recordContent == 'field') return {field: content.field, value: content.value};
+        throw "BUG: Record didn't exclusively contain fields. Did we forget to interpretExpr it first?";
+    });
 }
 
 function recordGet(env: Env, record: Expr, field: string): Expr {
