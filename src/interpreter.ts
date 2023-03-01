@@ -304,6 +304,12 @@ function interpretExpr(env: Env, expr: Expr): Expr {
                 default: throw `interpretExpr binary-op ${expr.op}`;
             }
         }
+        case 'if': {
+            const cond = interpretExpr(env,expr.cond);
+            if (cond.expr != 'bool') throw 'E0025: If expression with a non-bool condition';
+            if (cond.bool) return interpretExpr(env,expr.then);
+            else           return interpretExpr(env,expr.else);
+        }
         case 'record-get': {
             return recordGet(env,expr.record,expr.field);
         }
