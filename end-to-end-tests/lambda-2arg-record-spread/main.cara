@@ -1,0 +1,4 @@
+f = \{..},{..} -> a + b
+y = f({a:1},{b:2})
+IO.println!(f)
+IO.println!(y)

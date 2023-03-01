@@ -1,0 +1,9 @@
+E0031: Function has multiple arguments of the same name
+
+The argument `a` appears multiple times. It's unclear which one should be used
+when encountered in the function body.
+
+main.cara:1:11
+━━┓
+1 ┃ f = \{..},{..} -> a + 1
+  ┃           ^

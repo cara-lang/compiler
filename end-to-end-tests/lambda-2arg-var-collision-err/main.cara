@@ -1,0 +1,4 @@
+f = \x,x -> x + 1
+y = f(5,4)
+IO.println!(f)
+IO.println!(y)
