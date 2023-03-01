@@ -206,6 +206,7 @@ function show(e: Expr): string {
         case 'binary-op':   return `(${show(e.left)} ${showBinaryOp(e.op)} ${show(e.right)})`;
         case 'identifier':  return showIdentifier(e.id);
         case 'constructor': return showConstructor(e.id, e.args);
+        case 'closure':     return '<function>';
         default: throw `show(${e.expr})`;
     }
 }
