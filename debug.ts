@@ -9,13 +9,21 @@ import {interpret} from './src/interpreter.ts';
 // deno-lint-ignore no-explicit-any
 const log = (data: any) => { console.log(inspect(data, {depth:null,maxArrayLength:null,colors:true})); }
 
-const program = argv[2];
+console.log('Source file:');
+const file = argv[2];
+console.log(file);
+
 console.log('Source program:');
-log(program);
-const tokens = lex(program);
+const source = await Deno.readTextFile(file);
+log(source);
+
 console.log('Tokens:');
+const tokens = lex(source);
 log(tokens);
-const ast = parse(tokens);
+
 console.log('AST:');
+const ast = parse(tokens);
 log(ast);
+
+console.log('Interpreting:');
 interpret(ast);
