@@ -64,10 +64,10 @@ traverse(fn: a -> Maybe[b], list: List[a]): Maybe[List[b]]
 traverse(fn,list) = go(list,[])
   where
     go([],bs) = Just(List.reverse(bs))
-    go(a::as,bs) = 
+    go([a,...as],bs) = 
       case fn(a) of
         Nothing -> Nothing
-        Just(b) -> go(as,b::bs)
+        Just(b) -> go(as,b++bs)
 
 xs = [1,2,3,4,5]
 ys = [6,7,8,9,10]
