@@ -1,0 +1,45 @@
+x = 1
+
+module Foo {
+  IO.println!(x)
+  x = 2
+  IO.println!(x)
+
+  module Bar {
+    IO.println!(x)
+    x = 3
+    IO.println!(x)
+
+    // IO.println!(Foo.x)     // -> error
+    // IO.println!(Bar.x)     // -> error
+    // IO.println!(Foo.Bar.x) // -> error
+
+    IO.println!(::x)
+    IO.println!(::Foo.x)
+    IO.println!(::Foo.Bar.x)
+  }
+
+  // back in Foo
+
+  IO.println!(x)
+  IO.println!(Bar.x)
+
+  // IO.println!(Foo.x)     // -> error
+  // IO.println!(Foo.Bar.x) // -> error
+
+  IO.println!(::x)
+  IO.println!(::Foo.x)
+  IO.println!(::Foo.Bar.x)
+}
+
+// back in the root
+
+IO.println!(x)
+IO.println!(Foo.x)
+IO.println!(Foo.Bar.x)
+
+// IO.println!(Bar.x) // -> error
+
+IO.println!(::x)
+IO.println!(::Foo.x)
+IO.println!(::Foo.Bar.x)
