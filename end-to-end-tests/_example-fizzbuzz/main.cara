@@ -6,4 +6,5 @@ fizzbuzz(n) =
 
 1..20
   |> List.map(fizzbuzz)
+  |> String.join(", ")
   |> IO.println!

@@ -26,7 +26,7 @@ dstHandle = FS.open!(src, FS.Write)
 
 timestampFmt = "hh:mm:ss.fff"
 
-(1..10).each(\i -> IO {
+1..10 |> IO.forEach!(\i -> IO {
   time = Time.now!()
   dstHandle |> FS.write!("[${Time.format(timestampFmt, time)}] Hello number $i\n")
 })
@@ -39,28 +39,26 @@ isPrime(n) =
 
 x = isPrime(1111111111111111111)
 
-IO.inspect!(x)
-// -> True
+IO.println!(x) // -> True
 ```
 
 ```cara
-quickSort(list: List[Int]): List[Int]
+quickSort(List[Int]): List[Int]
 quickSort([]) = []
-quickSort(x::xs) = {
+quickSort([x,...xs]) = {
   (lt, gt) = List.partition(#(x >= _), xs)
   quickSort(lt) ++ x ++ quickSort(gt)
 }
 
-xs = [3,1,2,5,4]
-
-IO.inspect!(xs.quickSort())
-// -> [1,2,3,4,5]
+[5,1,3,2,4]
+  |> quickSort
+  |> IO.println!
 ```
 
 ```cara
 type Maybe[a] =
   | Nothing
-  | Just[a]
+  | Just(a)
 
 traverse(fn: a -> Maybe[b], list: List[a]): Maybe[List[b]]
 traverse(fn,list) = go(list,[])
@@ -75,8 +73,8 @@ xs = [1,2,3,4,5]
 ys = [6,7,8,9,10]
 f = \n -> if n == 3 then Nothing else Just(n)
 
-IO.inspect!(xs.traverse(f)) // -> Nothing
-IO.inspect!(ys.traverse(f)) // -> Just([6,7,8,9,10])
+IO.println!(xs.traverse(f)) // -> Nothing
+IO.println!(ys.traverse(f)) // -> Just([6,7,8,9,10])
 ```
 
 ```cara
@@ -88,6 +86,8 @@ fizzbuzz(n) =
 
 1..20
   |> List.map(fizzbuzz)
-  |> IO.inspect!
-// -> ["1","2","Fizz","4","Buzz","Fizz","7","8","Fizz","Buzz","11","Fizz","13","14","FizzBuzz","16","17","Fizz","19","Buzz"]
+  |> String.join(", ")
+  |> IO.println!
+
+// -> 1, 2, Fuzz, 4, Buzz, Fizz, 7, 8, Fizz, Buzz, 11, Fizz, 13, 14, FizzBuzz, 16, 17, Fizz, 19, Buzz
 ```
