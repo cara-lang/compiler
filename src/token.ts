@@ -66,6 +66,7 @@ export type SimpleTokenType =
     | 'RBRACKET'
     | 'PIPELINE'
     | 'COMMA'
+    | 'COLONCOLON'
     | 'COLON'
     | 'BANG'
     | 'EQ'
