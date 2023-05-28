@@ -167,8 +167,13 @@ function nextToken(state: State): { token: Token, state: State } {
             return simple('RBRACKET', state);
         case ',':
             return simple('COMMA', state);
-        case ':':
-            return simple('COLON', state);
+        case ':': {
+            const secondColon = match(':', state);
+            if (secondColon.matches) {
+                return simple('COLONCOLON', secondColon.state); // ::
+            }
+            return simple('COLON', state); // :
+        }
         case '/': {
             let result = match('/', state); // //
             if (result.matches) {

@@ -1,3 +1,5 @@
+import {Envs} from './env.ts';
+
 export type Expr =
     // literals
     | {expr:'int',    int:bigint}
@@ -23,10 +25,11 @@ export type Expr =
     | {expr:'effect-block', monadModule:UpperIdentifier, block:Block} // x = My.Monad { ... }
 
     // other
-    | {expr:'constructor', id:UpperIdentifier, args: Expr[]} // Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
-    | {expr:'identifier',  id:LowerIdentifier} // foo, Bar.foo
+    | {expr:'constructor',     id:UpperIdentifier, args: Expr[]} // Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
+    | {expr:'identifier',      id:LowerIdentifier} // foo, Bar.foo
+    | {expr:'root-identifier', id:LowerIdentifier} // ::foo, ::Bar.foo
     | {expr:'lambda',  args:Pattern[], body:Expr}
-    | {expr:'closure', args:Pattern[], body:Expr, env:Map<string,Expr>} // not creatable via syntax, only by the interpreter
+    | {expr:'closure', args:Pattern[], body:Expr, envs:Envs} // not creatable via syntax, only by the interpreter
     | {expr:'record-getter', field:string} // .a
     | {expr:'if', cond:Expr, then:Expr, else:Expr}
     | {expr:'case',subject:Expr, branches:CaseBranch[]}

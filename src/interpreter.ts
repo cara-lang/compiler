@@ -1,11 +1,6 @@
-import {Decl, Stmt, Bang, Typevar, Constructor, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent, TypeModifier} from './ast.ts';
+import {Decl, Stmt, Bang, Typevar, Constructor, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent, TypeModifier, ModuleModifier} from './ast.ts';
+import {Env,Envs,Module} from './env.ts';
 import {stringify,arrayEquals,print,eprintln,addToMap} from './util.ts';
-
-type Env = Map<string,Expr>;
-type Envs = {
-    public: Env,
-    private: Env,
-};
 
 type State = {
     envs: Envs,
@@ -15,8 +10,41 @@ type State = {
 
 let typeConstructorI = 0;
 
-function combineEnvs(envs: Envs): Env {
-    return envAdd(envs.public, envs.private);
+function getModule(envs: Envs, stack: string[]): Module | null {
+    let stackTodo = stack;
+    let currentModule = envs.rootModule;
+    while (stackTodo.length > 0) {
+        const moduleName = stackTodo[0];
+        const next = currentModule.modules.get(moduleName);
+        if (next == undefined) return null;
+        stackTodo = stack.slice(1);
+        currentModule = next;
+    }
+    return currentModule;
+}
+
+function mapModule(envs: Envs, stack: string[], fn: (m: Module) => Module): Envs {
+    /*
+mapModule : List String -> (Module -> Module) -> Envs -> Maybe Envs
+mapModule path fn envs =
+    mapModuleInner path fn envs.rootModule
+        |> Maybe.map (\m -> { envs | rootModule = m })
+
+mapModuleInner : List String -> (Module -> Module) -> Module -> Maybe Module
+mapModuleInner path fn mod =
+    case path of
+        [] -> 
+            fn mod
+
+        fst :: rest -> 
+            Dict.get fst mod.modules
+            |> Maybe.map (\old ->
+                let
+                    new = mapModuleInner rest fn old
+                in
+                { mod | modules = Dict.insert fst new mod.modules }
+            )
+    */
 }
 
 // `a` with items from `b` added. On collision, `b` wins.
@@ -27,22 +55,98 @@ function envAdd(a: Env, b: Env): Env {
     ]);
 }
 
-function envGet(id: Identifier, env: Env): Expr | undefined {
+function rootEnvs(envs: Envs): Envs {
+    return {
+        ...envs,
+        current: [],
+    };
+}
+
+function addToPublic(envs: Envs, addition: Env): Envs {
+    let module = envs.rootModule;
+    let modulesToDo = envs.current;
+    while (modulesToDo.length > 0) {
+        const nextQualifier = modulesToDo[0];
+        const nextModule = module.modules.get(nextQualifier);
+        if (nextModule == undefined) {
+            throw `Module ${modulesToDo.join('.')} not found.`;
+        }
+        module = nextModule;
+        modulesToDo = modulesToDo.slice(1);
+    }
+    return module;
+}
+
+function envGet(id: Identifier, envs: Envs): Expr | undefined {
+    // If there are qualifiers in the ID, we need to drill down to the correct module.
+    // Example: envs.current = ['Foo'], id = Bar.baz
+    // First we follow the `current` (foo = envs.modules['Foo'])
+    // Then we follow the qualifiers in the ID (bar = foo.modules['Bar'])
+    // Then we try to find the `baz` in that module's public env (baz = bar.public['baz'])
+    if (id.qualifiers.length > 0) {
+        let module = envs.rootModule;
+        const origQualifiersToDo = envs.current.concat(...id.qualifiers);
+        let qualifiersToDo = origQualifiersToDo;
+        while (qualifiersToDo.length > 0) {
+            const nextQualifier = qualifiersToDo[0];
+            const nextModule = module.modules.get(nextQualifier);
+            if (nextModule == undefined) {
+                throw `Module ${origQualifiersToDo.join('.')} not found.`;
+            }
+            module = nextModule;
+            qualifiersToDo = qualifiersToDo.slice(1);
+        }
+        return module.public.get(id.name); // ignoring the qualifiers deliberately: we've already walked into those modules
+    }
+
+    // If there are no qualifiers in the ID, we have a few cases to solve - see below.
     const str = idToString(id);
-    return env.get(str);
+    // Simplest case: self public
+    if (envs.selfPublic.has(str)) return envs.selfPublic.get(str);
+    // Next: self private
+    if (envs.selfPrivate.has(str)) return envs.selfPrivate.get(str);
+    // If none of the above: try the parent public, the grandparent public, ... until you get to the root public
+    let stackToTry = envs.current.slice(0,-1);
+    while (true) {
+        const module: Module | null = getModule(envs, stackToTry);
+        if (module == null) break;
+        if (module.public.has(str)) return module.public.get(str);
+        if (stackToTry.length == 0) break;
+        stackToTry = stackToTry.slice(0,-1);
+    }
+    // Otherwise it's simply not there!
+    return undefined;
 }
 
 function idToString(id: Identifier): string {
-    return id.qualifiers.join('.') + id.name;
+    return id.qualifiers.length == 0
+        ? id.name
+        : id.qualifiers.concat(id.name).join('.');
+}
+
+function addNamespace(env: Env, name: string): Env {
+    return new Map([...env.entries()].map(([k,v]) => [`${name}.${k}`,v]));
 }
 
 export async function interpret(ast: Decl[]): Promise<{code: number, stdout: string, stderr: string}> {
-    const envs: Envs = {public: new Map(), private: new Map()};
-    let state: State = {envs, stdout: '', stderr: ''};
+    const envs: Envs = {
+        rootModule: {
+            modules: new Map(),
+            public: new Map(),
+            private: new Map(),
+        },
+        current: [],
+    };
+    let state: State = {
+        envs,
+        stdout: '', 
+        stderr: '',
+    };
     for (const decl of ast) {
         try {
             state = await interpretDecl(state, decl);
         } catch (e) {
+            // TODO when we throw strings, we lose the stdout from the current decl. Throw something that has both the stdout and the error message?
             await eprintln(e);
             return {code: 1, stdout: state.stdout, stderr: state.stderr + e};
         }
@@ -53,6 +157,7 @@ export async function interpret(ast: Decl[]): Promise<{code: number, stdout: str
 async function interpretDecl(state: State, decl: Decl): Promise<State> {
     switch (decl.decl) {
         case 'statement': return await interpretStmt(state, decl.stmt);
+        case 'module': return await interpretModule(state, decl.mod, decl.name, decl.decls);
         case 'type': return Promise.resolve(interpretType(state, decl.name, decl.mod, decl.vars, decl.constructors));
         case 'type-alias': {
             // TODO do something about the type alias. We can ignore it in the meantime while we have no type checking.
@@ -71,20 +176,25 @@ async function interpretDecl(state: State, decl: Decl): Promise<State> {
 }
 function interpretType(state: State, _name: string, mod: TypeModifier, _vars: Typevar[], constructors: Constructor[]): State {
     // TODO register the type somewhere
-    let newPublicEnv  = state.envs.public;
-    let newPrivateEnv = state.envs.private;
+    let newSelfPublicEnv = state.envs.selfPublic;
+    let newSelfPrivateEnv = state.envs.selfPrivate;
+    // Add the type's constructors to the env
     switch (mod) {
         case 'NoModifier': {
-            newPublicEnv = constructors.reduce(interpretTypeConstructor,newPublicEnv);
+            newSelfPublicEnv = constructors.reduce(interpretTypeConstructor,newSelfPublicEnv);
             break;
         }
         case 'Private': {
-            newPrivateEnv = constructors.reduce(interpretTypeConstructor,newPrivateEnv);
+            newSelfPrivateEnv = constructors.reduce(interpretTypeConstructor,newSelfPrivateEnv);
             break;
         }
         case 'Opaque': break;
     }
-    const newEnvs = {public: newPublicEnv, private: newPrivateEnv};
+    const newEnvs = {
+        ...state.envs, 
+        selfPublic: newSelfPublicEnv, 
+        selfPrivate: newSelfPrivateEnv,
+    };
     return {...state, envs: newEnvs};
 }
 
@@ -103,6 +213,79 @@ function interpretTypeConstructor(env: Env, constructor: Constructor): Env {
             body: {expr:'constructor', id: constructorId, args: constructorArgs},
         };
         return addToMap(env,constructor.name,expr);
+    }
+}
+
+function saveSelf(envs: Envs): Module {
+    if (envs.current.length == 0) {
+        const finalPublic: Env = envAdd(envs.rootModule.public, envs.selfPublic);
+        const finalPrivate: Env = envAdd(envs.rootModule.public, envs.selfPrivate);
+        // TODO is this correct? public instead of private? ^
+
+        envs.rootModule.public = finalPublic;
+        envs.rootModule.private = finalPrivate;
+        return envs.rootModule;
+    } else {
+        // drill into the first parent
+        const nextModuleName = envs.current[0];
+        const newCurrent = envs.current.slice(1);
+        let nextModule = envs.rootModule.modules.get(nextModuleName);
+        if (!nextModule) { 
+            if (newCurrent.length == 0) {
+                nextModule = {
+                    modules: new Map(),
+                    private: envs.selfPrivate,
+                    public: envs.selfPublic,
+                };
+            } else {
+                throw `saveSelf: module ${nextModuleName} not found in the Envs module tree`; 
+            }
+        }
+        const nextEnvs: Envs = {
+            ...envs,
+            current: newCurrent,
+            rootModule: nextModule,
+        };
+        const finalModule: Module = saveSelf(nextEnvs);
+        envs.rootModule.modules.set(nextModuleName,finalModule);
+        return envs.rootModule;
+    }
+}
+
+async function interpretModule(state: State, mod: ModuleModifier, name: string, decls: Decl[]): Promise<State> {
+    let newState = {
+        ...state,
+        envs: {
+            rootModule: saveSelf(state.envs),
+            current: state.envs.current.concat(name),
+            selfPublic: new Map(),
+            selfPrivate: new Map(),
+        },
+    };
+    for (const decl of decls) {
+        newState = await interpretDecl(newState, decl);
+    }
+    switch (mod) {
+        case 'NoModifier': {
+            return {
+                ...newState, 
+                envs: {
+                    ...newState.envs,
+                    selfPublic: envAdd(state.envs.selfPublic, addNamespace(newState.envs.selfPublic, name)),
+                    selfPrivate: state.envs.selfPrivate,
+                }
+            };
+        }
+        case 'Private': {
+            return {
+                ...newState, 
+                envs: {
+                    ...newState.envs,
+                    selfPublic: state.envs.selfPublic,
+                    selfPrivate: envAdd(state.envs.selfPrivate, addNamespace(newState.envs.selfPrivate, name)),
+                }
+            };
+        }
     }
 }
 
@@ -125,19 +308,18 @@ async function interpretStmt(state: State, stmt: Stmt): Promise<State> {
 }
 
 async function interpretBang(state: State, bang: Bang): Promise<{state:State,expr:Expr}> {
-    const env = combineEnvs(state.envs);
     switch (bang.bang) {
         case 'value': {
-            const expr = interpretExpr(env, bang.val);
+            const expr = interpretExpr(state.envs,bang.val);
             return {state,expr};
         }
         case 'call': {
-            const fn = interpretExpr(env, bang.fn);
+            const fn = interpretExpr(state.envs,bang.fn);
             if (fn.expr == 'identifier') {
                 if (idEquals(fn.id,ioPrintlnId)) {
                     if (bang.args.length == 1) {
                         const arg = bang.args[0];
-                        const newStdout = await ioPrintln(env,arg);
+                        const newStdout = await ioPrintln(state.envs,arg);
                         const returnExpr: Expr = {expr:'unit'};
                         return {
                             state: {...state, stdout: state.stdout + newStdout},
@@ -160,18 +342,17 @@ function interpretLet(envs: Envs, mod: LetModifier, type: Type|null, lhs: Patter
     if (type != null) {
         // TODO typecheck the env against the type
     }
-    const env = combineEnvs(envs);
     switch (mod) {
+        case 'NoModifier': {
+            const selfEnvAdditions = interpretPattern(lhs, interpretExpr(envs,body));
+            if (selfEnvAdditions == null) {
+                throw `Pattern didn't match the expr: ${showPattern(lhs)} = ${show(body)}`;
+            }
+            return {...envs, selfPublic: envAdd(envs.selfPublic, selfEnvAdditions)};
+        }
         case 'Private': {
             // TODO do something else than NoModifier does?
             throw `interpretLet 1 ${mod} ${type} ${stringify(lhs)} ${stringify(body)}`;
-        }
-        case 'NoModifier': {
-            const publicEnvAdditions = interpretPattern(lhs, interpretExpr(env,body));
-            if (publicEnvAdditions == null) {
-                throw `Pattern didn't match the expr: ${showPattern(lhs)} = ${show(body)}`;
-            }
-            return {...envs, public: envAdd(envs.public, publicEnvAdditions)};
         }
     }
 }
@@ -301,8 +482,8 @@ function showBinaryOp(op: BinaryOp): string {
 }
 
 const ioPrintlnId: Identifier = {qualifiers:['IO'],name:'println'};
-async function ioPrintln(env: Env, expr: Expr): Promise<string> {
-    const e = interpretExpr(env,expr);
+async function ioPrintln(envs: Envs, expr: Expr): Promise<string> {
+    const e = interpretExpr(envs,expr);
     const str = show(e) + "\n";
     await print(str);
     return str;
@@ -320,7 +501,7 @@ function isSpecial(id: Identifier): boolean {
     return specialIds.some(specialId => idEquals(id,specialId));
 }
 
-function interpretExpr(env: Env, expr: Expr): Expr {
+function interpretExpr(envs: Envs, expr: Expr): Expr {
     switch (expr.expr) {
         case 'int':
         case 'float':
@@ -332,29 +513,46 @@ function interpretExpr(env: Env, expr: Expr): Expr {
         case 'record-getter': 
             return expr;
         case 'constructor':
-            return {...expr, args: expr.args.map((e) => interpretExpr(env,e))};
+            return {...expr, args: expr.args.map((e) => interpretExpr(envs,e))};
+        case 'root-identifier': 
+            return interpretExpr(rootEnvs(envs), {...expr, expr: 'identifier'});
         case 'identifier': {
             if (isSpecial(expr.id)) return expr;
-            const item = envGet(expr.id, env);
+            const item = envGet(expr.id, envs);
             if (item == null) {
-                throw `Unknown identifier: ${show(expr)}. Env: ${stringify([...env.entries()])}`;
+                throw `Unknown identifier: ${show(expr)}. Public env: ${showEnv(envs.selfPublic)}, private env: ${showEnv(envs.selfPrivate)}`;
             }
             return item;
         }
         case 'tuple': {
-            return {...expr, elements: expr.elements.map((e) => interpretExpr(env,e))};
+            return {...expr, elements: expr.elements.map((e) => interpretExpr(envs,e))};
         }
         case 'list': {
-            return {...expr, elements: expr.elements.map((e) => interpretExpr(env,e))};
+            return {...expr, elements: expr.elements.map((e) => interpretExpr(envs,e))};
         }
         case 'record': {
-            return {...expr, contents: expr.contents.flatMap((c) => interpretRecordExprContent(env,c))};
+            const newContents = expr.contents
+                .flatMap((c) => interpretRecordExprContent(envs,c))
+                .reduce(
+                    function (acc: Map<string, Expr>, content: { field: string, value: Expr }): Map<string, Expr> {
+                        return addToMap(acc, content.field, content.value);
+                    },
+                    new Map(),
+                );
+            return {
+                ...expr,
+                contents: [...newContents.entries()].map(([k,v]) => ({
+                    recordContent: 'field',
+                    field: k,
+                    value: v,
+                })),
+            };
         }
         case 'lambda': {
-            return {...expr, expr:'closure', env};
+            return {...expr, expr:'closure', envs};
         }
         case 'unary-op': {
-            const arg = interpretExpr(env,expr.arg);
+            const arg = interpretExpr(envs,expr.arg);
             switch (expr.op) {
                 case 'NegateNum': {
                     switch (arg.expr) {
@@ -373,8 +571,8 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             }
         }
         case 'binary-op': {
-            const left = interpretExpr(env,expr.left);
-            const right = interpretExpr(env,expr.right);
+            const left = interpretExpr(envs,expr.left);
+            const right = interpretExpr(envs,expr.right);
             switch (expr.op) {
                 case 'Plus': {
                     if (left.expr == 'int'   && right.expr == 'int')   return {expr: 'int',   int:   left.int + right.int};
@@ -405,42 +603,44 @@ function interpretExpr(env: Env, expr: Expr): Expr {
             }
         }
         case 'if': {
-            const cond = interpretExpr(env,expr.cond);
+            const cond = interpretExpr(envs,expr.cond);
             if (cond.expr != 'bool') throw 'E0025: If expression with a non-bool condition';
-            if (cond.bool) return interpretExpr(env,expr.then);
-            else           return interpretExpr(env,expr.else);
+            if (cond.bool) return interpretExpr(envs,expr.then);
+            else           return interpretExpr(envs,expr.else);
         }
         case 'case': {
-            const subject = interpretExpr(env, expr.subject);
+            const subject = interpretExpr(envs,expr.subject);
             for (const branch of expr.branches) {
                 const envAddition: Env|null = matchAnyPattern(subject, branch.orPatterns);
                 if (envAddition != null) {
-                    const newEnv = envAdd(env, envAddition);
-                    return interpretExpr(newEnv, branch.body);
+                    // TODO is it correct to use the selfPublic here?
+                    const newEnv: Env = envAdd(envs.selfPublic, envAddition);
+                    const newEnvs: Envs = {...envs, selfPublic: newEnv};
+                    return interpretExpr(newEnvs,branch.body);
                 }
             }
             throw `interpretExpr case - nothing matched! ${show(expr.subject)} ${stringify(expr.branches)}`;
         }
         case 'record-get': {
-            return recordGet(env,expr.record,expr.field);
+            return recordGet(envs,expr.record,expr.field);
         }
         case 'call': {
-            const fn = interpretExpr(env,expr.fn);
-            const args = expr.args.map((e) => interpretExpr(env,e));
+            const fn = interpretExpr(envs,expr.fn);
+            const args = expr.args.map((e) => interpretExpr(envs,e));
             switch (fn.expr) {
                 case 'record-getter': {
                     if (args.length !== 1) {
                         throw `interpretExpr BUG: record getter called with more than onen argument`;
                     }
-                    return recordGet(env,args[0],fn.field);
+                    return recordGet(envs,args[0],fn.field);
                 }
                 case 'closure': {
-                    const innerEnv: Env = applyClosureArgumentPatterns(
-                        fn.env, // lexical closure baby!
+                    const innerEnvs: Envs = applyClosureArgumentPatterns(
+                        fn.envs, // lexical closure baby!
                         fn.args,
                         args
                     ); 
-                    return interpretExpr(innerEnv, fn.body);
+                    return interpretExpr(innerEnvs,fn.body);
                 }
                 default: throw `interpretExpr call ${fn.expr} ${stringify(args)}`;
             }
@@ -457,7 +657,7 @@ function matchAnyPattern(subject: Expr, patterns: Pattern[]): Env|null {
     return null;
 }
 
-function applyClosureArgumentPatterns(env:Env, argPatterns:Pattern[], argValues:Expr[]): Env {
+function applyClosureArgumentPatterns(envs:Envs, argPatterns:Pattern[], argValues:Expr[]): Envs {
     if (argPatterns.length !== argValues.length) {
         throw `Wrong number of arguments provided: ${argPatterns.length} needed, ${argValues.length} provided`;
     }
@@ -467,17 +667,16 @@ function applyClosureArgumentPatterns(env:Env, argPatterns:Pattern[], argValues:
                 const envAddition = interpretPattern(pattern,argValues[i]);
                 return envAddition == null ? [] : [envAddition];
             });
-    return envAdditions.reduce(envAdd,env);
+    return addToPublic(envs, envAdditions);
 }
 
-function interpretRecordExprContent(env: Env, content: RecordExprContent): RecordExprContent[] {
+function interpretRecordExprContent(envs: Envs, content: RecordExprContent): {field: string, value: Expr}[] {
     switch (content.recordContent) {
-        case 'field': return [content];
+        case 'field': return [{field: content.field, value: content.value}];
         case 'pun':   return [{
-                                recordContent: 'field',
                                 field: content.field,
                                 value: interpretExpr(
-                                    env,
+                                    envs,
                                     {
                                         expr: 'identifier',
                                         id: {qualifiers: [], name: content.field}
@@ -485,9 +684,9 @@ function interpretRecordExprContent(env: Env, content: RecordExprContent): Recor
                                 )
                             }];
         case 'spread': {
-            const record = interpretExpr(env, {expr: 'identifier', id: content.recordId});
+            const record = interpretExpr(envs, {expr: 'identifier', id: content.recordId});
             if (record.expr != 'record') throw `Tried to spread a non-record value when creating a record`;
-            return record.contents;
+            return record.contents.flatMap((c) => interpretRecordExprContent(envs, c));
         }
     }
 }
@@ -499,8 +698,8 @@ function ensureRecordFieldsOnly(contents: RecordExprContent[]): {field:string, v
     });
 }
 
-function recordGet(env: Env, record: Expr, field: string): Expr {
-    const rec = interpretExpr(env,record);
+function recordGet(envs: Envs, record: Expr, field: string): Expr {
+    const rec = interpretExpr(envs,record);
     switch (rec.expr) {
         case 'tuple': {
             const index = tupleIndex(field);
@@ -547,4 +746,8 @@ function tupleIndex(field: string): number|null {
             return num - 1;
         }
     }
+}
+
+function showEnv(env: Env): string {
+    return `{${[...env.entries()].map(([k,v]) => `${k} => ${show(v)}`).join(', ')}}`;
 }

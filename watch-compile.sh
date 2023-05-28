@@ -4,8 +4,7 @@ COLOR_OFF="\e[0m";
 DIM="\e[2m";
 
 function compile {
-  rm -rf _build
-  dune build @all --profile release
+  deno check test.ts src/*.ts 2>&1
 }
 
 function run {

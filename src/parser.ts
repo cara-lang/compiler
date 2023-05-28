@@ -19,7 +19,7 @@ export function parse(tokens: Token[]): Decl[] {
             decls.push(declResult.match);
             i = skipEol({tokens,i});
         } catch (e) {
-            throw e.message;
+            throw `${e.message} @ ${showLoc(e.loc)}`;
         }
     }
     return decls;
@@ -788,6 +788,7 @@ function prefixExpr(state: State): {i: number, match: Expr} {
             {prefix: ['LHOLE'],           parser: holeLambdaExpr},
             {prefix: ['UNDERSCORE'],      parser: holeExpr},
             {prefix: ['HOLE'],            parser: holeExpr},
+            {prefix: ['COLONCOLON'],      parser: rootIdentifierExpr},
 
             // unary-op
             {prefix: ['MINUS'], parser: unaryOpExpr('number negation expr','MINUS','NegateNum')},
@@ -1291,6 +1292,28 @@ function block(state: State): {i: number, match: Block} {
     };
 }
 
+//: COLONCOLON lowerIdentifier
+//= ::foo
+//= ::Foo.bar
+//= ::Foo.Bar.baz
+function rootIdentifierExpr(state: State): {i: number, match: Expr} {
+    let {i} = state;
+    const desc = 'root identifier';
+    //: COLONCOLON
+    i = expect('COLONCOLON',desc,i,state.tokens);
+    //: lowerIdentifier
+    const idResult = lowerIdentifier({...state, i});
+    i = idResult.i;
+    // Done!
+    return {
+        i, 
+        match: {
+            expr: 'root-identifier',
+            id: idResult.match,
+        },
+    };
+}
+
 //: IF expr THEN expr ELSE expr
 //= if 1 == 2 then foo() else bar()
 function ifExpr(state: State): {i: number, match: Expr} {
@@ -1563,6 +1586,7 @@ function analyzeHoles(expr: Expr): HoleAnalysis {
         case 'string':
         case 'bool':
         case 'unit':
+        case 'root-identifier':
         case 'record-getter':
             return {type:'no-holes'};
         case 'constructor':
@@ -2616,7 +2640,7 @@ type OneOfOption<T> = {
     parser: Parser<T>,
 }
 
-// Throws {e | message: string}
+// Throws {e | message: string, loc: Loc}
 function oneOf<T>(options: OneOfOption<T>[], parsedItem: string, state: State): {i: number, match: T} {
     const iBefore = state.i;
     const loc = state.tokens[state.i].loc;

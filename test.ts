@@ -7,7 +7,7 @@ import {interpret} from './src/interpreter.ts';
 import {log} from './src/util.ts';
 import {Token} from './src/token.ts';
 
-const selectedTest = null;
+const selectedTest = 'module-nested-root';
 
 const originalCwd = Deno.cwd();
 const testsDir = 'end-to-end-tests';
