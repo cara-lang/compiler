@@ -1,24 +1,20 @@
 module Interpreter exposing
     ( Outcome(..)
     , interpret
-    , interpretModule
-    , interpretProgram
     )
 
 import AST exposing (AST(..), Id)
 import Effect exposing (Effect)
 import Env exposing (Env)
 import Error exposing (InterpreterError(..))
-import Tree exposing (Tree)
 import Tree.Zipper as Zipper exposing (Zipper)
-import Tree.Zipper.Extra as Zipper
 import Value exposing (Value(..))
 
 
 type Outcome
     = DoneInterpreting Env (Zipper AST) Value
     | NeedsEffect Env (Zipper AST) Effect
-    | FoundError Env (Zipper AST) InterpreterError
+    | FoundError InterpreterError
 
 
 interpret : Env -> Zipper AST -> Outcome
@@ -80,7 +76,7 @@ interpretLet : String -> Env -> Zipper AST -> Outcome
 interpretLet name env ast =
     case Zipper.firstChild ast of
         Nothing ->
-            FoundError env ast (ExpectedChildNode "let")
+            FoundError (ExpectedChildNode "let")
 
         Just child ->
             case interpret env child of
@@ -106,17 +102,17 @@ interpretModule name env ast =
         case envWithOpenModule of
             Nothing ->
                 -- Should never happen
-                FoundError env ast (ExpectedModule name)
+                FoundError (ExpectedModule name)
 
             Just envWithOpenModule_ ->
                 case interpretProgram envWithOpenModule_ ast of
-                    DoneInterpreting envAfterChildren newAst _ ->
+                    DoneInterpreting envAfterChildren _ _ ->
                         done envAfterChildren ast VUnit
 
                     NeedsEffect newEnv newAst eff ->
                         case Zipper.parent newEnv of
                             Nothing ->
-                                FoundError newEnv newAst ExpectedParent
+                                FoundError ExpectedParent
 
                             Just parentEnv ->
                                 NeedsEffect parentEnv newAst eff
@@ -133,7 +129,7 @@ interpretPrintln env ast =
 
         Just child ->
             case interpret env child of
-                DoneInterpreting newEnv finishedChild val ->
+                DoneInterpreting newEnv _ val ->
                     case removeCurrent ast of
                         Nothing ->
                             NeedsEffect newEnv ast (Effect.Println (Value.toString val))
@@ -151,7 +147,7 @@ interpretVar id env ast =
         go env_ =
             case env_ of
                 Nothing ->
-                    FoundError env ast (VarNotFound id)
+                    FoundError (VarNotFound id)
 
                 Just env__ ->
                     case Env.get id env__ of
@@ -168,7 +164,7 @@ interpretRootVar : Id -> Env -> Zipper AST -> Outcome
 interpretRootVar id env ast =
     case Env.get id (Zipper.root env) of
         Nothing ->
-            FoundError env ast (RootVarNotFound id)
+            FoundError (RootVarNotFound id)
 
         Just value ->
             done env ast value

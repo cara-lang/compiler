@@ -3,6 +3,7 @@ module Env exposing
     , add, addModule, open
     , get
     , toString
+    , Module
     )
 
 {-|
@@ -11,6 +12,7 @@ module Env exposing
 @docs add, addModule, open
 @docs get
 @docs toString
+@docs Module
 
 -}
 

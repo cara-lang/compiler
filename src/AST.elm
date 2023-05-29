@@ -6,7 +6,7 @@ module AST exposing
     )
 
 import String.Extra as String
-import Tree exposing (Tree)
+import Tree
 import Tree.Zipper as Zipper exposing (Zipper)
 
 

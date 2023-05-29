@@ -26,6 +26,7 @@ lex source =
 
                 GotToken next i_ row_ col_ ->
                     let
+                        newTokens : List Token
                         newTokens =
                             { type_ = next
 
@@ -278,7 +279,7 @@ skipUntilNewline source i row col =
 
 
 blockComment : String -> Int -> Int -> Int -> Result LexerError ( Int, Int, Int )
-blockComment source i row col =
+blockComment _ _ _ _ =
     -- i,row,col start _after_ /*
     Debug.todo "block comment"
 
@@ -571,11 +572,6 @@ eol source i row =
 isWhitespace : Char -> Bool
 isWhitespace c =
     c == ' ' || c == '\t'
-
-
-isAtEnd : Int -> String -> Bool
-isAtEnd i source =
-    i >= String.length source
 
 
 char : String -> Int -> Int -> Int -> TokenResult

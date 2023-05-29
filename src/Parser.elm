@@ -7,5 +7,5 @@ import Tree exposing (Tree)
 
 
 parse : List Token -> Result ParserError (Tree AST)
-parse tokens =
+parse _ =
     Debug.todo "parse"

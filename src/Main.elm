@@ -1,17 +1,14 @@
-port module Main exposing (main)
+port module Main exposing (Flags, Model, Msg, main)
 
 import AST exposing (AST(..))
 import Effect exposing (Effect)
 import Env exposing (Env)
-import Error exposing (Error(..), InterpreterError(..))
-import Html.Attributes exposing (value)
+import Error exposing (Error(..))
 import Interpreter
 import Lexer
 import Parser
 import Tree exposing (Tree)
 import Tree.Zipper as Zipper exposing (Zipper)
-import Tree.Zipper.Extra as Zipper
-import Value exposing (Value)
 
 
 main : Program Flags Model Msg
@@ -36,10 +33,14 @@ type Model
 
 
 type Msg
-    = CompletedPrintln String
-    | CompletedEprintln String
-    | CompletedReadFile { filename : String, content : String }
-    | CompletedWriteFile { filename : String, content : String }
+    = CompletedPrintln
+    | CompletedEprintln
+    | CompletedReadFile String
+    | CompletedWriteFile
+
+
+
+-- EFFECTS
 
 
 port println : String -> Cmd msg
@@ -54,16 +55,16 @@ port readFile : { filename : String } -> Cmd msg
 port writeFile : { filename : String, content : String } -> Cmd msg
 
 
-port completedPrintln : (String -> msg) -> Sub msg
+port completedPrintln : (() -> msg) -> Sub msg
 
 
-port completedEprintln : (String -> msg) -> Sub msg
+port completedEprintln : (() -> msg) -> Sub msg
 
 
-port completedReadFile : ({ filename : String, content : String } -> msg) -> Sub msg
+port completedReadFile : (String -> msg) -> Sub msg
 
 
-port completedWriteFile : ({ filename : String, content : String } -> msg) -> Sub msg
+port completedWriteFile : (() -> msg) -> Sub msg
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -95,7 +96,7 @@ init flags =
                 Interpreter.DoneInterpreting _ _ _ ->
                     finish
 
-                Interpreter.FoundError _ _ error ->
+                Interpreter.FoundError error ->
                     finishWithError (InterpreterError error)
 
                 Interpreter.NeedsEffect env_ pausedZipper effect ->
@@ -124,11 +125,6 @@ printError error =
     eprintln (Error.title error)
 
 
-printValue : Value -> Cmd msg
-printValue value =
-    println (Value.toString value)
-
-
 handleEffect : Effect -> Cmd Msg
 handleEffect effect =
     case effect of
@@ -153,16 +149,16 @@ update msg model =
 
         PausedOnEffect env pausedZipper effect ->
             case ( effect, msg ) of
-                ( Effect.Println _, CompletedPrintln _ ) ->
+                ( Effect.Println _, CompletedPrintln ) ->
                     continueAfterEffect env pausedZipper
 
-                ( Effect.Eprintln _, CompletedEprintln _ ) ->
+                ( Effect.Eprintln _, CompletedEprintln ) ->
                     continueAfterEffect env pausedZipper
 
-                ( Effect.ReadFile _, CompletedReadFile { content } ) ->
+                ( Effect.ReadFile _, CompletedReadFile content ) ->
                     continueAfterEffectWithString content env pausedZipper
 
-                ( Effect.WriteFile _, CompletedWriteFile _ ) ->
+                ( Effect.WriteFile _, CompletedWriteFile ) ->
                     continueAfterEffect env pausedZipper
 
                 _ ->
@@ -176,7 +172,7 @@ continueAfterEffect env ast =
         Interpreter.DoneInterpreting _ _ _ ->
             finish
 
-        Interpreter.FoundError _ _ error ->
+        Interpreter.FoundError error ->
             finishWithError (InterpreterError error)
 
         Interpreter.NeedsEffect env_ pausedZipper effect ->
@@ -184,17 +180,17 @@ continueAfterEffect env ast =
 
 
 continueAfterEffectWithString : String -> Env -> Zipper AST -> ( Model, Cmd Msg )
-continueAfterEffectWithString string env doneZipper =
+continueAfterEffectWithString _ _ _ =
     Debug.todo "continueAfterEffectWithString"
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.batch
-        [ completedPrintln CompletedPrintln
-        , completedEprintln CompletedEprintln
+        [ completedPrintln (\_ -> CompletedPrintln)
+        , completedEprintln (\_ -> CompletedEprintln)
         , completedReadFile CompletedReadFile
-        , completedWriteFile CompletedWriteFile
+        , completedWriteFile (\_ -> CompletedWriteFile)
         ]
 
 
