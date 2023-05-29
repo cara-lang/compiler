@@ -69,6 +69,13 @@ port completedWriteFile : ({ filename : String, content : String } -> msg) -> Su
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
+        _ =
+            flags.sourceCode
+                |> (Lexer.lex >> Result.mapError LexerError)
+                --|> Result.map (List.reverse >> List.map (Debug.log ""))
+                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+                |> Debug.log "Parsed AST"
+
         astResult : Result Error (Tree AST)
         astResult =
             {-
@@ -114,7 +121,7 @@ pauseOnEffect env ast effect =
 
 printError : Error -> Cmd msg
 printError error =
-    eprintln (Error.toString error)
+    eprintln (Error.title error)
 
 
 printValue : Value -> Cmd msg

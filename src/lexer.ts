@@ -209,11 +209,11 @@ function nextToken(state: State): { token: Token, state: State } {
             return { token: { type: { type: 'HOLE', n: result.match }, loc: {row, col} }, state: result.state };
         }
         case '.': {
-            const first = match('.', state);
-            if (first.matches) {
-                const second = match('.', first.state);
-                if (second.matches) return simple('DOTDOTDOT', second.state); // ...
-                return simple('DOTDOT', first.state) // ..
+            const second = match('.', state);
+            if (second.matches) {
+                const third = match('.', second.state);
+                if (third.matches) return simple('DOTDOTDOT', third.state); // ...
+                return simple('DOTDOT', second.state) // ..
             }
             const lower = lowerName(state);
             if (lower.match == null) throw "EXXXX: Unexpected character: '.'";
@@ -225,6 +225,7 @@ function nextToken(state: State): { token: Token, state: State } {
         case '"':  return string(state);
         case '`':  return multilineString(state);
 
+        // TODO not advancing i,col - bug?
         case ' ':  return nextToken(state);
         case '\t': return nextToken(state);
 

@@ -1,4 +1,4 @@
-module String.Extra exposing (indent)
+module String.Extra exposing (at, indent)
 
 
 indent : String -> String
@@ -7,3 +7,11 @@ indent str =
         |> String.lines
         |> List.map (\s -> "    " ++ s)
         |> String.join "\n"
+
+
+at : Int -> String -> Maybe Char
+at n string =
+    string
+        |> String.slice n (n + 1)
+        |> String.toList
+        |> List.head

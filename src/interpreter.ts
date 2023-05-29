@@ -1,6 +1,10 @@
 import {Decl, Stmt, Bang, Typevar, Constructor, Expr, Identifier, LetModifier, Type, Pattern, BinaryOp, RecordExprContent, TypeModifier, ModuleModifier} from './ast.ts';
 import {Env,Envs,Module} from './env.ts';
 import {stringify,arrayEquals,print,eprintln,addToMap} from './util.ts';
+<<<<<<< Updated upstream
+=======
+import {arrayZipper, Location} from 'npm:@thi.ng/zipper';
+>>>>>>> Stashed changes
 
 type State = {
     envs: Envs,
@@ -10,6 +14,7 @@ type State = {
 
 let typeConstructorI = 0;
 
+<<<<<<< Updated upstream
 function getModule(envs: Envs, stack: string[]): Module | null {
     let stackTodo = stack;
     let currentModule = envs.rootModule;
@@ -19,10 +24,24 @@ function getModule(envs: Envs, stack: string[]): Module | null {
         if (next == undefined) return null;
         stackTodo = stack.slice(1);
         currentModule = next;
+=======
+function getModule(envs: Envs, stack: string[]): Location<Module> | null {
+    let stackTodo = stack;
+    let currentModule: Location<Module> | undefined = envs;
+    while (stackTodo.length > 0 && currentModule != null) {
+        const moduleName = stackTodo[0];
+        currentModule = currentModule.down;
+        while (currentModule != null && currentModule.node.name != moduleName) {
+            currentModule = currentModule.right;
+        }
+        if (currentModule == null) return null;
+        stackTodo = stack.slice(1);
+>>>>>>> Stashed changes
     }
     return currentModule;
 }
 
+<<<<<<< Updated upstream
 function mapModule(envs: Envs, stack: string[], fn: (m: Module) => Module): Envs {
     /*
 mapModule : List String -> (Module -> Module) -> Envs -> Maybe Envs
@@ -45,6 +64,19 @@ mapModuleInner path fn mod =
                 { mod | modules = Dict.insert fst new mod.modules }
             )
     */
+=======
+function upmost<T>(z: Location<T>): Location<T> {
+    while (z.up != null) {
+        z = z.up;
+    }
+    return z;
+}
+
+function mapModule(envs: Envs, stack: string[], fn: (m: Module) => Module): Envs {
+    const focused = getModule(envs, stack);
+    if (focused == null) return envs;
+    return upmost(focused.update(fn));
+>>>>>>> Stashed changes
 }
 
 // `a` with items from `b` added. On collision, `b` wins.
@@ -55,6 +87,7 @@ function envAdd(a: Env, b: Env): Env {
     ]);
 }
 
+<<<<<<< Updated upstream
 function rootEnvs(envs: Envs): Envs {
     return {
         ...envs,
@@ -75,6 +108,10 @@ function addToPublic(envs: Envs, addition: Env): Envs {
         modulesToDo = modulesToDo.slice(1);
     }
     return module;
+=======
+function addToPublic(envs: Envs, addition: Env): Envs {
+    return envs.update(m => ({...m, public: envAdd(m.public, addition)}));
+>>>>>>> Stashed changes
 }
 
 function envGet(id: Identifier, envs: Envs): Expr | undefined {
