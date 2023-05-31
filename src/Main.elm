@@ -1,10 +1,11 @@
 port module Main exposing (Flags, Model, Msg, main)
 
-import AST exposing (AST(..), Bang(..), Declaration(..), Expr(..), Statement(..))
-import Effect exposing (Effect)
+import AST exposing (Bang(..), Decl(..), Expr(..), Stmt(..))
+import Effect exposing (Effect0, EffectStr)
 import Env exposing (Env)
 import Error exposing (Error(..))
 import Interpreter
+import Interpreter.Outcome as Interpreter
 import Lexer
 import Parser
 import Tree exposing (Tree)
@@ -27,9 +28,9 @@ type alias Flags =
 
 type Model
     = Done
-      --                  ↓ where to continue afterwards
-      --                  ↓            ↓ what to do
-    | PausedOnEffect Env (Zipper AST) Effect
+    | ExitingWithError
+    | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
+    | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
 
 
 type Msg
@@ -74,10 +75,11 @@ init flags =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
                 --|> Result.map (List.reverse >> List.map (Debug.log ""))
-                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
-                |> Debug.log "Parsed AST"
+                --|> Result.andThen (Parser.parse >> Result.mapError ParserError)
+                --|> Debug.log "Parsed AST"
+                |> identity
 
-        astResult : Result Error (Tree AST)
+        astResult : Result Error AST.Program
         astResult =
             {-
                flags.sourceCode
@@ -92,21 +94,31 @@ init flags =
             finishWithError err
 
         Ok astTree ->
-            case Interpreter.interpret Env.empty (Zipper.fromTree astTree) of
-                Interpreter.DoneInterpreting _ _ _ ->
-                    finish
+            astTree
+                |> Interpreter.interpretProgram Env.initWithIntrinsics
+                |> handleInterpreterOutcome
 
-                Interpreter.FoundError error ->
-                    finishWithError (InterpreterError error)
 
-                Interpreter.NeedsEffect env_ pausedZipper effect ->
-                    pauseOnEffect env_ pausedZipper effect
+handleInterpreterOutcome : Interpreter.Outcome () -> ( Model, Cmd Msg )
+handleInterpreterOutcome outcome =
+    case outcome of
+        Interpreter.DoneInterpreting _ _ ->
+            finish
+
+        Interpreter.FoundError error ->
+            finishWithError (InterpreterError error)
+
+        Interpreter.NeedsEffect0 effect k ->
+            pauseOnEffect0 effect k
+
+        Interpreter.NeedsEffectStr effect k ->
+            pauseOnEffectStr effect k
 
 
 finishWithError : Error -> ( Model, Cmd Msg )
 finishWithError err =
     -- TODO show the location of the error (in Lexer, in Parser, in Interpreter)
-    ( Done, printError err )
+    ( ExitingWithError, printError err )
 
 
 finish : ( Model, Cmd Msg )
@@ -114,10 +126,17 @@ finish =
     ( Done, Cmd.none )
 
 
-pauseOnEffect : Env -> Zipper AST -> Effect -> ( Model, Cmd Msg )
-pauseOnEffect env ast effect =
-    ( PausedOnEffect env ast effect
-    , handleEffect effect
+pauseOnEffect0 : Effect0 -> (() -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
+pauseOnEffect0 effect k =
+    ( PausedOnEffect0 effect (k >> handleInterpreterOutcome)
+    , handleEffect0 effect
+    )
+
+
+pauseOnEffectStr : EffectStr -> (String -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
+pauseOnEffectStr effect k =
+    ( PausedOnEffectStr effect (k >> handleInterpreterOutcome)
+    , handleEffectStr effect
     )
 
 
@@ -126,8 +145,8 @@ printError error =
     eprintln (Error.title error)
 
 
-handleEffect : Effect -> Cmd Msg
-handleEffect effect =
+handleEffect0 : Effect0 -> Cmd Msg
+handleEffect0 effect =
     case effect of
         Effect.Println string ->
             println string
@@ -135,54 +154,52 @@ handleEffect effect =
         Effect.Eprintln string ->
             eprintln string
 
-        Effect.ReadFile r ->
-            readFile r
-
         Effect.WriteFile r ->
             writeFile r
+
+
+handleEffectStr : EffectStr -> Cmd Msg
+handleEffectStr effect =
+    case effect of
+        Effect.ReadFile r ->
+            readFile r
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
         Done ->
-            Debug.todo <| "it's weird we're getting a Msg when we're done: " ++ Debug.toString msg
+            Debug.todo <| "BUG: we're getting a Msg when we're Done: " ++ Debug.toString msg
 
-        PausedOnEffect env pausedZipper effect ->
-            case ( effect, msg ) of
-                ( Effect.Println _, CompletedPrintln ) ->
-                    continueAfterEffect env pausedZipper
-
-                ( Effect.Eprintln _, CompletedEprintln ) ->
-                    continueAfterEffect env pausedZipper
-
-                ( Effect.ReadFile _, CompletedReadFile content ) ->
-                    continueAfterEffectWithString content env pausedZipper
-
-                ( Effect.WriteFile _, CompletedWriteFile ) ->
-                    continueAfterEffect env pausedZipper
+        ExitingWithError ->
+            case msg of
+                CompletedEprintln ->
+                    ( Done, Cmd.none )
 
                 _ ->
-                    Debug.todo <| "msg effect mismatch: " ++ Debug.toString ( effect, msg )
+                    Debug.todo <| "BUG: we're getting a non-eprintln Msg when ExitingWithError: " ++ Debug.toString msg
 
+        PausedOnEffect0 effect k ->
+            case ( effect, msg ) of
+                ( Effect.Println _, CompletedPrintln ) ->
+                    k ()
 
-continueAfterEffect : Env -> Zipper AST -> ( Model, Cmd Msg )
-continueAfterEffect env ast =
-    -- Since we're removing things as they get finished, we can start everything from beginning
-    case Interpreter.interpret (Zipper.root env) (Zipper.root ast) of
-        Interpreter.DoneInterpreting _ _ _ ->
-            finish
+                ( Effect.Eprintln _, CompletedEprintln ) ->
+                    k ()
 
-        Interpreter.FoundError error ->
-            finishWithError (InterpreterError error)
+                ( Effect.WriteFile _, CompletedWriteFile ) ->
+                    k ()
 
-        Interpreter.NeedsEffect env_ pausedZipper effect ->
-            pauseOnEffect env_ pausedZipper effect
+                _ ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
 
+        PausedOnEffectStr effect k ->
+            case ( effect, msg ) of
+                ( Effect.ReadFile _, CompletedReadFile content ) ->
+                    k content
 
-continueAfterEffectWithString : String -> Env -> Zipper AST -> ( Model, Cmd Msg )
-continueAfterEffectWithString _ _ _ =
-    Debug.todo "continueAfterEffectWithString"
+                _ ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
 
 
 subscriptions : Model -> Sub Msg
@@ -195,63 +212,60 @@ subscriptions _ =
         ]
 
 
-hardcodedProgram : Tree AST
+hardcodedProgram : AST.Program
 hardcodedProgram =
     let
-        t =
-            Tree.tree
-
-        s =
-            Tree.singleton
-
         letX n =
-            t (Stmt (LetStmt { name = "x" })) [ s (Expr (Int n)) ]
+            DStatement <| SLet { name = "x", expr = Int n }
 
         prn id =
-            t (Bang CallBang)
-                [ s (Expr (Identifier { qualifiers = [ "IO" ], name = "println" }))
-                , s (Expr (Identifier id))
-                ]
+            DStatement <|
+                SBang <|
+                    BCall
+                        { fn = Identifier { qualifiers = [ "IO" ], name = "println" }
+                        , args = [ Identifier id ]
+                        }
 
         prnRoot id =
-            t (Bang CallBang)
-                [ s (Expr (Identifier { qualifiers = [ "IO" ], name = "println" }))
-                , s (Expr (RootIdentifier id))
-                ]
+            DStatement <|
+                SBang <|
+                    BCall
+                        { fn = Identifier { qualifiers = [ "IO" ], name = "println" }
+                        , args = [ RootIdentifier id ]
+                        }
 
         prnX =
             prn { qualifiers = [], name = "x" }
 
-        module_ name children =
-            t (Decl (Module { name = name })) children
+        module_ name decls =
+            DModule { name = name, decls = decls }
     in
-    t Program
-        [ letX 1
-        , module_ "Foo"
-            [ prnX -- 1
-            , letX 2
-            , prnX -- 2
-            , module_ "Bar"
-                [ prnX -- 2
-                , letX 3
-                , prnX -- 3
-                , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
-                , prnRoot { qualifiers = [], name = "x" } -- 1
-                , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
-                , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
-                ]
-            , prnX -- 2
+    [ letX 1
+    , module_ "Foo"
+        [ prnX -- 1
+        , letX 2
+        , prnX -- 2
+        , module_ "Bar"
+            [ prnX -- 2
+            , letX 3
+            , prnX -- 3
             , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
-            , prn { qualifiers = [ "Bar" ], name = "x" } -- 3
-            , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
             , prnRoot { qualifiers = [], name = "x" } -- 1
             , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
             , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
             ]
-        , prn { qualifiers = [], name = "x" } -- 1
+        , prnX -- 2
         , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
+        , prn { qualifiers = [ "Bar" ], name = "x" } -- 3
         , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
         , prnRoot { qualifiers = [], name = "x" } -- 1
         , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
         , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
         ]
+    , prn { qualifiers = [], name = "x" } -- 1
+    , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
+    , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
+    , prnRoot { qualifiers = [], name = "x" } -- 1
+    , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
+    , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
+    ]

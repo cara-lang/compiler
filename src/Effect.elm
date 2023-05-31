@@ -1,8 +1,14 @@
-module Effect exposing (Effect(..))
+module Effect exposing
+    ( Effect0(..)
+    , EffectStr(..)
+    )
 
 
-type Effect
+type Effect0
     = Println String
     | Eprintln String
-    | ReadFile { filename : String }
     | WriteFile { filename : String, content : String }
+
+
+type EffectStr
+    = ReadFile { filename : String }

@@ -37,11 +37,11 @@ type ParserError
 
 
 type InterpreterError
-    = ExpectedChildNode String
-    | VarNotFound Id
+    = VarNotFound Id
     | RootVarNotFound Id
     | ExpectedModule String
     | ExpectedParent
+    | UnexpectedArity
 
 
 title : Error -> String
@@ -111,10 +111,6 @@ title error =
         InterpreterError interpreterError ->
             "Interpreter error: "
                 ++ (case interpreterError of
-                        ExpectedChildNode node ->
-                            -- TODO error code
-                            "Expected child node " ++ node
-
                         VarNotFound id ->
                             -- TODO error code
                             "Var not found: " ++ Id.toString id
@@ -130,4 +126,8 @@ title error =
                         ExpectedParent ->
                             -- TODO error code
                             "Expected parent"
+
+                        UnexpectedArity ->
+                            -- TODO error code
+                            "Unexpected arity"
                    )

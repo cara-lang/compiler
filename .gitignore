@@ -4,6 +4,6 @@ cara-parser.js
 /node_modules/
 /yarn.lock
 /.vscode/
-/elm-stuff/
+elm-stuff/
 /index.html
 /dist/

@@ -49,11 +49,11 @@ type Type
     | If
     | Then
     | Else
-    | TTrue
-    | TFalse
+    | True_
+    | False_
     | Type
     | Alias
-    | TModule
+    | Module_
     | Private
     | Opaque
     | Extend

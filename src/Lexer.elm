@@ -318,7 +318,7 @@ lower source i row col =
                     token Alias
 
                 "module" ->
-                    token TModule
+                    token Module_
 
                 "private" ->
                     token Private
@@ -346,10 +346,10 @@ upper source i row col =
             else
                 case name of
                     "True" ->
-                        GotToken TTrue i_ row_ col_
+                        GotToken True_ i_ row_ col_
 
                     "False" ->
-                        GotToken TFalse i_ row_ col_
+                        GotToken False_ i_ row_ col_
 
                     _ ->
                         GotToken (UpperName name) i_ row_ col_

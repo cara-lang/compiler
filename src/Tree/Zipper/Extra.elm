@@ -3,6 +3,9 @@ module Tree.Zipper.Extra exposing
     , breadcrumbs
     , findChild
     , isLast
+    , isRoot
+    , mapAtPath
+    , mapRoot
     , navigate
     )
 
@@ -29,19 +32,19 @@ findChild pred zipper =
     go (Zipper.firstChild zipper)
 
 
-navigate : (String -> a -> Bool) -> List String -> Zipper a -> Maybe (Zipper a)
-navigate hasName names zipper =
-    case names of
+navigate : (a -> comparable) -> List comparable -> Zipper a -> Maybe (Zipper a)
+navigate getId ids zipper =
+    case ids of
         [] ->
             Just zipper
 
-        name :: rest ->
-            case findChild (hasName name) zipper of
+        id :: rest ->
+            case findChild (\a -> getId a == id) zipper of
                 Nothing ->
                     Nothing
 
                 Just inChild ->
-                    navigate hasName rest inChild
+                    navigate getId rest inChild
 
 
 isLast : Zipper a -> Bool
@@ -49,19 +52,25 @@ isLast zipper =
     Zipper.forward zipper == Nothing
 
 
+isRoot : Zipper a -> Bool
+isRoot zipper =
+    Zipper.parent zipper == Nothing
+
+
 breadcrumbs : Zipper a -> List a
 breadcrumbs zipper =
     let
-        go : List a -> Maybe (Zipper a) -> List a
-        go acc parent =
-            case parent of
+        go : List a -> Zipper a -> List a
+        go acc current =
+            case Zipper.parent current of
                 Nothing ->
+                    -- We're the root. We don't want the root label in breadcrumbs so let's stop here!
                     acc
 
-                Just parent_ ->
-                    go (Zipper.label parent_ :: acc) (Zipper.parent parent_)
+                Just parent ->
+                    go (Zipper.label current :: acc) parent
     in
-    go [ Zipper.label zipper ] (Zipper.parent zipper)
+    go [] zipper
 
 
 {-| Appends a child (to the end of children), or makes a singleton tree into
@@ -83,8 +92,60 @@ appendChild child zipper =
                     )
 
         Just lastChild ->
-            lastChild
-                |> Zipper.append child
-                |> Zipper.parent
-                -- Shouldn't happen:
-                |> Maybe.withDefault zipper
+            case
+                lastChild
+                    |> Zipper.append child
+                    |> Zipper.parent
+            of
+                Nothing ->
+                    Debug.todo "Couldn't go to a parent after appending a child"
+
+                Just parent ->
+                    parent
+
+
+mapRoot : (a -> comparable) -> (Zipper a -> Zipper a) -> Zipper a -> Zipper a
+mapRoot getId fn zipper =
+    let
+        path : List comparable
+        path =
+            breadcrumbs zipper
+                |> List.map getId
+    in
+    case
+        zipper
+            |> Zipper.root
+            |> fn
+            |> navigate getId path
+    of
+        Nothing ->
+            Debug.todo "mapRoot: Bug: couldn't retrace steps from root to previous focus"
+
+        Just zipper_ ->
+            zipper_
+
+
+mapAtPath : (a -> comparable) -> List comparable -> (Zipper a -> Zipper a) -> Zipper a -> Zipper a
+mapAtPath getId path fn zipper =
+    let
+        originalPath : List comparable
+        originalPath =
+            breadcrumbs zipper
+                |> List.map getId
+    in
+    case
+        zipper
+            |> navigate getId path
+            |> Maybe.andThen
+                (\zipperAtPath ->
+                    zipperAtPath
+                        |> fn
+                        |> Zipper.root
+                        |> navigate getId originalPath
+                )
+    of
+        Nothing ->
+            Debug.todo "mapAtPath: Bug: couldn't retrace steps to original focus"
+
+        Just zipper_ ->
+            zipper_

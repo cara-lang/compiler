@@ -1,4 +1,4 @@
-module Id exposing (Id, isIoPrintln, toString)
+module Id exposing (Id, toString)
 
 
 type alias Id =
@@ -10,15 +10,3 @@ type alias Id =
 toString : Id -> String
 toString id =
     String.join "." (id.qualifiers ++ [ id.name ])
-
-
-isIoPrintln : Id -> Bool
-isIoPrintln id =
-    id == ioPrintln
-
-
-ioPrintln : Id
-ioPrintln =
-    { qualifiers = [ "IO" ]
-    , name = "println"
-    }

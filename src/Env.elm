@@ -1,6 +1,6 @@
 module Env exposing
-    ( Env, empty
-    , add, addModule, open
+    ( Env, initWithIntrinsics
+    , add, addId, addModule, open
     , get
     , toString
     , Module
@@ -8,8 +8,8 @@ module Env exposing
 
 {-|
 
-@docs Env, empty
-@docs add, addModule, open
+@docs Env, initWithIntrinsics
+@docs add, addId, addModule, open
 @docs get
 @docs toString
 @docs Module
@@ -18,11 +18,12 @@ module Env exposing
 
 import Dict exposing (Dict)
 import Id exposing (Id)
+import Intrinsic exposing (Intrinsic)
 import String.Extra as String
 import Tree
 import Tree.Zipper as Zipper exposing (Zipper)
 import Tree.Zipper.Extra as Zipper
-import Value exposing (Value)
+import Value exposing (Value(..))
 
 
 type alias Env =
@@ -37,11 +38,17 @@ type alias Module =
     }
 
 
-empty : Env
-empty =
-    emptyModule "<root>"
+initWithIntrinsics : Env
+initWithIntrinsics =
+    rootModule
         |> Tree.singleton
         |> Zipper.fromTree
+        |> addIntrinsics
+
+
+rootModule : Module
+rootModule =
+    emptyModule "<root>"
 
 
 emptyModule : String -> Module
@@ -51,10 +58,36 @@ emptyModule name =
     }
 
 
+addIntrinsics : Env -> Env
+addIntrinsics env =
+    let
+        addIntrinsic : Intrinsic -> Env -> Env
+        addIntrinsic intrinsic module_ =
+            let
+                id =
+                    Intrinsic.id intrinsic
+            in
+            env
+                |> Zipper.mapRoot .name (addId id (VIntrinsic intrinsic))
+    in
+    Intrinsic.all
+        |> List.foldl addIntrinsic env
+
+
 add : String -> Value -> Env -> Env
 add name value env =
     env
         |> Zipper.mapLabel (\m -> { m | values = Dict.insert name value m.values })
+
+
+addId : Id -> Value -> Env -> Env
+addId id value env =
+    env
+        |> ensurePath id.qualifiers
+        |> Zipper.mapAtPath
+            .name
+            id.qualifiers
+            (add id.name value)
 
 
 addModule : String -> Env -> Env
@@ -67,14 +100,52 @@ addModule name env =
             |> Zipper.mapTree (Tree.appendChild (Tree.singleton (emptyModule name)))
 
 
+ensurePath : List String -> Env -> Env
+ensurePath path env =
+    let
+        goUpNTimes : Int -> Env -> Env
+        goUpNTimes n env_ =
+            if n <= 0 then
+                env_
+
+            else
+                case Zipper.parent env_ of
+                    Nothing ->
+                        Debug.todo "Bug: couldn't go up the specified number of times"
+
+                    Just env__ ->
+                        goUpNTimes (n - 1) env__
+
+        go : List String -> Env -> Env
+        go path_ env_ =
+            case path_ of
+                [] ->
+                    env_
+                        |> goUpNTimes (List.length path)
+
+                m :: rest ->
+                    case
+                        env_
+                            |> addModule m
+                            |> open [ m ]
+                    of
+                        Nothing ->
+                            Debug.todo "Bug: couldn't open a freshly created module"
+
+                        Just newEnv ->
+                            go rest newEnv
+    in
+    go path env
+
+
 open : List String -> Env -> Maybe Env
 open modules env =
-    Zipper.navigate (\name m -> m.name == name) modules env
+    Zipper.navigate .name modules env
 
 
 get : Id -> Env -> Maybe Value
 get id env =
-    Zipper.navigate (\name m -> m.name == name) id.qualifiers env
+    Zipper.navigate .name id.qualifiers env
         |> Maybe.andThen
             (\deepEnv ->
                 (Zipper.label deepEnv).values

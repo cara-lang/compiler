@@ -1,17 +1,17 @@
 module Parser exposing (parse)
 
-import AST exposing (AST(..))
+import AST exposing (..)
 import Error exposing (ParserError(..))
 import List.Zipper as Zipper exposing (Zipper)
 import Token exposing (Token, Type(..))
 import Tree exposing (Tree)
 
 
-type alias Parser =
-    Zipper Token -> Result ParserError ( Tree AST, Zipper Token )
+type alias Parser a =
+    Zipper Token -> Result ParserError ( a, Zipper Token )
 
 
-parse : List Token -> Result ParserError (Tree AST)
+parse : List Token -> Result ParserError AST.Program
 parse tokensList =
     case Zipper.fromList tokensList of
         Nothing ->
@@ -22,35 +22,33 @@ parse tokensList =
                 Err err ->
                     Err err
 
-                Ok ( programAST, tokens_ ) ->
+                Ok ( decls, tokens_ ) ->
                     if isAtEnd tokens_ then
-                        Ok programAST
+                        Ok decls
 
                     else
                         Err ExpectedEOF
 
 
-program : Parser
-program tokens =
-    many
-        Program
-        declaration
-        (tokens |> skipEol)
+program : Parser AST.Program
+program =
+    \tokens ->
+    many declaration (tokens |> skipEol)
 
 
 {-| Consumes 0+ children.
 Never raises an error.
-Returns `Tree AST` with parent as root and containing the parsed children.
 In case a child raises an error, stops looping.
 -}
-many : AST -> Parser -> Parser
-many parent childParser tokens =
+many : Parser a -> Parser (List a)
+many childParser =
+    \tokens ->
     let
-        go : List (Tree AST) -> Parser
+        go : List a -> Parser (List a)
         go acc tokens_ =
             case childParser tokens_ of
                 Err _ ->
-                    Ok ( Tree.tree parent (List.reverse acc), tokens_ )
+                    Ok ( List.reverse acc, tokens_ )
 
                 Ok ( child, tokens__ ) ->
                     go (child :: acc) tokens__
@@ -79,15 +77,15 @@ If the oneOf list runs out, an error will be raised.
 
 -}
 oneOf :
-    { commited : List ( List Token.Type, Parser )
-    , noncommited : List Parser
+    { commited : List ( List Token.Type, Parser a )
+    , noncommited : List (Parser a)
     }
-    -> Parser
+    -> Parser a
 oneOf _ =
     Debug.todo "oneOf"
 
 
-declaration : Parser
+declaration : Parser Decl
 declaration =
     oneOf
         { commited =
@@ -130,55 +128,11 @@ declaration =
         }
 
 
-statementDecl : Parser
+statementDecl : Parser Decl
 statementDecl =
     Debug.todo "Parser: statementDecl"
 
 
-
-{-
-   valueAnnotationDecl : Parser
-   valueAnnotationDecl =
-       Debug.todo "valueAnnotationDecl"
-
-
-   functionDecl : Parser
-   functionDecl =
-       Debug.todo "functionDecl"
-
-
-   binaryOperatorDecl : Parser
-   binaryOperatorDecl =
-       Debug.todo "binaryOperatorDecl"
-
-
-   unaryOperatorDecl : Parser
-   unaryOperatorDecl =
-       Debug.todo "unaryOperatorDecl"
-
-
-   functionAnnotationDecl : Parser
-   functionAnnotationDecl =
-       Debug.todo "functionAnnotationDecl"
-
-
-   typeAliasDecl : Parser
-   typeAliasDecl =
-       Debug.todo "typeAliasDecl"
-
-
-   typeDecl : Parser
-   typeDecl =
-       Debug.todo "typeDecl"
-
-
-   extendModuleDecl : Parser
-   extendModuleDecl =
-       Debug.todo "extendModuleDecl"
-
--}
-
-
-moduleDecl : Parser
+moduleDecl : Parser Decl
 moduleDecl =
     Debug.todo "moduleDecl"
