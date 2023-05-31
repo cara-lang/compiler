@@ -53,7 +53,7 @@ type Type
     | TFalse
     | Type
     | Alias
-    | Module
+    | TModule
     | Private
     | Opaque
     | Extend

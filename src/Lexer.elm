@@ -318,7 +318,7 @@ lower source i row col =
                     token Alias
 
                 "module" ->
-                    token Module
+                    token TModule
 
                 "private" ->
                     token Private

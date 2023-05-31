@@ -1,6 +1,6 @@
 port module Main exposing (Flags, Model, Msg, main)
 
-import AST exposing (AST(..))
+import AST exposing (AST(..), Bang(..), Declaration(..), Expr(..), Statement(..))
 import Effect exposing (Effect)
 import Env exposing (Env)
 import Error exposing (Error(..))
@@ -105,6 +105,7 @@ init flags =
 
 finishWithError : Error -> ( Model, Cmd Msg )
 finishWithError err =
+    -- TODO show the location of the error (in Lexer, in Parser, in Interpreter)
     ( Done, printError err )
 
 
@@ -204,15 +205,27 @@ hardcodedProgram =
             Tree.singleton
 
         letX n =
-            t (Let { name = "x" }) [ s (Int n) ]
+            t (Stmt (LetStmt { name = "x" })) [ s (Expr (Int n)) ]
+
+        prn id =
+            t (Bang CallBang)
+                [ s (Expr (Identifier { qualifiers = [ "IO" ], name = "println" }))
+                , s (Expr (Identifier id))
+                ]
+
+        prnRoot id =
+            t (Bang CallBang)
+                [ s (Expr (Identifier { qualifiers = [ "IO" ], name = "println" }))
+                , s (Expr (RootIdentifier id))
+                ]
 
         prnX =
-            t Println [ s (Var { qualifiers = [], name = "x" }) ]
+            prn { qualifiers = [], name = "x" }
 
         module_ name children =
-            t (Module { name = name }) children
+            t (Decl (Module { name = name })) children
     in
-    t (Program { filename = "main.cara" })
+    t Program
         [ letX 1
         , module_ "Foo"
             [ prnX -- 1
@@ -222,23 +235,23 @@ hardcodedProgram =
                 [ prnX -- 2
                 , letX 3
                 , prnX -- 3
-                , t Println [ s (Var { qualifiers = [ "Foo" ], name = "x" }) ] -- 2
-                , t Println [ s (RootVar { qualifiers = [], name = "x" }) ] -- 1
-                , t Println [ s (RootVar { qualifiers = [ "Foo" ], name = "x" }) ] -- 2
-                , t Println [ s (RootVar { qualifiers = [ "Foo", "Bar" ], name = "x" }) ] -- 3
+                , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
+                , prnRoot { qualifiers = [], name = "x" } -- 1
+                , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
+                , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
                 ]
-            , t Println [ s (Var { qualifiers = [], name = "x" }) ] -- 2
-            , t Println [ s (Var { qualifiers = [ "Foo" ], name = "x" }) ] -- 2
-            , t Println [ s (Var { qualifiers = [ "Bar" ], name = "x" }) ] -- 3
-            , t Println [ s (Var { qualifiers = [ "Foo", "Bar" ], name = "x" }) ] -- 3
-            , t Println [ s (RootVar { qualifiers = [], name = "x" }) ] -- 1
-            , t Println [ s (RootVar { qualifiers = [ "Foo" ], name = "x" }) ] -- 2
-            , t Println [ s (RootVar { qualifiers = [ "Foo", "Bar" ], name = "x" }) ] -- 3
+            , prnX -- 2
+            , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
+            , prn { qualifiers = [ "Bar" ], name = "x" } -- 3
+            , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
+            , prnRoot { qualifiers = [], name = "x" } -- 1
+            , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
+            , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
             ]
-        , t Println [ s (Var { qualifiers = [], name = "x" }) ] -- 1
-        , t Println [ s (Var { qualifiers = [ "Foo" ], name = "x" }) ] -- 2
-        , t Println [ s (Var { qualifiers = [ "Foo", "Bar" ], name = "x" }) ] -- 3
-        , t Println [ s (RootVar { qualifiers = [], name = "x" }) ] -- 1
-        , t Println [ s (RootVar { qualifiers = [ "Foo" ], name = "x" }) ] -- 2
-        , t Println [ s (RootVar { qualifiers = [ "Foo", "Bar" ], name = "x" }) ] -- 3
+        , prn { qualifiers = [], name = "x" } -- 1
+        , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
+        , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
+        , prnRoot { qualifiers = [], name = "x" } -- 1
+        , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
+        , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
         ]

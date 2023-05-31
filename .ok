@@ -1,5 +1,5 @@
 check: deno check test.ts src/*.ts 2>&1
 test:  ./test.ts 2>&1 | less
 
-elm: yarn elm-esm make src/Main.elm --output=dist/elm.js && ./src/index.ts
+elm: clr && yarn elm-esm make src/Main.elm --output=dist/elm.js && ./src/index.ts
 

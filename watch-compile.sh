@@ -4,7 +4,8 @@ COLOR_OFF="\e[0m";
 DIM="\e[2m";
 
 function compile {
-  deno check test.ts src/*.ts 2>&1
+  # deno check test.ts src/*.ts 2>&1
+  yarn elm-esm make src/Main.elm --output=dist/elm.js && ./src/index.ts
 }
 
 function run {

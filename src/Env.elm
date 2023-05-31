@@ -16,8 +16,8 @@ module Env exposing
 
 -}
 
-import AST exposing (Id)
 import Dict exposing (Dict)
+import Id exposing (Id)
 import String.Extra as String
 import Tree
 import Tree.Zipper as Zipper exposing (Zipper)

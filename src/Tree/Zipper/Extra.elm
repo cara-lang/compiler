@@ -1,10 +1,12 @@
 module Tree.Zipper.Extra exposing
-    ( breadcrumbs
+    ( appendChild
+    , breadcrumbs
     , findChild
     , isLast
     , navigate
     )
 
+import Tree exposing (Tree)
 import Tree.Zipper as Zipper exposing (Zipper)
 
 
@@ -60,3 +62,29 @@ breadcrumbs zipper =
                     go (Zipper.label parent_ :: acc) (Zipper.parent parent_)
     in
     go [ Zipper.label zipper ] (Zipper.parent zipper)
+
+
+{-| Appends a child (to the end of children), or makes a singleton tree into
+a tree with a single child.
+
+Keeps focus on the parent.
+
+-}
+appendChild : Tree a -> Zipper a -> Zipper a
+appendChild child zipper =
+    case Zipper.lastChild zipper of
+        Nothing ->
+            zipper
+                |> Zipper.mapTree
+                    (\t ->
+                        Tree.tree
+                            (Tree.label t)
+                            [ child ]
+                    )
+
+        Just lastChild ->
+            lastChild
+                |> Zipper.append child
+                |> Zipper.parent
+                -- Shouldn't happen:
+                |> Maybe.withDefault zipper

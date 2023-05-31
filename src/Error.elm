@@ -6,7 +6,7 @@ module Error exposing
     , title
     )
 
-import AST exposing (Id)
+import Id exposing (Id)
 
 
 type Error
@@ -32,7 +32,8 @@ type LexerError
 
 
 type ParserError
-    = TodoParserError
+    = ExpectedNonemptyTokens
+    | ExpectedEOF
 
 
 type InterpreterError
@@ -47,76 +48,86 @@ title : Error -> String
 title error =
     case error of
         LexerError lexerError ->
-            case lexerError of
-                NonterminatedChar ->
-                    -- TODO error code
-                    "EXXXX: Nonterminated character"
+            "Lexer error: "
+                ++ (case lexerError of
+                        NonterminatedChar ->
+                            -- TODO error code
+                            "EXXXX: Nonterminated character"
 
-                NonterminatedMultilineString ->
-                    -- TODO error code
-                    "EXXXX: Nonterminated multiline string"
+                        NonterminatedMultilineString ->
+                            -- TODO error code
+                            "EXXXX: Nonterminated multiline string"
 
-                EmptyChar ->
-                    "E0019: Empty character"
+                        EmptyChar ->
+                            "E0019: Empty character"
 
-                UnescapedTabInChar ->
-                    "E0018: Unescaped tab in a character"
+                        UnescapedTabInChar ->
+                            "E0018: Unescaped tab in a character"
 
-                UnexpectedEscapedCharacterInChar _ ->
-                    "E0028: Unexpected escaped character in a character"
+                        UnexpectedEscapedCharacterInChar _ ->
+                            "E0028: Unexpected escaped character in a character"
 
-                UnexpectedEscapedCharacterInMultilineString _ ->
-                    "E0029: Unexpected escaped character in a multi-line string"
+                        UnexpectedEscapedCharacterInMultilineString _ ->
+                            "E0029: Unexpected escaped character in a multi-line string"
 
-                ExpectedLowerName ->
-                    -- TODO error code
-                    "Expected lower name"
+                        ExpectedLowerName ->
+                            -- TODO error code
+                            "Expected lower name"
 
-                ExpectedUpperName ->
-                    -- TODO error code
-                    "Expected upper name"
+                        ExpectedUpperName ->
+                            -- TODO error code
+                            "Expected upper name"
 
-                ExpectedNumber ->
-                    -- TODO error code
-                    "Expected number"
+                        ExpectedNumber ->
+                            -- TODO error code
+                            "Expected number"
 
-                UnexpectedChar c ->
-                    -- TODO error code
-                    "Unexpected character: '{CHAR}'"
-                        |> String.replace "{CHAR}" (String.fromChar c)
+                        UnexpectedChar c ->
+                            -- TODO error code
+                            "Unexpected character: '{CHAR}'"
+                                |> String.replace "{CHAR}" (String.fromChar c)
 
-                HexIntStartedWith0X ->
-                    "E0024: Hexadecimal integer started with 0X"
+                        HexIntStartedWith0X ->
+                            "E0024: Hexadecimal integer started with 0X"
 
-                BinaryIntStartedWith0X ->
-                    "E0025: Binary integer started with 0B"
+                        BinaryIntStartedWith0X ->
+                            "E0025: Binary integer started with 0B"
 
-                OctalIntStartedWith0X ->
-                    "E0026: Octal integer started with 0O"
+                        OctalIntStartedWith0X ->
+                            "E0026: Octal integer started with 0O"
+                   )
 
         ParserError parserError ->
-            case parserError of
-                TodoParserError ->
-                    "TodoParserError"
+            "Parser error: "
+                ++ (case parserError of
+                        ExpectedNonemptyTokens ->
+                            -- Shouldn't happen
+                            "Expected nonempty tokens"
+
+                        ExpectedEOF ->
+                            "Expected EOF"
+                   )
 
         InterpreterError interpreterError ->
-            case interpreterError of
-                ExpectedChildNode node ->
-                    -- TODO error code
-                    "Expected child node " ++ node
+            "Interpreter error: "
+                ++ (case interpreterError of
+                        ExpectedChildNode node ->
+                            -- TODO error code
+                            "Expected child node " ++ node
 
-                VarNotFound id ->
-                    -- TODO error code
-                    "Var not found: " ++ AST.idToString id
+                        VarNotFound id ->
+                            -- TODO error code
+                            "Var not found: " ++ Id.toString id
 
-                RootVarNotFound id ->
-                    -- TODO error code
-                    "Root var not found: " ++ AST.idToString id
+                        RootVarNotFound id ->
+                            -- TODO error code
+                            "Root var not found: " ++ Id.toString id
 
-                ExpectedModule module_ ->
-                    -- TODO error code
-                    "Expected module " ++ module_
+                        ExpectedModule module_ ->
+                            -- TODO error code
+                            "Expected module " ++ module_
 
-                ExpectedParent ->
-                    -- TODO error code
-                    "Expected parent"
+                        ExpectedParent ->
+                            -- TODO error code
+                            "Expected parent"
+                   )
