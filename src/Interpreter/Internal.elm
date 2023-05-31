@@ -1,7 +1,7 @@
 module Interpreter.Internal exposing
     ( Interpreter
     , succeed, fail
-    , map, mapOutcome, contramap, andThen
+    , map, contramap, andThen
     , traverse
     )
 
@@ -9,7 +9,7 @@ module Interpreter.Internal exposing
 
 @docs Interpreter
 @docs succeed, fail
-@docs map, mapOutcome, contramap, andThen
+@docs map, contramap, andThen
 @docs traverse
 
 -}
@@ -33,16 +33,11 @@ fail err =
     \_ _ -> FoundError err
 
 
-map : (Outcome b -> Outcome bb) -> Interpreter a b -> Interpreter a bb
+map : (b -> bb) -> Interpreter a b -> Interpreter a bb
 map fn interpreter =
     \env a ->
         interpreter env a
-            |> fn
-
-
-mapOutcome : (b -> bb) -> Interpreter a b -> Interpreter a bb
-mapOutcome fn =
-    map (Outcome.map fn)
+            |> Outcome.map fn
 
 
 {-| This could be:

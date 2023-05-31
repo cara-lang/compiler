@@ -16,7 +16,7 @@ import Value exposing (Value(..))
 interpretProgram : Interpreter AST.Program ()
 interpretProgram =
     Interpreter.traverse interpretDecl
-        |> Interpreter.mapOutcome (\_ -> ())
+        |> Interpreter.map (\_ -> ())
 
 
 interpretDecl : Interpreter Decl ()
