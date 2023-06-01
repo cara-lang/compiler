@@ -39,22 +39,30 @@ parse tokensList =
 program : Parser AST.Program
 program =
     Parser.skipEol
-        |> Parser.andThen (\_ -> Parser.many declaration)
+        |> Parser.andThen
+            (\_ ->
+                Parser.many
+                    (Parser.succeed identity
+                        |> Parser.keep declaration
+                        |> Parser.skip Parser.skipEol
+                    )
+            )
 
 
 declaration : Parser Decl
 declaration =
     Parser.oneOf
         { commited =
-            [{- ( [ T Private, T Type, T Alias ], typeAliasDecl )
-                , ( [ T Type, T Alias ], typeAliasDecl )
-                , ( [ T Private,T Type ], typeDecl )
-                , ( [ T Opaque,T Type ], typeDecl )
-                , ( [ T Type ], typeDecl )
-                , ( [ T Extend,T Module_ ], extendModuleDecl )
-                , ( [ T Private,T Module_ ], moduleDecl )
-                , ( [ T Module_ ], moduleDecl )
-             -}
+            [ {- ( [ T Private, T Type, T Alias ], typeAliasDecl )
+                 , ( [ T Type, T Alias ], typeAliasDecl )
+                 , ( [ T Private,T Type ], typeDecl )
+                 , ( [ T Opaque,T Type ], typeDecl )
+                 , ( [ T Type ], typeDecl )
+                 , ( [ T Extend,T Module ], extendModuleDecl )
+                 , ( [ T Private,T Module ], moduleDecl )
+                 ,
+              -}
+              ( [ T Module ], moduleDecl )
             ]
         , noncommited =
             [ -- x = 123
@@ -91,10 +99,47 @@ statementDecl =
         |> Parser.map DStatement
 
 
+{-|
+
+    : PRIVATE? MODULE UPPER_NAME LBRACE (EOL+ declaration)+ EOL+ RBRACE
+
+-}
 moduleDecl : Parser Decl
 moduleDecl =
-    \tokens ->
-        Debug.todo "moduleDecl"
+    Parser.succeed
+        (\mod name decls ->
+            DModule
+                { mod = mod
+                , name = name
+                , decls = decls
+                }
+        )
+        |> Parser.keep
+            -- PRIVATE?
+            (Parser.maybe (Parser.token Private)
+                |> Parser.map
+                    (\maybePrivate ->
+                        case maybePrivate of
+                            Nothing ->
+                                ModuleNoModifier
+
+                            Just () ->
+                                ModulePrivate
+                    )
+            )
+        |> Parser.skip (Parser.token Module)
+        |> Parser.keep upperName
+        |> Parser.skip (Parser.token LBrace)
+        |> Parser.keep
+            -- (EOL+ declaration)+
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.skip Parser.skipEol
+                    |> Parser.keep (Parser.lazy (\() -> declaration))
+                )
+            )
+        |> Parser.skip Parser.skipEol
+        |> Parser.skip (Parser.token RBrace)
 
 
 statement : Parser Stmt
@@ -298,7 +343,10 @@ prefixExpr =
                , ( [ T LHole ], holeLambdaExpr )
                , ( [ T Underscore ], holeExpr )
                , ( [ T Hole ], holeExpr )
-               , ( [ T ColonColon ], rootIdentifierExpr )
+            -}
+            , ( [ T ColonColon ], rootIdentifierExpr )
+
+            {-
                , ( [ T Minus ], unaryOpExpr Minus NegateNum )
                , ( [ T Bang ], unaryOpExpr Bang NegateBool )
                , ( [ T Tilde ], unaryOpExpr Tilde NegateBin )
@@ -431,6 +479,21 @@ identifierExpr =
 
 {-|
 
+    : COLONCOLON lowerIdentifier
+    = ::foo
+    = ::Foo.bar
+    = ::Foo.Bar.baz
+
+-}
+rootIdentifierExpr : Parser Expr
+rootIdentifierExpr =
+    Parser.succeed RootIdentifier
+        |> Parser.skip (Parser.token ColonColon)
+        |> Parser.keep lowerIdentifier
+
+
+{-|
+
     : QUALIFIER* LOWER_NAME
     = foo
     = Foo.bar
@@ -452,3 +515,8 @@ qualifier =
 lowerName : Parser String
 lowerName =
     Parser.tokenData Token.getLowerName
+
+
+upperName : Parser String
+upperName =
+    Parser.tokenData Token.getUpperName

@@ -1,6 +1,6 @@
 module Env exposing
     ( Env, initWithIntrinsics
-    , add, addId, addModule, open
+    , add, addId, addDict, createModule, open
     , get
     , toString
     , Module
@@ -9,7 +9,7 @@ module Env exposing
 {-|
 
 @docs Env, initWithIntrinsics
-@docs add, addId, addModule, open
+@docs add, addId, addDict, createModule, open
 @docs get
 @docs toString
 @docs Module
@@ -17,6 +17,7 @@ module Env exposing
 -}
 
 import Dict exposing (Dict)
+import EnvDict exposing (EnvDict)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
 import String.Extra as String
@@ -90,8 +91,15 @@ addId id value env =
             (add id.name value)
 
 
-addModule : String -> Env -> Env
-addModule name env =
+addDict : EnvDict -> Env -> Env
+addDict dict env =
+    dict
+        |> EnvDict.toList
+        |> List.foldl (\( id, value ) env_ -> addId id value env_) env
+
+
+createModule : String -> Env -> Env
+createModule name env =
     if List.any (\m -> (Tree.label m).name == name) (Zipper.children env) then
         env
 
@@ -126,7 +134,7 @@ ensurePath path env =
                 m :: rest ->
                     case
                         env_
-                            |> addModule m
+                            |> createModule m
                             |> open [ m ]
                     of
                         Nothing ->

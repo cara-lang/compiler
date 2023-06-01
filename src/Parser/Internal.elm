@@ -4,9 +4,10 @@ module Parser.Internal exposing
     , map, map2, andThen, skip, keep
     , many, separatedList, nonSeparatedList
     , maybe, butNot
+    , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, ifNextIs
-    , logCurrentBefore, logCurrentAround, logCurrentAfter
+    , logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
     , TokenPred(..), oneOf
     , InfixParserTable, InfixParser, pratt
     )
@@ -18,9 +19,10 @@ module Parser.Internal exposing
 @docs map, map2, andThen, skip, keep
 @docs many, separatedList, nonSeparatedList
 @docs maybe, butNot
+@docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
 @docs token, tokenData, peekToken, ifNextIs
-@docs logCurrentBefore, logCurrentAround, logCurrentAfter
+@docs logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
 @docs TokenPred, oneOf
 @docs InfixParserTable, InfixParser, pratt
 
@@ -429,10 +431,16 @@ peekToken =
         Ok ( (Zipper.current tokens).type_, tokens )
 
 
+logCurrent : String -> Parser ()
+logCurrent label =
+    succeed ()
+        |> skip (peekToken |> map (Debug.log label))
+
+
 logCurrentBefore : String -> Parser a -> Parser a
 logCurrentBefore label parser =
     succeed identity
-        |> skip (peekToken |> map (Debug.log label))
+        |> skip (logCurrent label)
         |> keep parser
 
 
@@ -440,12 +448,18 @@ logCurrentAfter : String -> Parser a -> Parser a
 logCurrentAfter label parser =
     succeed identity
         |> keep parser
-        |> skip (peekToken |> map (Debug.log label))
+        |> skip (logCurrent label)
 
 
 logCurrentAround : String -> Parser a -> Parser a
 logCurrentAround label parser =
     succeed identity
-        |> skip (peekToken |> map (Debug.log (label ++ " - before")))
+        |> skip (logCurrent (label ++ " - before"))
         |> keep parser
-        |> skip (peekToken |> map (Debug.log (label ++ " - after")))
+        |> skip (logCurrent (label ++ " - after"))
+
+
+lazy : (() -> Parser a) -> Parser a
+lazy fn =
+    \tokens ->
+        fn () tokens

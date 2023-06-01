@@ -6,6 +6,7 @@ import AST
         , Decl(..)
         , Expr(..)
         , LetModifier(..)
+        , ModuleModifier(..)
         , Pattern(..)
         , Stmt(..)
         )
@@ -79,23 +80,12 @@ port completedWriteFile : (() -> msg) -> Sub msg
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        _ =
-            flags.sourceCode
-                |> (Lexer.lex >> Result.mapError LexerError)
-                --|> Result.map (List.reverse >> List.map (Debug.log ""))
-                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
-                |> Debug.log "Parsed AST"
-                |> identity
-
         astResult : Result Error AST.Program
         astResult =
-            {-
-               flags.sourceCode
-                   |> (Lexer.lex >> Result.mapError LexerError)
-                   |> Result.andThen (Parser.parse >> Result.mapError ParserError)
-                   |> Debug.log "AST result"
-            -}
-            Ok hardcodedProgram
+            --Ok hardcodedProgram
+            flags.sourceCode
+                |> (Lexer.lex >> Result.mapError LexerError)
+                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
     case astResult of
         Err err ->
@@ -252,7 +242,7 @@ hardcodedProgram =
             prn { qualifiers = [], name = "x" }
 
         module_ name decls =
-            DModule { name = name, decls = decls }
+            DModule { mod = ModuleNoModifier, name = name, decls = decls }
     in
     [ letX 1
     , module_ "Foo"

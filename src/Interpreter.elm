@@ -3,6 +3,7 @@ module Interpreter exposing (interpretProgram)
 import AST exposing (..)
 import Effect exposing (Effect0, EffectStr)
 import Env exposing (Env)
+import EnvDict exposing (EnvDict)
 import Error exposing (InterpreterError(..))
 import Id exposing (Id)
 import Interpreter.Internal as Interpreter exposing (Interpreter)
@@ -92,16 +93,42 @@ interpretLet :
         ()
 interpretLet =
     \env { lhs, expr } ->
+        -- TODO interpret the modifier
+        -- TODO interpret the type
         interpretExpr env expr
+            |> Outcome.map (\value -> ( lhs, value ))
+            |> Interpreter.andThen interpretPattern
             |> Outcome.mapBoth
-                (\env_ value ->
-                    Debug.todo "interpretLet: use interpretPattern"
-                 {-
-                    ( env |> Env.add name value
-                    , ()
-                    )
-                 -}
+                (\env_ envAdditions ->
+                    case envAdditions of
+                        Nothing ->
+                            Debug.todo "Pattern didn't match the expr. TODO Report this as user error?"
+
+                        Just additions ->
+                            ( env_ |> Env.addDict additions
+                            , ()
+                            )
                 )
+
+
+{-| Returns (NEW) env additions, instead of the whole env.
+Nothing is returned if the pattern doesn't match the expr.
+-}
+interpretPattern : Interpreter ( Pattern, Value ) (Maybe EnvDict)
+interpretPattern =
+    \env ( pattern, value ) ->
+        case pattern of
+            PVar var ->
+                Outcome.succeed env
+                    (Just
+                        (EnvDict.singleton
+                            { qualifiers = [], name = var }
+                            value
+                        )
+                    )
+
+            _ ->
+                Debug.todo "interpret pattern - other"
 
 
 interpretExpr : Interpreter Expr Value
@@ -156,14 +183,15 @@ interpretRootIdentifier =
                 Outcome.succeed env value
 
 
-interpretModule : Interpreter { name : String, decls : List Decl } ()
+interpretModule : Interpreter { mod : ModuleModifier, name : String, decls : List Decl } ()
 interpretModule =
-    \env { name, decls } ->
+    \env { mod, name, decls } ->
+        -- TODO handle the modifier
         let
             envWithOpenModule : Maybe Env
             envWithOpenModule =
                 env
-                    |> Env.addModule name
+                    |> Env.createModule name
                     |> Env.open [ name ]
         in
         case envWithOpenModule of

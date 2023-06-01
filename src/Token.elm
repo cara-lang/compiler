@@ -76,7 +76,7 @@ type Type
     | False_
     | Type
     | Alias
-    | Module_
+    | Module
     | Private
     | Opaque
     | Extend

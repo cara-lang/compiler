@@ -3,6 +3,7 @@ module AST exposing
     , Decl(..)
     , Expr(..)
     , LetModifier(..)
+    , ModuleModifier(..)
     , Pattern(..)
     , Program
     , Stmt(..)
@@ -92,7 +93,7 @@ type LetModifier
 type Decl
     = DTypeAlias { name : String, body : Type } -- TODO mod, vars
     | DTypeDecl { name : String, constructors : List Constructor } --  TODO mod, vars
-    | DModule { name : String, decls : List Decl } -- TODO mod
+    | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }
     | DFunction { name : String, body : Expr } -- TODO mod, args, resultType
     | DBinaryOperator { op : BinaryOp, body : Expr } -- TODO mod, left, right, resultType
@@ -100,6 +101,11 @@ type Decl
     | DStatement Stmt
     | DValueAnnotation { name : String, type_ : Type }
     | DFunctionAnnotation { name : String, resultType : Type } -- TODO mod, args
+
+
+type ModuleModifier
+    = ModuleNoModifier
+    | ModulePrivate
 
 
 type alias CaseBranch =

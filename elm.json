@@ -8,6 +8,7 @@
         "direct": {
             "elm/core": "1.0.5",
             "elm/json": "1.1.3",
+            "turboMaCk/any-dict": "2.6.0",
             "wernerdegroot/listzipper": "4.0.0",
             "zwilias/elm-rosetree": "1.5.0"
         },
