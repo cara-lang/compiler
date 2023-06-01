@@ -82,7 +82,6 @@ init flags =
     let
         astResult : Result Error AST.Program
         astResult =
-            --Ok hardcodedProgram
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
@@ -208,68 +207,3 @@ subscriptions _ =
         , completedReadFile CompletedReadFile
         , completedWriteFile (\_ -> CompletedWriteFile)
         ]
-
-
-hardcodedProgram : AST.Program
-hardcodedProgram =
-    let
-        letX n =
-            DStatement <|
-                SLet
-                    { mod = LetNoModifier
-                    , lhs = PVar "x"
-                    , type_ = Nothing
-                    , expr = Int n
-                    }
-
-        prn id =
-            DStatement <|
-                SBang <|
-                    BCall
-                        { fn = Identifier { qualifiers = [ "IO" ], name = "println" }
-                        , args = [ Identifier id ]
-                        }
-
-        prnRoot id =
-            DStatement <|
-                SBang <|
-                    BCall
-                        { fn = Identifier { qualifiers = [ "IO" ], name = "println" }
-                        , args = [ RootIdentifier id ]
-                        }
-
-        prnX =
-            prn { qualifiers = [], name = "x" }
-
-        module_ name decls =
-            DModule { mod = ModuleNoModifier, name = name, decls = decls }
-    in
-    [ letX 1
-    , module_ "Foo"
-        [ prnX -- 1
-        , letX 2
-        , prnX -- 2
-        , module_ "Bar"
-            [ prnX -- 2
-            , letX 3
-            , prnX -- 3
-            , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
-            , prnRoot { qualifiers = [], name = "x" } -- 1
-            , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
-            , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
-            ]
-        , prnX -- 2
-        , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
-        , prn { qualifiers = [ "Bar" ], name = "x" } -- 3
-        , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
-        , prnRoot { qualifiers = [], name = "x" } -- 1
-        , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
-        , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
-        ]
-    , prn { qualifiers = [], name = "x" } -- 1
-    , prn { qualifiers = [ "Foo" ], name = "x" } -- 2
-    , prn { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
-    , prnRoot { qualifiers = [], name = "x" } -- 1
-    , prnRoot { qualifiers = [ "Foo" ], name = "x" } -- 2
-    , prnRoot { qualifiers = [ "Foo", "Bar" ], name = "x" } -- 3
-    ]
