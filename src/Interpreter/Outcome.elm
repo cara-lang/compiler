@@ -1,14 +1,16 @@
 module Interpreter.Outcome exposing
     ( Outcome(..)
     , succeed, fail
-    , map, mapBoth, andThen
+    , map, mapBoth, mapEnv, attemptMapEnv
+    , andThen
     )
 
 {-|
 
 @docs Outcome
 @docs succeed, fail
-@docs map, mapBoth, andThen
+@docs map, mapBoth, mapEnv, attemptMapEnv
+@docs andThen
 
 -}
 
@@ -65,6 +67,43 @@ mapBoth fn outcome =
 
         NeedsEffectStr eff k ->
             NeedsEffectStr eff (k >> mapBoth fn)
+
+        FoundError err ->
+            FoundError err
+
+
+mapEnv : (Env -> Env) -> Outcome a -> Outcome a
+mapEnv fn outcome =
+    case outcome of
+        DoneInterpreting env a ->
+            DoneInterpreting (fn env) a
+
+        NeedsEffect0 eff k ->
+            NeedsEffect0 eff (k >> mapEnv fn)
+
+        NeedsEffectStr eff k ->
+            NeedsEffectStr eff (k >> mapEnv fn)
+
+        FoundError err ->
+            FoundError err
+
+
+attemptMapEnv : (Env -> Maybe Env) -> InterpreterError -> Outcome a -> Outcome a
+attemptMapEnv fn error outcome =
+    case outcome of
+        DoneInterpreting env a ->
+            case fn env of
+                Nothing ->
+                    FoundError error
+
+                Just env_ ->
+                    DoneInterpreting env_ a
+
+        NeedsEffect0 eff k ->
+            NeedsEffect0 eff (k >> attemptMapEnv fn error)
+
+        NeedsEffectStr eff k ->
+            NeedsEffectStr eff (k >> attemptMapEnv fn error)
 
         FoundError err ->
             FoundError err

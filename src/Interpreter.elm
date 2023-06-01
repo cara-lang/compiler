@@ -201,6 +201,7 @@ interpretModule =
 
             Just envWithOpenModule_ ->
                 interpretProgram envWithOpenModule_ decls
+                    |> Outcome.attemptMapEnv Env.goUp ExpectedParent
 
 
 interpretPrintln : Interpreter Value ()

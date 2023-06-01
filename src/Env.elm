@@ -1,17 +1,17 @@
 module Env exposing
     ( Env, initWithIntrinsics
-    , add, addId, addDict, createModule, open
-    , get
-    , toString
+    , add, addId, addDict, createModule
+    , open, goUp
+    , get, toString
     , Module
     )
 
 {-|
 
 @docs Env, initWithIntrinsics
-@docs add, addId, addDict, createModule, open
-@docs get
-@docs toString
+@docs add, addId, addDict, createModule
+@docs open, goUp
+@docs get, toString
 @docs Module
 
 -}
@@ -194,3 +194,8 @@ moduleToString module_ =
                     )
                 |> String.join "\n"
             )
+
+
+goUp : Env -> Maybe Env
+goUp env =
+    Zipper.parent env
