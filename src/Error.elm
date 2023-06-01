@@ -7,6 +7,7 @@ module Error exposing
     )
 
 import Id exposing (Id)
+import Token
 
 
 type Error
@@ -34,6 +35,13 @@ type LexerError
 type ParserError
     = ExpectedNonemptyTokens
     | ExpectedEOF
+    | RanPastEndOfTokens
+    | CouldntGetTokenData
+    | ExpectedToken Token.Type
+    | AssignmentOfExprToUnderscore
+    | DidntGetInfixParser
+    | EmptyOneOf
+    | OneOfDidntMatch
 
 
 type InterpreterError
@@ -101,11 +109,40 @@ title error =
             "Parser error: "
                 ++ (case parserError of
                         ExpectedNonemptyTokens ->
+                            -- TODO error code
                             -- Shouldn't happen
                             "Expected nonempty tokens"
 
                         ExpectedEOF ->
+                            -- TODO error code
                             "Expected EOF"
+
+                        RanPastEndOfTokens ->
+                            -- TODO error code
+                            "Ran past end of tokens"
+
+                        CouldntGetTokenData ->
+                            -- TODO error code
+                            "Couldn't get token data"
+
+                        ExpectedToken t ->
+                            -- TODO error code
+                            "Expected token: " ++ Debug.toString t
+
+                        AssignmentOfExprToUnderscore ->
+                            "E0013: Assignment of expression to underscore"
+
+                        DidntGetInfixParser ->
+                            -- TODO error code
+                            "Shouldn't be surfaced to the user: we didn't get an infix parser, stop trying to chomp in pratt"
+
+                        EmptyOneOf ->
+                            -- TODO error code
+                            "oneOf was given empty list of parsers to try"
+
+                        OneOfDidntMatch ->
+                            -- TODO error code
+                            "oneOf didn't match anything"
                    )
 
         InterpreterError interpreterError ->

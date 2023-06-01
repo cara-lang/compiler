@@ -1,6 +1,14 @@
 port module Main exposing (Flags, Model, Msg, main)
 
-import AST exposing (Bang(..), Decl(..), Expr(..), Stmt(..))
+import AST
+    exposing
+        ( Bang(..)
+        , Decl(..)
+        , Expr(..)
+        , LetModifier(..)
+        , Pattern(..)
+        , Stmt(..)
+        )
 import Effect exposing (Effect0, EffectStr)
 import Env exposing (Env)
 import Error exposing (Error(..))
@@ -75,8 +83,8 @@ init flags =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
                 --|> Result.map (List.reverse >> List.map (Debug.log ""))
-                --|> Result.andThen (Parser.parse >> Result.mapError ParserError)
-                --|> Debug.log "Parsed AST"
+                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+                |> Debug.log "Parsed AST"
                 |> identity
 
         astResult : Result Error AST.Program
@@ -216,7 +224,13 @@ hardcodedProgram : AST.Program
 hardcodedProgram =
     let
         letX n =
-            DStatement <| SLet { name = "x", expr = Int n }
+            DStatement <|
+                SLet
+                    { mod = LetNoModifier
+                    , lhs = PVar "x"
+                    , type_ = Nothing
+                    , expr = Int n
+                    }
 
         prn id =
             DStatement <|

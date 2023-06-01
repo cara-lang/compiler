@@ -2,6 +2,7 @@ module AST exposing
     ( Bang(..)
     , Decl(..)
     , Expr(..)
+    , LetModifier(..)
     , Pattern(..)
     , Program
     , Stmt(..)
@@ -78,10 +79,14 @@ type Bang
 
 
 type Stmt
-    = -- TODO modifiers, types, lhs is Pattern instead of just a name
-      SLet { name : String, expr : Expr }
-    | SLetBang { name : String, bang : Bang }
+    = SLet { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, expr : Expr }
+    | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
+
+
+type LetModifier
+    = LetNoModifier
+    | LetPrivate
 
 
 type Decl

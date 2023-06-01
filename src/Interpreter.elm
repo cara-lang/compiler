@@ -82,15 +82,25 @@ interpretBangCall =
                 )
 
 
-interpretLet : Interpreter { name : String, expr : Expr } ()
+interpretLet :
+    Interpreter
+        { mod : LetModifier
+        , lhs : Pattern
+        , type_ : Maybe Type
+        , expr : Expr
+        }
+        ()
 interpretLet =
-    \env { name, expr } ->
+    \env { lhs, expr } ->
         interpretExpr env expr
             |> Outcome.mapBoth
                 (\env_ value ->
+                    Debug.todo "interpretLet: use interpretPattern"
+                 {-
                     ( env |> Env.add name value
                     , ()
                     )
+                 -}
                 )
 
 

@@ -366,7 +366,7 @@ number source i row col =
                 case String.at (i + 1) source of
                     Nothing ->
                         GotToken
-                            (Int (Char.digitToInt first))
+                            (Int_ (Char.digitToInt first))
                             (i + 1)
                             row
                             (col + 1)
@@ -428,7 +428,7 @@ decNumber first source i row col =
                 GotError ExpectedNumber
 
             Just n ->
-                GotToken (Int n) i1 row1 col1
+                GotToken (Int_ n) i1 row1 col1
 
 
 lowerName : String -> Int -> Int -> Int -> Result LexerError ( String, ( Int, Int, Int ) )

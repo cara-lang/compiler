@@ -11,7 +11,7 @@ E0009,Unfinished block comment
 E0010,Non-exhaustive anonymous function argument
 E0011,Unused expression
 E0012,Unescaped newline in a single-line string
-E0013,Assignment to underscore
+E0013,Assignment of expression to underscore
 E0014,Unexpected escaped character in a single-line string
 E0015,Shebang comment is not first
 E0016,Character contains multiple visible characters
