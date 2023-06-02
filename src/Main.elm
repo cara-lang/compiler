@@ -57,7 +57,8 @@ init flags =
         astResult =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
-                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+                -- TODO don't throw away the Loc! Show it
+                |> Result.andThen (Parser.parse >> Result.mapError (Tuple.second >> ParserError))
     in
     case astResult of
         Err err ->

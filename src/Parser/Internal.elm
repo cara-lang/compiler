@@ -32,11 +32,12 @@ module Parser.Internal exposing
 
 import Error exposing (ParserError(..))
 import List.Zipper as Zipper exposing (Zipper)
+import Loc exposing (Loc)
 import Token exposing (Token, Type(..))
 
 
 type alias Parser a =
-    Zipper Token -> Result ParserError ( a, Zipper Token )
+    Zipper Token -> Result ( Loc, ParserError ) ( a, Zipper Token )
 
 
 type alias InfixParser a =
@@ -64,7 +65,12 @@ succeed a =
 
 fail : ParserError -> Parser a
 fail err =
-    \_ -> Err err
+    \tokens -> fail_ tokens err
+
+
+fail_ : Zipper Token -> ParserError -> Result ( Loc, ParserError ) a
+fail_ tokens err =
+    Err ( (Zipper.current tokens).loc, err )
 
 
 map : (a -> b) -> Parser a -> Parser b
@@ -258,7 +264,7 @@ type TokenPred
 If the parser fails, the error of that parser will be re-raised.
 
 Noncommited: these will be tried one after another until one succeeds.
-If the oneOf list runs out, an error will be raised.
+If the oneOf list runs out, an error will be raised that got the furthest Loc-wise.
 
 -}
 oneOf :
@@ -321,20 +327,41 @@ oneOfNoncommited : List (Parser a) -> Parser a
 oneOfNoncommited noncommited =
     \tokens ->
         let
-            go parsers =
+            go : Maybe ( Loc, ParserError ) -> List (Parser a) -> Result ( Loc, ParserError ) ( a, Zipper Token )
+            go furthestError parsers =
                 case parsers of
                     [] ->
-                        Err OneOfDidntMatch
+                        case furthestError of
+                            Nothing ->
+                                fail_ tokens OneOfDidntMatchAnyCommited
+
+                            Just ( _, error ) ->
+                                fail_ tokens error
 
                     parser :: rest ->
                         case parser tokens of
-                            Err err ->
-                                go rest
+                            Err ( newLoc, err ) ->
+                                let
+                                    newFurthestError : ( Loc, ParserError )
+                                    newFurthestError =
+                                        case furthestError of
+                                            Nothing ->
+                                                ( newLoc, err )
+
+                                            Just ( oldLoc, oldErr ) ->
+                                                if Loc.compare oldLoc newLoc == LT then
+                                                    -- old < new, new is further
+                                                    ( newLoc, err )
+
+                                                else
+                                                    ( oldLoc, oldErr )
+                                in
+                                go (Just newFurthestError) rest
 
                             Ok ok ->
                                 Ok ok
         in
-        go noncommited
+        go Nothing noncommited
 
 
 pratt :
@@ -389,14 +416,14 @@ token type_ =
     \tokens ->
         case Zipper.next tokens of
             Nothing ->
-                Err RanPastEndOfTokens
+                fail_ tokens RanPastEndOfTokens
 
             Just nextTokens ->
                 if (Zipper.current tokens).type_ == type_ then
                     Ok ( (), nextTokens )
 
                 else
-                    Err <| ExpectedToken type_
+                    fail_ tokens <| ExpectedToken type_
 
 
 tokenData : (Token.Type -> Maybe a) -> Parser a
@@ -404,12 +431,12 @@ tokenData getter =
     \tokens ->
         case Zipper.next tokens of
             Nothing ->
-                Err RanPastEndOfTokens
+                fail_ tokens RanPastEndOfTokens
 
             Just nextTokens ->
                 case getter (Zipper.current tokens).type_ of
                     Nothing ->
-                        Err CouldntGetTokenData
+                        fail_ tokens CouldntGetTokenData
 
                     Just data ->
                         Ok ( data, nextTokens )
@@ -443,7 +470,7 @@ butNot disallowedValue err parser =
             |> Result.andThen
                 (\( value, newTokens ) ->
                     if value == disallowedValue then
-                        Err err
+                        fail_ tokens err
 
                     else
                         Ok ( value, newTokens )

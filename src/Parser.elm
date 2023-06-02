@@ -4,16 +4,17 @@ import AST exposing (..)
 import Error exposing (ParserError(..))
 import Id exposing (Id)
 import List.Zipper as Zipper exposing (Zipper)
+import Loc exposing (Loc)
 import Parser.Internal as Parser exposing (InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
 import Tree exposing (Tree)
 
 
-parse : List Token -> Result ParserError AST.Program
+parse : List Token -> Result ( Loc, ParserError ) AST.Program
 parse tokensList =
     case Zipper.fromList tokensList of
         Nothing ->
-            Err ExpectedNonemptyTokens
+            Err ( Loc.zero, ExpectedNonemptyTokens )
 
         Just tokens ->
             program tokens

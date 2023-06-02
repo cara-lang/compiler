@@ -65,7 +65,8 @@ runTest name fileContents k =
         parseResult =
             fileContents
                 |> (Lexer.lex >> Result.mapError LexerError)
-                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+                -- TODO don't throw away the Loc! Show it
+                |> Result.andThen (Parser.parse >> Result.mapError (Tuple.second >> ParserError))
 
         --|> Debug.log "parsed"
     in

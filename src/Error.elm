@@ -34,14 +34,13 @@ type LexerError
 
 type ParserError
     = ExpectedNonemptyTokens
-    | ExpectedEOF
     | RanPastEndOfTokens
     | CouldntGetTokenData
     | ExpectedToken Token.Type
     | AssignmentOfExprToUnderscore
     | DidntGetInfixParser
     | EmptyOneOf
-    | OneOfDidntMatch
+    | OneOfDidntMatchAnyCommited -- in case where there are no noncommited
 
 
 type InterpreterError
@@ -113,10 +112,6 @@ title error =
                             -- Shouldn't happen
                             "Expected nonempty tokens"
 
-                        ExpectedEOF ->
-                            -- TODO error code
-                            "Expected EOF"
-
                         RanPastEndOfTokens ->
                             -- TODO error code
                             "Ran past end of tokens"
@@ -140,9 +135,9 @@ title error =
                             -- TODO error code
                             "oneOf was given empty list of parsers to try"
 
-                        OneOfDidntMatch ->
+                        OneOfDidntMatchAnyCommited ->
                             -- TODO error code
-                            "oneOf didn't match anything"
+                            "oneOf didn't match any commited path (and there were no noncommited paths)"
                    )
 
         InterpreterError interpreterError ->
