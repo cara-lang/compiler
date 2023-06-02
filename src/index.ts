@@ -45,6 +45,10 @@ function registerPorts(app) {
       chdir(path);
       app.ports.completedChdir.send(null);
   });
+  app.ports.print.subscribe(async (str: string) => {
+      await Deno.stdout.write(textEncoder.encode(str));
+      app.ports.completedPrint.send(null);
+  });
   app.ports.println.subscribe(async (str: string) => {
       await Deno.stdout.write(textEncoder.encode(str + "\n"));
       app.ports.completedPrintln.send(null);

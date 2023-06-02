@@ -44,6 +44,7 @@ type Model
 
 type Msg
     = CompletedChdir
+    | CompletedPrint
     | CompletedPrintln
     | CompletedEprintln
     | CompletedReadFile String
@@ -131,6 +132,12 @@ update msg model =
 
         PausedOnEffect0 effect k ->
             case ( effect, msg ) of
+                ( Effect.Print _, CompletedPrint ) ->
+                    k ()
+
+                ( Effect.Print _, _ ) ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+
                 ( Effect.Println _, CompletedPrintln ) ->
                     k ()
 
@@ -168,6 +175,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ Effect.completedChdir (\_ -> CompletedChdir)
+        , Effect.completedPrint (\_ -> CompletedPrint)
         , Effect.completedPrintln (\_ -> CompletedPrintln)
         , Effect.completedEprintln (\_ -> CompletedEprintln)
         , Effect.completedReadFile CompletedReadFile

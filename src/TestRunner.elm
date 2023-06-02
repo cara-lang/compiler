@@ -31,6 +31,7 @@ type Model
 
 type Msg
     = CompletedChdir
+    | CompletedPrint
     | CompletedPrintln
     | CompletedEprintln
     | CompletedReadFile String
@@ -59,13 +60,14 @@ runTests rootPath testDirs =
 
 runTest : String -> String -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
 runTest name fileContents k =
+    effect0 (Effect.Print <| name ++ ": ") <| \() ->
     let
         parseResult =
             fileContents
                 |> (Lexer.lex >> Result.mapError LexerError)
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
-    effect0 (Effect.Eprintln <| name ++ ": " ++ Debug.toString parseResult) k
+    effect0 (Effect.Println <| Debug.toString parseResult) k
 
 
 effect0 : Effect0 -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
@@ -98,6 +100,12 @@ update msg model =
 
         PausedOnEffect0 effect k ->
             case ( effect, msg ) of
+                ( Effect.Print _, CompletedPrint ) ->
+                    k ()
+
+                ( Effect.Print _, _ ) ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+
                 ( Effect.Println _, CompletedPrintln ) ->
                     k ()
 
@@ -138,6 +146,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ Effect.completedChdir (\_ -> CompletedChdir)
+        , Effect.completedPrint (\_ -> CompletedPrint)
         , Effect.completedPrintln (\_ -> CompletedPrintln)
         , Effect.completedEprintln (\_ -> CompletedEprintln)
         , Effect.completedReadFile CompletedReadFile
