@@ -2,6 +2,7 @@ module Lexer exposing (lex)
 
 import Char.Extra as Char
 import Error exposing (LexerError(..))
+import Loc exposing (Loc)
 import String.Extra as String
 import Token exposing (Token, Type(..))
 
@@ -9,17 +10,17 @@ import Token exposing (Token, Type(..))
 type TokenResult
     = GotToken Token.Type Int Int Int
     | GotNothing Int Int Int
-    | GotError LexerError
+    | GotError ( Loc, LexerError )
 
 
-lex : String -> Result LexerError (List Token)
+lex : String -> Result ( Loc, LexerError ) (List Token)
 lex source =
     let
-        go : Int -> Int -> Int -> List Token -> Result LexerError (List Token)
+        go : Int -> Int -> Int -> List Token -> Result ( Loc, LexerError ) (List Token)
         go i row col tokens =
             case nextToken source i row col of
-                GotError err ->
-                    Err err
+                GotError ( loc, e ) ->
+                    Err ( loc, e )
 
                 GotNothing i_ row_ col_ ->
                     go i_ row_ col_ tokens
@@ -42,6 +43,14 @@ lex source =
                         go i_ row_ col_ newTokens
     in
     go 0 1 1 []
+
+
+err : Int -> Int -> LexerError -> TokenResult
+err row col error =
+    GotError
+        ( { row = row, col = col }
+        , error
+        )
 
 
 nextToken : String -> Int -> Int -> Int -> TokenResult
@@ -166,8 +175,8 @@ nextToken source i row col =
                             Ok ( i_, row_, col_ ) ->
                                 nextToken source i_ row_ col_
 
-                            Err err ->
-                                GotError err
+                            Err e ->
+                                err row (newCol + 1) e
 
                     else
                         token Div
@@ -211,7 +220,7 @@ nextToken source i row col =
                         else
                             case lowerName source newI row newCol of
                                 Err _ ->
-                                    GotError <| UnexpectedChar '.'
+                                    err row col <| UnexpectedChar '.'
 
                                 Ok ( lower_, ( i_, row_, col_ ) ) ->
                                     GotToken (Getter lower_) i_ row_ col_
@@ -287,8 +296,8 @@ blockComment _ _ _ _ =
 lower : String -> Int -> Int -> Int -> TokenResult
 lower source i row col =
     case lowerName source i row col of
-        Err err ->
-            GotError err
+        Err e ->
+            err row col e
 
         Ok ( name, ( i_, row_, col_ ) ) ->
             let
@@ -336,8 +345,8 @@ lower source i row col =
 upper : String -> Int -> Int -> Int -> TokenResult
 upper source i row col =
     case upperName source i row col of
-        Err err ->
-            GotError err
+        Err e ->
+            err row col e
 
         Ok ( name, ( i_, row_, col_ ) ) ->
             if (match "." source i_ row_ col_).matches then
@@ -359,7 +368,7 @@ number : String -> Int -> Int -> Int -> TokenResult
 number source i row col =
     case String.at i source of
         Nothing ->
-            GotError ExpectedNumber
+            err row col ExpectedNumber
 
         Just first ->
             if Char.isDigit first then
@@ -373,13 +382,13 @@ number source i row col =
 
                     Just second ->
                         if first == '0' && second == 'X' then
-                            GotError HexIntStartedWith0X
+                            err row col HexIntStartedWith0X
 
                         else if first == '0' && second == 'B' then
-                            GotError BinaryIntStartedWith0X
+                            err row col BinaryIntStartedWith0X
 
                         else if first == '0' && second == 'O' then
-                            GotError OctalIntStartedWith0X
+                            err row col OctalIntStartedWith0X
 
                         else if first == '0' && second == 'x' then
                             Debug.todo "hex int"
@@ -394,7 +403,7 @@ number source i row col =
                             decNumber first source (i + 1) row (col + 1)
 
             else
-                GotError ExpectedNumber
+                err row col ExpectedNumber
 
 
 decNumber : Char -> String -> Int -> Int -> Int -> TokenResult
@@ -425,7 +434,7 @@ decNumber first source i row col =
                 |> String.toInt
         of
             Nothing ->
-                GotError ExpectedNumber
+                err row col ExpectedNumber
 
             Just n ->
                 GotToken (Int_ n) i1 row1 col1
@@ -588,11 +597,11 @@ char source i row col =
             in
             case String.at i_ source of
                 Nothing ->
-                    GotError NonterminatedChar
+                    err row_ col_ NonterminatedChar
 
                 Just '\'' ->
                     if List.isEmpty content then
-                        GotError EmptyChar
+                        err row_ col_ EmptyChar
 
                     else
                         GotToken
@@ -606,12 +615,12 @@ char source i row col =
                             newCol
 
                 Just '\t' ->
-                    GotError UnescapedTabInChar
+                    err row_ col_ UnescapedTabInChar
 
                 Just '\\' ->
                     case String.at (i_ + 1) source of
                         Nothing ->
-                            GotError NonterminatedChar
+                            err row_ col_ NonterminatedChar
 
                         Just second ->
                             let
@@ -640,7 +649,7 @@ char source i row col =
                                 -- TODO \u{....}
                                 -- TODO \x{..}
                                 _ ->
-                                    GotError <| UnexpectedEscapedCharacterInChar second
+                                    err row_ (col_ + 1) <| UnexpectedEscapedCharacterInChar second
 
                 Just '\u{000D}' ->
                     -- optionally read '\n' as well
@@ -669,7 +678,7 @@ multilineString source i row col =
             in
             case String.at i_ source of
                 Nothing ->
-                    GotError NonterminatedMultilineString
+                    err row col NonterminatedMultilineString
 
                 Just '`' ->
                     GotToken
@@ -685,7 +694,7 @@ multilineString source i row col =
                 Just '\\' ->
                     case String.at (i_ + 1) source of
                         Nothing ->
-                            GotError NonterminatedMultilineString
+                            err row_ col_ NonterminatedMultilineString
 
                         Just second ->
                             let
@@ -714,7 +723,7 @@ multilineString source i row col =
                                 -- TODO \u{....}
                                 -- TODO \x{..}
                                 _ ->
-                                    GotError <| UnexpectedEscapedCharacterInMultilineString second
+                                    err row_ (col_ + 1) <| UnexpectedEscapedCharacterInMultilineString second
 
                 Just '\u{000D}' ->
                     -- optionally read '\n' as well

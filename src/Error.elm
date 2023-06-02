@@ -7,12 +7,13 @@ module Error exposing
     )
 
 import Id exposing (Id)
+import Loc exposing (Loc)
 import Token
 
 
 type Error
-    = LexerError LexerError
-    | ParserError ParserError
+    = LexerError ( Loc, LexerError )
+    | ParserError ( Loc, ParserError )
     | InterpreterError InterpreterError
 
 
@@ -54,8 +55,10 @@ type InterpreterError
 title : Error -> String
 title error =
     case error of
-        LexerError lexerError ->
-            "Lexer error: "
+        LexerError ( loc, lexerError ) ->
+            "Lexer error at "
+                ++ Loc.toString loc
+                ++ ": "
                 ++ (case lexerError of
                         NonterminatedChar ->
                             -- TODO error code
@@ -104,8 +107,10 @@ title error =
                             "E0026: Octal integer started with 0O"
                    )
 
-        ParserError parserError ->
-            "Parser error: "
+        ParserError ( loc, parserError ) ->
+            "Parser error at "
+                ++ Loc.toString loc
+                ++ ": "
                 ++ (case parserError of
                         ExpectedNonemptyTokens ->
                             -- TODO error code

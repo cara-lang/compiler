@@ -60,15 +60,10 @@ runTests rootPath testDirs =
 runTest : String -> String -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
 runTest name fileContents k =
     let
-        --_ =
-        --    Debug.log fileContents "file contents"
         parseResult =
             fileContents
                 |> (Lexer.lex >> Result.mapError LexerError)
-                -- TODO don't throw away the Loc! Show it
-                |> Result.andThen (Parser.parse >> Result.mapError (Tuple.second >> ParserError))
-
-        --|> Debug.log "parsed"
+                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
     effect0 (Effect.Eprintln <| name ++ ": " ++ Debug.toString parseResult) k
 
