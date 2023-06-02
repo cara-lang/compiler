@@ -21,6 +21,7 @@ type LexerError
     = NonterminatedChar
     | NonterminatedString
     | NonterminatedMultilineString
+    | UnfinishedBlockComment
     | EmptyChar
     | UnescapedTabInChar
     | UnexpectedEscapedCharacterInChar Char
@@ -74,6 +75,9 @@ title error =
                         NonterminatedMultilineString ->
                             -- TODO error code
                             "EXXXX: Nonterminated multiline string"
+
+                        UnfinishedBlockComment ->
+                            "E0009: Unfinished block comment"
 
                         EmptyChar ->
                             "E0019: Empty character"

@@ -176,7 +176,7 @@ nextToken source i row col =
                                 nextToken source i_ row_ col_
 
                             Err e ->
-                                err row (newCol + 1) e
+                                GotError e
 
                     else
                         token Div
@@ -328,10 +328,52 @@ skipUntilNewline source i row col =
                     skipUntilNewline source (i + 1) row (col + 1)
 
 
-blockComment : String -> Int -> Int -> Int -> Result LexerError ( Int, Int, Int )
-blockComment _ _ _ _ =
+blockComment : String -> Int -> Int -> Int -> Result ( Loc, LexerError ) ( Int, Int, Int )
+blockComment source i row col =
     -- i,row,col start _after_ /*
-    Debug.todo "block comment"
+    let
+        go : Int -> Int -> Int -> Int -> Result ( Loc, LexerError ) ( Int, Int, Int )
+        go nesting i_ row_ col_ =
+            let
+                continue () =
+                    go nesting (i_ + 1) row_ (col_ + 1)
+            in
+            case String.at i_ source of
+                Nothing ->
+                    Err ( { row = row_, col = col_ }, UnfinishedBlockComment )
+
+                Just '/' ->
+                    if (match "*" source (i_ + 1) row_ (col_ + 1)).matches then
+                        go (nesting + 1) (i_ + 2) row_ (col_ + 2)
+
+                    else
+                        continue ()
+
+                Just '*' ->
+                    if (match "/" source (i_ + 1) row_ (col_ + 1)).matches then
+                        if nesting > 0 then
+                            go (nesting - 1) (i_ + 2) row_ (col_ + 2)
+
+                        else
+                            Ok ( i_ + 2, row_, col_ + 2 )
+
+                    else
+                        continue ()
+
+                Just '\u{000D}' ->
+                    if (match "\n" source (i_ + 1) row_ (col_ + 1)).matches then
+                        go nesting (i_ + 2) (row_ + 1) 1
+
+                    else
+                        go nesting (i_ + 1) (row_ + 1) 1
+
+                Just '\n' ->
+                    go nesting (i_ + 1) (row_ + 1) 1
+
+                Just _ ->
+                    continue ()
+    in
+    go 0 i row col
 
 
 lower : String -> Int -> Int -> Int -> TokenResult
