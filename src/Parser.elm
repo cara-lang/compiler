@@ -25,14 +25,14 @@ parse tokensList =
                         Ok decls
 
                     else
-                        let
-                            _ =
-                                Debug.log "before ExpectedEOF"
-                                    ( decls
-                                    , Zipper.current tokens_
-                                    , List.length <| Zipper.after tokens_
-                                    )
-                        in
+                        --let
+                        --    _ =
+                        --        Debug.log "before ExpectedEOF"
+                        --            ( decls
+                        --            , Zipper.current tokens_
+                        --            , List.length <| Zipper.after tokens_
+                        --            )
+                        --in
                         Err ExpectedEOF
 
 

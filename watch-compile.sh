@@ -5,7 +5,7 @@ DIM="\e[2m";
 
 function compile {
   # deno check test.ts src/*.ts 2>&1
-  yarn elm-esm make src/Main.elm --output=dist/elm.js && ./src/index.ts
+  yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js && ./src/index.ts
 }
 
 function run {
