@@ -745,10 +745,14 @@ char source i row col =
 
                 Just '\u{000D}' ->
                     -- optionally read '\n' as well
-                    Debug.todo "char \\r"
+                    if (match "\n" source newI row_ newCol).matches then
+                        go (newI + 1) (row_ + 1) 1 ('\n' :: content)
+
+                    else
+                        go newI (row_ + 1) 1 ('\n' :: content)
 
                 Just '\n' ->
-                    Debug.todo "char \\n"
+                    go newI (row_ + 1) 1 ('\n' :: content)
 
                 Just c ->
                     go newI row_ newCol (c :: content)
