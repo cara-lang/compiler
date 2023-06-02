@@ -207,7 +207,12 @@ nextToken source i row col =
                     eol source i_ row_
 
                 '_' ->
-                    Debug.todo "underscore"
+                    case simpleInt source newI row newCol of
+                        Nothing ->
+                            GotToken Underscore newI row newCol
+
+                        Just ( int, ( intI, intRow, intCol ) ) ->
+                            GotToken (Hole int) intI intRow intCol
 
                 '.' ->
                     let
@@ -260,6 +265,20 @@ nextToken source i row col =
 
                     else
                         Debug.todo <| "next token fallthrough ?!?!?! : " ++ String.fromChar c
+
+
+{-| TODO this would be nicer if we parameterized TokenResult over the data.
+This would be TokenResult Int and others would be TokenResult Token.Type
+-}
+simpleInt : String -> Int -> Int -> Int -> Maybe ( Int, ( Int, Int, Int ) )
+simpleInt source i row col =
+    let
+        ( intString, ( i_, row_, col_ ) ) =
+            consumeWhile Char.isDigit source i row col
+    in
+    -- TODO: make sure there are no letters afterwards (throw a LexerError if there are)
+    String.toInt intString
+        |> Maybe.map (\int -> ( int, ( i_, row_, col_ ) ))
 
 
 shebang : String -> Int -> Int -> Int -> TokenResult
