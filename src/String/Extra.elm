@@ -13,5 +13,5 @@ at : Int -> String -> Maybe Char
 at n string =
     string
         |> String.slice n (n + 1)
-        |> String.toList
-        |> List.head
+        |> String.uncons
+        |> Maybe.map Tuple.first
