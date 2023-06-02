@@ -16,24 +16,8 @@ parse tokensList =
             Err ExpectedNonemptyTokens
 
         Just tokens ->
-            case program tokens of
-                Err err ->
-                    Err err
-
-                Ok ( decls, tokens_ ) ->
-                    if Parser.isAtEnd tokens_ then
-                        Ok decls
-
-                    else
-                        --let
-                        --    _ =
-                        --        Debug.log "before ExpectedEOF"
-                        --            ( decls
-                        --            , Zipper.current tokens_
-                        --            , List.length <| Zipper.after tokens_
-                        --            )
-                        --in
-                        Err ExpectedEOF
+            program tokens
+                |> Result.map Tuple.first
 
 
 program : Parser AST.Program
@@ -41,7 +25,7 @@ program =
     Parser.skipEol
         |> Parser.andThen
             (\_ ->
-                Parser.many
+                Parser.manyUntilEOF
                     (Parser.succeed identity
                         |> Parser.keep declaration
                         |> Parser.skip Parser.skipEol

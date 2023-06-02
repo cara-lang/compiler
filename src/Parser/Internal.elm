@@ -2,7 +2,8 @@ module Parser.Internal exposing
     ( Parser
     , succeed, fail
     , map, map2, andThen, skip, keep
-    , many, separatedList, nonSeparatedList
+    , many, manyUntilEOF
+    , separatedList, nonSeparatedList
     , maybe, butNot
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
@@ -17,7 +18,8 @@ module Parser.Internal exposing
 @docs Parser
 @docs succeed, fail
 @docs map, map2, andThen, skip, keep
-@docs many, separatedList, nonSeparatedList
+@docs many, manyUntilEOF
+@docs separatedList, nonSeparatedList
 @docs maybe, butNot
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
@@ -157,6 +159,29 @@ many childParser =
 
                     Ok ( child, tokens__ ) ->
                         go (child :: acc) tokens__
+        in
+        go [] tokens
+
+
+{-| Consumes 0+ children.
+Either ends at EOF or re-raises the child's error.
+-}
+manyUntilEOF : Parser a -> Parser (List a)
+manyUntilEOF childParser =
+    \tokens ->
+        let
+            go : List a -> Parser (List a)
+            go acc tokens_ =
+                if isAtEnd tokens_ then
+                    Ok ( List.reverse acc, tokens_ )
+
+                else
+                    case childParser tokens_ of
+                        Err err ->
+                            Err err
+
+                        Ok ( child, tokens__ ) ->
+                            go (child :: acc) tokens__
         in
         go [] tokens
 
