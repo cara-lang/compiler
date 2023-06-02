@@ -40,6 +40,9 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
+    effect0 (Effect.Println "----------------------------") <| \() ->
+    effect0 (Effect.Println "Running lexer + parser tests") <| \() ->
+    effect0 (Effect.Println "----------------------------") <| \() ->
     runTests flags.rootPath flags.dirs
 
 

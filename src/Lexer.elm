@@ -408,36 +408,45 @@ number source i row col =
 
 decNumber : Char -> String -> Int -> Int -> Int -> TokenResult
 decNumber first source i row col =
-    -- We're responsible for numbers like 123, 1, 1.234, 123.56
-    -- We're NOT responsible for 1..20 - in that case we only parse the `1`.
-    -----
-    -- first is guaranteed to be a digit
-    -- second is _not_ (0.123, 123.352, 1..20)
-    -- i,row,col are on the _second_ character
-    -----
-    -- consume as much [0-9_] as possible
+    {-
+       We're responsible for numbers like 123, 1, 1.234, 123.56
+       We're NOT responsible for 1..20 - in that case we only parse the `1`.
+
+       first is guaranteed to be a digit
+       second is _not_ (0.123, 123.352, 1..20)
+       i,row,col are on the _second_ character
+
+       consume as much [0-9_] as possible
+    -}
     let
         ( intPartWithoutFirst, ( i1, row1, col1 ) ) =
             consumeWhile isDigitOrUnderscore source i row col
                 |> Tuple.mapFirst (String.replace "_" "")
+
+        gotInt () =
+            case String.toInt <| String.cons first intPartWithoutFirst of
+                Nothing ->
+                    err row col ExpectedNumber
+
+                Just n ->
+                    GotToken (Int_ n) i1 row1 col1
     in
     -- Now if we find a dot and 0-9 after that, we're in a Float!
     -- Otherwise we're in an Int.
     if (match "." source i1 row1 col1).matches then
-        -- TODO beware the need to inc i1 and col1 because of the match in the if
-        Debug.todo "check for digit, then float, otherwise Ok Int"
+        if (match "." source (i1 + 1) row1 (col1 + 1)).matches then
+            {- We found `1..`. Let's ignore the `..` for now and just return the `1`.
+               The `..` will get lexed as DotDot later.
+            -}
+            gotInt ()
+
+        else
+            -- TODO beware the need to inc i1 and col1 because of the match in the if
+            Debug.todo "check for digit, then float, otherwise Ok Int"
 
     else
         -- Definitely an Int!
-        case
-            String.cons first intPartWithoutFirst
-                |> String.toInt
-        of
-            Nothing ->
-                err row col ExpectedNumber
-
-            Just n ->
-                GotToken (Int_ n) i1 row1 col1
+        gotInt ()
 
 
 lowerName : String -> Int -> Int -> Int -> Result LexerError ( String, ( Int, Int, Int ) )
