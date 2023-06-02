@@ -182,7 +182,15 @@ nextToken source i row col =
                         token Div
 
                 '#' ->
-                    Debug.todo "hash"
+                    case String.at newI source of
+                        Just '!' ->
+                            shebang source (newI + 1) row (newCol + 1)
+
+                        Just '(' ->
+                            GotToken LHole (newI + 1) row (newCol + 1)
+
+                        _ ->
+                            err row newCol <| UnexpectedChar '#'
 
                 '\n' ->
                     eol source newI row
@@ -252,6 +260,20 @@ nextToken source i row col =
 
                     else
                         Debug.todo <| "next token fallthrough ?!?!?! : " ++ String.fromChar c
+
+
+shebang : String -> Int -> Int -> Int -> TokenResult
+shebang source i row col =
+    -- i,row,col start _after_ #!
+    if i /= 2 then
+        err row (col - 2) ShebangIsNotFirst
+
+    else
+        let
+            ( i_, row_, col_ ) =
+                skipUntilNewline source i row col
+        in
+        GotToken EOL i_ row_ col_
 
 
 lineComment : String -> Int -> Int -> Int -> TokenResult

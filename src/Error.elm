@@ -33,6 +33,7 @@ type LexerError
     | HexIntStartedWith0X
     | BinaryIntStartedWith0X
     | OctalIntStartedWith0X
+    | ShebangIsNotFirst
 
 
 type ParserError
@@ -114,6 +115,9 @@ title error =
 
                         OctalIntStartedWith0X ->
                             "E0026: Octal integer started with 0O"
+
+                        ShebangIsNotFirst ->
+                            "E0015: Shebang comment is not first"
                    )
 
         ParserError ( loc, parserError ) ->

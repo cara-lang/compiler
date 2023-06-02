@@ -195,7 +195,7 @@ function nextToken(state: State): { token: Token, state: State } {
             result = match('(', state); // #(
             if (result.matches) return simple('LHOLE', result.state);
 
-            throw "EXXXX: Unespected character: '#'";
+            throw "EXXXX: Unexpected character: '#'";
         }
         case '\n':
             return eol(state);
