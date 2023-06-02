@@ -19,10 +19,12 @@ type Error
 
 type LexerError
     = NonterminatedChar
+    | NonterminatedString
     | NonterminatedMultilineString
     | EmptyChar
     | UnescapedTabInChar
     | UnexpectedEscapedCharacterInChar Char
+    | UnexpectedEscapedCharacterInString Char
     | UnexpectedEscapedCharacterInMultilineString Char
     | ExpectedLowerName
     | ExpectedUpperName
@@ -64,6 +66,10 @@ title error =
                             -- TODO error code
                             "EXXXX: Nonterminated character"
 
+                        NonterminatedString ->
+                            -- TODO error code
+                            "EXXXX: Nonterminated string"
+
                         NonterminatedMultilineString ->
                             -- TODO error code
                             "EXXXX: Nonterminated multiline string"
@@ -76,6 +82,9 @@ title error =
 
                         UnexpectedEscapedCharacterInChar _ ->
                             "E0028: Unexpected escaped character in a character"
+
+                        UnexpectedEscapedCharacterInString _ ->
+                            "E0014: Unexpected escaped character in a string"
 
                         UnexpectedEscapedCharacterInMultilineString _ ->
                             "E0029: Unexpected escaped character in a multi-line string"

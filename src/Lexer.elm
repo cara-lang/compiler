@@ -229,7 +229,7 @@ nextToken source i row col =
                     char source newI row newCol
 
                 '"' ->
-                    Debug.todo "double quote"
+                    string source newI row newCol
 
                 '`' ->
                     multilineString source newI row newCol
@@ -657,6 +657,80 @@ char source i row col =
 
                 Just '\n' ->
                     Debug.todo "char \\n"
+
+                Just c ->
+                    go newI row_ newCol (c :: content)
+    in
+    go i row col []
+
+
+string : String -> Int -> Int -> Int -> TokenResult
+string source i row col =
+    let
+        go : Int -> Int -> Int -> List Char -> TokenResult
+        go i_ row_ col_ content =
+            let
+                newI =
+                    i_ + 1
+
+                newCol =
+                    col_ + 1
+            in
+            case String.at i_ source of
+                Nothing ->
+                    err row_ col_ NonterminatedString
+
+                Just '"' ->
+                    GotToken
+                        (content
+                            |> List.reverse
+                            |> String.fromList
+                            |> String
+                        )
+                        newI
+                        row_
+                        newCol
+
+                Just '\\' ->
+                    case String.at (i_ + 1) source of
+                        Nothing ->
+                            err row_ col_ NonterminatedString
+
+                        Just second ->
+                            let
+                                newI_ =
+                                    i_ + 2
+
+                                newCol_ =
+                                    col_ + 2
+                            in
+                            case second of
+                                '\\' ->
+                                    go newI_ row_ newCol_ ('\\' :: content)
+
+                                'n' ->
+                                    go newI_ row_ newCol_ ('\n' :: content)
+
+                                'r' ->
+                                    go newI_ row_ newCol_ ('\u{000D}' :: content)
+
+                                't' ->
+                                    go newI_ row_ newCol_ ('\t' :: content)
+
+                                '"' ->
+                                    go newI_ row_ newCol_ ('"' :: content)
+
+                                -- TODO \u{....}
+                                -- TODO \x{..}
+                                _ ->
+                                    err row_ (col_ + 1) <| UnexpectedEscapedCharacterInString second
+
+                Just '\u{000D}' ->
+                    -- optionally read '\n' as well
+                    Debug.todo "string \\r"
+
+                Just '\n' ->
+                    Debug.todo "string \\n"
 
                 Just c ->
                     go newI row_ newCol (c :: content)
