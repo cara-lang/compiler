@@ -284,9 +284,18 @@ varType =
     \_ -> Debug.todo "varType"
 
 
+{-|
+
+    : QUALIFIER* UPPER_NAME
+    = Int
+    = Base.Maybe
+    = List.Internal.Step
+
+-}
 namedType : Parser AST.Type
 namedType =
-    \_ -> Debug.todo "namedType"
+    upperIdentifier
+        |> Parser.map TNamed
 
 
 recordType : Parser AST.Type
@@ -566,6 +575,21 @@ lowerIdentifier =
     Parser.map2 Id
         (Parser.many qualifier)
         lowerName
+
+
+{-|
+
+    : QUALIFIER* UPPER_NAME
+    = Foo
+    = Foo.Bar
+    = Foo.Bar.Baz
+
+-}
+upperIdentifier : Parser Id
+upperIdentifier =
+    Parser.map2 Id
+        (Parser.many qualifier)
+        upperName
 
 
 qualifier : Parser String
