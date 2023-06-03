@@ -3,6 +3,7 @@ module Lexer exposing (lex)
 import Char.Extra as Char
 import Error exposing (LexerError(..))
 import Loc exposing (Loc)
+import ParseInt
 import String.Extra as String
 import Token exposing (Token, Type(..))
 
@@ -458,7 +459,7 @@ number source i row col =
                 case String.at (i + 1) source of
                     Nothing ->
                         GotToken
-                            (Int_ (Char.digitToInt first))
+                            (Int (Char.digitToInt first))
                             (i + 1)
                             row
                             (col + 1)
@@ -474,19 +475,91 @@ number source i row col =
                             err row col OctalIntStartedWith0X
 
                         else if first == '0' && second == 'x' then
-                            Debug.todo "hex int"
+                            hexInt source (i + 2) row (col + 2)
 
                         else if first == '0' && second == 'b' then
-                            Debug.todo "binary int"
+                            binaryInt source (i + 2) row (col + 2)
 
                         else if first == '0' && second == 'o' then
-                            Debug.todo "octal int"
+                            octInt source (i + 2) row (col + 2)
 
                         else
                             decNumber first source (i + 1) row (col + 1)
 
             else
                 err row col ExpectedNumber
+
+
+binaryInt : String -> Int -> Int -> Int -> TokenResult
+binaryInt =
+    intOfRadix
+        { radix = 2
+        , isRadixChar = isBinaryDigit
+        , invalidError = InvalidBinaryInt
+        , unfinishedError = UnfinishedBinaryInt
+        , unexpectedCharError = UnexpectedBinaryIntCharacter
+        }
+
+
+octInt : String -> Int -> Int -> Int -> TokenResult
+octInt =
+    intOfRadix
+        { radix = 8
+        , isRadixChar = Char.isOctDigit
+        , invalidError = InvalidOctInt
+        , unfinishedError = UnfinishedOctInt
+        , unexpectedCharError = UnexpectedOctIntCharacter
+        }
+
+
+hexInt : String -> Int -> Int -> Int -> TokenResult
+hexInt =
+    intOfRadix
+        { radix = 16
+        , isRadixChar = Char.isHexDigit
+        , invalidError = InvalidHexInt
+        , unfinishedError = UnfinishedHexInt
+        , unexpectedCharError = UnexpectedHexIntCharacter
+        }
+
+
+intOfRadix :
+    { radix : Int
+    , isRadixChar : Char -> Bool
+    , invalidError : LexerError
+    , unfinishedError : LexerError
+    , unexpectedCharError : Char -> LexerError
+    }
+    -> String
+    -> Int
+    -> Int
+    -> Int
+    -> TokenResult
+intOfRadix config source i row col =
+    -- i,row,col starts after the radix prefix (`0b` etc.)
+    case String.at i source of
+        Just c ->
+            if config.isRadixChar c then
+                let
+                    ( radixIntPartWithoutFirst, ( i1, row1, col1 ) ) =
+                        consumeWhile (isCharOrUnderscore config.isRadixChar) source (i + 1) row (col + 1)
+                            |> Tuple.mapFirst (String.replace "_" "")
+                in
+                case
+                    String.cons c radixIntPartWithoutFirst
+                        |> ParseInt.parseIntRadix config.radix
+                of
+                    Ok n ->
+                        GotToken (Int n) i1 row1 col1
+
+                    Err _ ->
+                        err row (col - 2) config.invalidError
+
+            else
+                err row col <| config.unexpectedCharError c
+
+        Nothing ->
+            err row col config.unfinishedError
 
 
 decNumber : Char -> String -> Int -> Int -> Int -> TokenResult
@@ -515,7 +588,7 @@ decNumber first source i row col =
                     err row col ExpectedNumber
 
                 Just n ->
-                    GotToken (Int_ n) i1 row1 col1
+                    GotToken (Int n) i1 row1 col1
     in
     -- Now if we find a dot and 0-9 after that, we're in a Float!
     -- Otherwise we're in an Int.
@@ -679,6 +752,16 @@ isIdentifierSecond c =
 isDigitOrUnderscore : Char -> Bool
 isDigitOrUnderscore c =
     Char.isDigit c || c == '_'
+
+
+isBinaryDigit : Char -> Bool
+isBinaryDigit c =
+    c == '0' || c == '1'
+
+
+isCharOrUnderscore : (Char -> Bool) -> Char -> Bool
+isCharOrUnderscore pred c =
+    pred c || c == '_'
 
 
 variants : String -> Int -> Int -> Int -> List ( String, Token.Type ) -> Token.Type -> TokenResult

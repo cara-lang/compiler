@@ -358,7 +358,7 @@ prefixExpr =
 intExpr : Parser Expr
 intExpr =
     Parser.tokenData Token.getInt
-        |> Parser.map Int
+        |> Parser.map AST.Int
 
 
 infixExpr : InfixParserTable Expr

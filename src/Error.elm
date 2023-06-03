@@ -36,6 +36,15 @@ type LexerError
     | OctalIntStartedWith0X
     | ShebangIsNotFirst
     | FloatExpectedNumbersAfterE
+    | UnexpectedBinaryIntCharacter Char
+    | UnexpectedOctIntCharacter Char
+    | UnexpectedHexIntCharacter Char
+    | UnfinishedBinaryInt
+    | UnfinishedOctInt
+    | UnfinishedHexInt
+    | InvalidBinaryInt
+    | InvalidOctInt
+    | InvalidHexInt
 
 
 type ParserError
@@ -127,6 +136,45 @@ title error =
                         FloatExpectedNumbersAfterE ->
                             -- TODO error code
                             "Float: expected numbers after E"
+
+                        UnexpectedBinaryIntCharacter c ->
+                            -- TODO error code
+                            "Binary integer: unexpected character '{C}'"
+                                |> String.replace "{C}" (String.fromChar c)
+
+                        UnexpectedOctIntCharacter c ->
+                            -- TODO error code
+                            "Octal integer: unexpected character '{C}'"
+                                |> String.replace "{C}" (String.fromChar c)
+
+                        UnexpectedHexIntCharacter c ->
+                            -- TODO error code
+                            "Hexadecimal integer: unexpected character '{C}'"
+                                |> String.replace "{C}" (String.fromChar c)
+
+                        UnfinishedBinaryInt ->
+                            -- TODO error code
+                            "Unfinished binary integer"
+
+                        UnfinishedOctInt ->
+                            -- TODO error code
+                            "Unfinished octal integer"
+
+                        UnfinishedHexInt ->
+                            -- TODO error code
+                            "Unfinished hexadecimal integer"
+
+                        InvalidBinaryInt ->
+                            -- TODO error code
+                            "Invalid binary integer"
+
+                        InvalidOctInt ->
+                            -- TODO error code
+                            "Invalid octal integer"
+
+                        InvalidHexInt ->
+                            -- TODO error code
+                            "Invalid hexadecimal integer"
                    )
 
         ParserError ( loc, parserError ) ->

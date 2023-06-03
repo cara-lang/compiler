@@ -33,7 +33,7 @@ type alias Token =
 
 
 type Type
-    = Int_ Int
+    = Int Int
     | Float Float
     | Char String
     | String String
@@ -103,7 +103,7 @@ type Type
 isInt : Type -> Bool
 isInt type_ =
     case type_ of
-        Int_ _ ->
+        Int _ ->
             True
 
         _ ->
@@ -203,7 +203,7 @@ isHole type_ =
 getInt : Type -> Maybe Int
 getInt type_ =
     case type_ of
-        Int_ n ->
+        Int n ->
             Just n
 
         _ ->
