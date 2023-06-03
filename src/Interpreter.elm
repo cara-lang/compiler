@@ -144,6 +144,9 @@ interpretExpr =
             RootIdentifier id ->
                 interpretRootIdentifier env id
 
+            List xs ->
+                interpretList env xs
+
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
 
@@ -181,6 +184,12 @@ interpretRootIdentifier =
 
             Just value ->
                 Outcome.succeed env value
+
+
+interpretList : Interpreter (List Expr) Value
+interpretList =
+    Interpreter.traverse interpretExpr
+        |> Interpreter.map VList
 
 
 interpretModule : Interpreter { mod : ModuleModifier, name : String, decls : List Decl } ()

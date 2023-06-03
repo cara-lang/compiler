@@ -466,7 +466,10 @@ prefixExpr =
                , ( [ T False_ ], boolExpr )
                , ( [ T LParen, T RParen ], unitExpr )
                , ( [ T LParen ], tupleOrParenthesizedExpr )
-               , ( [ T LBracket ], listExpr )
+            -}
+            , ( [ T LBracket ], listExpr )
+
+            {-
                , ( [ T If ], ifExpr )
                , ( [ T Case ], caseExpr )
                , ( [ T Backslash ], lambdaExpr )
@@ -492,6 +495,28 @@ prefixExpr =
             --, recordExpr
             ]
         }
+
+
+{-|
+
+    : LBRACKET expr (COMMA expr)* RBRACKET
+    = []
+    = [1]
+    = [1,2]
+
+-}
+listExpr : Parser Expr
+listExpr =
+    -- TODO should we allow trailing sep?
+    Parser.separatedList
+        { left = LBracket
+        , right = RBracket
+        , sep = Comma
+        , item = Parser.lazy (\() -> expr)
+        , skipEol = True
+        , allowTrailingSep = False
+        }
+        |> Parser.map List
 
 
 {-|

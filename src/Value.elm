@@ -8,6 +8,7 @@ type Value
     = VInt Int
     | VUnit
     | VIntrinsic Intrinsic
+    | VList (List Value)
 
 
 toString : Value -> String
@@ -21,3 +22,6 @@ toString value =
 
         VIntrinsic _ ->
             "<intrinsic>"
+
+        VList values ->
+            "[" ++ String.join "," (List.map toString values) ++ "]"

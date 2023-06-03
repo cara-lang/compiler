@@ -41,45 +41,54 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    effect0 (Effect.Println "----------------------------") <| \() ->
-    effect0 (Effect.Println "Running lexer + parser tests") <| \() ->
-    effect0 (Effect.Println "----------------------------") <| \() ->
-    runTests flags.rootPath flags.dirs
+    effect0 (Effect.Println "----------------------------") <|
+        \() ->
+            effect0 (Effect.Println "Running lexer + parser tests") <|
+                \() ->
+                    effect0 (Effect.Println "----------------------------") <|
+                        \() ->
+                            runTests flags.rootPath flags.dirs
 
 
 runTests : String -> List String -> ( Model, Cmd Msg )
 runTests rootPath testDirs =
     case testDirs of
         [] ->
-            effect0 (Effect.Println "Done running tests!") <| \() ->
-            ( Done, Cmd.none )
+            effect0 (Effect.Println "Done running tests!") <|
+                \() ->
+                    ( Done, Cmd.none )
 
         testDir :: rest ->
-            effect0 (Effect.Chdir testDir) <| \() ->
-            effectStr (Effect.ReadFile { filename = "main.cara" }) <| \fileContents ->
-            runTest testDir fileContents <| \() ->
-            effect0 (Effect.Chdir rootPath) <| \() ->
-            runTests rootPath rest
+            effect0 (Effect.Chdir testDir) <|
+                \() ->
+                    effectStr (Effect.ReadFile { filename = "main.cara" }) <|
+                        \fileContents ->
+                            runTest testDir fileContents <|
+                                \() ->
+                                    effect0 (Effect.Chdir rootPath) <|
+                                        \() ->
+                                            runTests rootPath rest
 
 
 runTest : String -> String -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
 runTest name fileContents k =
-    effect0 (Effect.Print <| name ++ ": ") <| \() ->
-    let
-        parseResult =
-            fileContents
-                |> (Lexer.lex >> Result.mapError LexerError)
-                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
-    in
-    case parseResult of
-        Err (LexerError ( loc, err )) ->
-            effect0 (Effect.Println <| "Lexer - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
+    effect0 (Effect.Print <| name ++ ": ") <|
+        \() ->
+            let
+                parseResult =
+                    fileContents
+                        |> (Lexer.lex >> Result.mapError LexerError)
+                        |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+            in
+            case parseResult of
+                Err (LexerError ( loc, err )) ->
+                    effect0 (Effect.Println <| "Lexer - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
 
-        Err (ParserError ( loc, err )) ->
-            effect0 (Effect.Println <| "Parser - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
+                Err (ParserError ( loc, err )) ->
+                    effect0 (Effect.Println <| "Parser - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
 
-        other ->
-            effect0 (Effect.Println <| Debug.toString other) k
+                other ->
+                    effect0 (Effect.Println <| Debug.toString other) k
 
 
 effect0 : Effect0 -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
