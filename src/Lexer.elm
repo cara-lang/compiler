@@ -901,6 +901,7 @@ char source i row col =
                                     err row_ (col_ + 1) <| UnexpectedEscapedCharacterInChar second
 
                 Just '\u{000D}' ->
+                    -- TODO disallow literal \n in chars
                     -- optionally read '\n' as well
                     if (match "\n" source newI row_ newCol).matches then
                         go (newI + 1) (row_ + 1) 1 ('\n' :: content)
@@ -909,6 +910,7 @@ char source i row col =
                         go newI (row_ + 1) 1 ('\n' :: content)
 
                 Just '\n' ->
+                    -- TODO disallow literal \n in chars
                     go newI (row_ + 1) 1 ('\n' :: content)
 
                 Just c ->
@@ -1054,10 +1056,14 @@ multilineString source i row col =
 
                 Just '\u{000D}' ->
                     -- optionally read '\n' as well
-                    Debug.todo "multiline string \\r"
+                    if (match "\n" source newI row_ newCol).matches then
+                        go (newI + 1) (row_ + 1) 1 ('\u{000D}' :: '\n' :: content)
+
+                    else
+                        go newI (row_ + 1) 1 ('\u{000D}' :: content)
 
                 Just '\n' ->
-                    Debug.todo "multiline string \\n"
+                    go newI (row_ + 1) 1 ('\n' :: content)
 
                 Just c ->
                     go newI row_ newCol (c :: content)
