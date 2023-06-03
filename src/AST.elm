@@ -51,7 +51,7 @@ type Expr
 
 type Type
     = TNamed Id -- Int, Base.Maybe
-    | TCall { type_ : Type, args : List Type } -- List[a]
+    | TApplication { type_ : Type, args : List Type } -- List[a]
     | TVar String -- a
     | TFn { from : Type, to : Type } -- x -> y
     | TTuple (List Type) -- (Int, Bool)
@@ -146,7 +146,7 @@ type UnaryOp
     = NegateNum -- -e
     | NegateBool -- !e
     | NegateBin -- ~e
-    | InfiniteRangeInclusive -- e..
+    | InfiniteRange -- e..
 
 
 type BinaryOp
@@ -163,7 +163,7 @@ type BinaryOp
     | XorBin -- ^
     | ShiftL -- <<
     | ShiftR -- >>
-    | ShiftRU -- >>>
+    | ShiftRU -- >>>, unsigned
       -- comparisons and booleans
     | Lte -- <=
     | Lt -- <

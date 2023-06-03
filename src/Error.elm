@@ -35,6 +35,7 @@ type LexerError
     | BinaryIntStartedWith0X
     | OctalIntStartedWith0X
     | ShebangIsNotFirst
+    | FloatExpectedNumbersAfterE
 
 
 type ParserError
@@ -122,6 +123,10 @@ title error =
 
                         ShebangIsNotFirst ->
                             "E0015: Shebang comment is not first"
+
+                        FloatExpectedNumbersAfterE ->
+                            -- TODO error code
+                            "Float: expected numbers after E"
                    )
 
         ParserError ( loc, parserError ) ->

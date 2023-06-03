@@ -506,8 +506,11 @@ decNumber first source i row col =
             consumeWhile isDigitOrUnderscore source i row col
                 |> Tuple.mapFirst (String.replace "_" "")
 
+        intPart =
+            String.cons first intPartWithoutFirst
+
         gotInt () =
-            case String.toInt <| String.cons first intPartWithoutFirst of
+            case String.toInt intPart of
                 Nothing ->
                     err row col ExpectedNumber
 
@@ -517,19 +520,77 @@ decNumber first source i row col =
     -- Now if we find a dot and 0-9 after that, we're in a Float!
     -- Otherwise we're in an Int.
     if (match "." source i1 row1 col1).matches then
-        if (match "." source (i1 + 1) row1 (col1 + 1)).matches then
-            {- We found `1..`. Let's ignore the `..` for now and just return the `1`.
-               The `..` will get lexed as DotDot later.
-            -}
-            gotInt ()
+        case String.at (i1 + 1) source of
+            Just '.' ->
+                {- We found `1..`. Let's ignore the `..` for now and just return the `1`.
+                   The `..` will get lexed as DotDot later.
+                -}
+                gotInt ()
 
-        else
-            -- TODO beware the need to inc i1 and col1 because of the match in the if
-            Debug.todo "check for digit, then float, otherwise Ok Int"
+            Just c ->
+                if Char.isDigit c then
+                    float intPart c source (i1 + 2) row1 (col1 + 2) row col
+
+                else
+                    Debug.todo "number float 2"
+
+            Nothing ->
+                Debug.todo "number float 3"
 
     else
         -- Definitely an Int!
         gotInt ()
+
+
+float : String -> Char -> String -> Int -> Int -> Int -> Int -> Int -> TokenResult
+float intPart firstFloat source i row col startRow startCol =
+    -- Starts after the first decimal number
+    let
+        ( floatPartWithoutFirstBeforeE, ( i1, row1, col1 ) ) =
+            consumeWhile isDigitOrUnderscore source i row col
+                |> Tuple.mapFirst (String.replace "_" "")
+
+        restResult : Result ( Loc, LexerError ) ( String, ( Int, Int, Int ) )
+        restResult =
+            case Maybe.map Char.toLower <| String.at i1 source of
+                Just 'e' ->
+                    case String.at (i1 + 1) source of
+                        Just '-' ->
+                            Debug.todo "float: negative E"
+
+                        Just c ->
+                            if Char.isDigit c then
+                                Debug.todo "float: positive E"
+
+                            else
+                                Debug.todo "float: non-number E"
+
+                        Nothing ->
+                            Err
+                                ( { row = row1, col = col1 }
+                                , FloatExpectedNumbersAfterE
+                                )
+
+                _ ->
+                    Ok ( "", ( i1, row1, col1 ) )
+    in
+    case restResult of
+        Err e ->
+            GotError e
+
+        Ok ( ePart, ( i2, row2, col2 ) ) ->
+            let
+                floatPart =
+                    String.cons firstFloat floatPartWithoutFirstBeforeE
+                        ++ ePart
+            in
+            case String.toFloat (intPart ++ "." ++ floatPart ++ ePart) of
+                Nothing ->
+                    -- Shouldn't happen if the previous getters are correct?
+                    err startRow startCol ExpectedNumber
+
+                Just n ->
+                    GotToken (Float n) i2 row2 col2
 
 
 lowerName : String -> Int -> Int -> Int -> Result LexerError ( String, ( Int, Int, Int ) )
