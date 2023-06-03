@@ -5,7 +5,7 @@ import Error exposing (ParserError(..))
 import Id exposing (Id)
 import List.Zipper as Zipper exposing (Zipper)
 import Loc exposing (Loc)
-import Parser.Internal as Parser exposing (InfixParserTable, Parser, TokenPred(..))
+import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
 import Tree exposing (Tree)
 
@@ -178,7 +178,7 @@ letStatement =
             )
         |> Parser.keep
             (pattern
-                -- TODO do we need to support a "stop the world" type of error?
+                -- TODO do we need to support a "stop the world" type of error? This would be one of those
                 |> Parser.butNot PWildcard AssignmentOfExprToUnderscore
             )
         |> Parser.keep
@@ -236,8 +236,84 @@ varPattern =
 
 type_ : Parser AST.Type
 type_ =
-    \tokens ->
-        Debug.todo "type_"
+    typeAux 0 False
+
+
+typeAux : Int -> Bool -> Parser AST.Type
+typeAux precedence isRight =
+    Parser.pratt
+        { skipEolBeforeIndented = False
+        , isRight = isRight
+        , precedence = precedence
+        , prefix = prefixType
+        , infix = infixType
+        }
+
+
+prefixType : Parser AST.Type
+prefixType =
+    Parser.oneOf
+        { commited =
+            [ ( [ T LParen, T RParen ], unitType )
+            , ( [ T LParen ], tupleOrParenthesizedType )
+            , ( [ T LBrace ], recordType )
+            , ( [ P Token.isUpperName ], namedType )
+            , ( [ P Token.isQualifier ], namedType )
+            , ( [ P Token.isLowerName ], varType )
+            ]
+        , noncommited = []
+        }
+
+
+infixType : InfixParserTable AST.Type
+infixType =
+    \token ->
+        case token of
+            Arrow ->
+                Just { precedence = 1, isRight = True, parser = fnType }
+
+            LBracket ->
+                Just { precedence = 2, isRight = True, parser = applicationType }
+
+            _ ->
+                Nothing
+
+
+varType : Parser AST.Type
+varType =
+    \_ -> Debug.todo "varType"
+
+
+namedType : Parser AST.Type
+namedType =
+    \_ -> Debug.todo "namedType"
+
+
+recordType : Parser AST.Type
+recordType =
+    \_ -> Debug.todo "recordType"
+
+
+tupleOrParenthesizedType : Parser AST.Type
+tupleOrParenthesizedType =
+    \_ -> Debug.todo "tupleOrParenthesizedType"
+
+
+unitType : Parser AST.Type
+unitType =
+    Parser.succeed TUnit
+        |> Parser.skip (Parser.token LParen)
+        |> Parser.skip (Parser.token RParen)
+
+
+fnType : InfixParser AST.Type
+fnType =
+    \_ -> Debug.todo "fnType"
+
+
+applicationType : InfixParser AST.Type
+applicationType =
+    \_ -> Debug.todo "applicationType"
 
 
 {-|
