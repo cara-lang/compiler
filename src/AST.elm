@@ -6,6 +6,7 @@ module AST exposing
     , ModuleModifier(..)
     , Pattern(..)
     , Program
+    , RecordTypeField
     , Stmt(..)
     , Type(..)
     )

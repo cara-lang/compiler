@@ -4,6 +4,7 @@ module Parser.Internal exposing
     , map, map2, andThen, skip, keep
     , many, manyUntilEOF
     , separatedList, nonSeparatedList
+    , separatedNonemptyList
     , maybe, butNot
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
@@ -20,6 +21,7 @@ module Parser.Internal exposing
 @docs map, map2, andThen, skip, keep
 @docs many, manyUntilEOF
 @docs separatedList, nonSeparatedList
+@docs separatedNonemptyList, nonSeparatedList
 @docs maybe, butNot
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
@@ -207,6 +209,8 @@ separatedList :
     }
     -> Parser (List a)
 separatedList config =
+    -- TODO use skipEol
+    -- TODO use allowTrailingSep
     succeed identity
         |> skip (token config.left)
         |> keep
@@ -226,6 +230,38 @@ separatedList config =
                         )
                 )
                 |> map (Maybe.withDefault [])
+            )
+        |> skip (token config.right)
+
+
+{-|
+
+    : left item (sep item)* right
+
+-}
+separatedNonemptyList :
+    { left : Token.Type
+    , right : Token.Type
+    , sep : Token.Type
+    , item : Parser a
+    , skipEol : Bool
+    , allowTrailingSep : Bool
+    }
+    -> Parser ( a, List a )
+separatedNonemptyList config =
+    -- TODO use skipEol
+    -- TODO use allowTrailingSep
+    succeed Tuple.pair
+        |> skip (token config.left)
+        |> keep config.item
+        |> keep
+            -- (sep item)*
+            (many
+                -- sep item
+                (succeed identity
+                    |> skip (token config.sep)
+                    |> keep config.item
+                )
             )
         |> skip (token config.right)
 

@@ -298,14 +298,65 @@ namedType =
         |> Parser.map TNamed
 
 
+{-|
+
+    : LBRACE (recordTypeField (COMMA recordTypeField)*)? RBRACE
+    = {a:Int,b:Bool}
+
+-}
 recordType : Parser AST.Type
 recordType =
-    \_ -> Debug.todo "recordType"
+    Parser.separatedList
+        { left = LBrace
+        , right = RBrace
+        , sep = Comma
+        , item = recordTypeField
+        , skipEol = True
+        , allowTrailingSep = True
+        }
+        |> Parser.map TRecord
 
 
+{-|
+
+    : LOWER_NAME COLON type
+    = a: Int
+
+-}
+recordTypeField : Parser RecordTypeField
+recordTypeField =
+    Parser.succeed RecordTypeField
+        |> Parser.keep lowerName
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep (Parser.lazy (\() -> type_))
+
+
+{-|
+
+    : LPAREN type (COMMA type)* RPAREN
+    = (Int)
+    = (Int,Float,String)
+
+-}
 tupleOrParenthesizedType : Parser AST.Type
 tupleOrParenthesizedType =
-    \_ -> Debug.todo "tupleOrParenthesizedType"
+    Parser.separatedNonemptyList
+        { left = Token.LParen
+        , right = Token.RParen
+        , sep = Token.Comma
+        , item = Parser.lazy (\() -> type_)
+        , skipEol = True
+        , allowTrailingSep = False
+        }
+        |> Parser.map
+            (\( t, ts ) ->
+                case ts of
+                    [] ->
+                        t
+
+                    _ ->
+                        TTuple (t :: ts)
+            )
 
 
 unitType : Parser AST.Type
@@ -315,9 +366,18 @@ unitType =
         |> Parser.skip (Parser.token RParen)
 
 
+{-|
+
+    : type ARROW type
+      ^^^^^^^^^^ already parsed
+    = x -> y
+
+-}
 fnType : InfixParser AST.Type
 fnType =
-    \_ -> Debug.todo "fnType"
+    \config ->
+        typeAux config.precedence config.isRight
+            |> Parser.map (\right -> TFn { from = config.left, to = right })
 
 
 applicationType : InfixParser AST.Type
