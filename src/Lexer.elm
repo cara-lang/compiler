@@ -556,14 +556,24 @@ float intPart firstFloat source i row col startRow startCol =
                 Just 'e' ->
                     case String.at (i1 + 1) source of
                         Just '-' ->
-                            Debug.todo "float: negative E"
+                            let
+                                ( eNumbersPart, ( i2, row2, col2 ) ) =
+                                    consumeWhile Char.isDigit source (i1 + 1) row1 (col1 + 1)
+                            in
+                            Ok
+                                ( String.cons '-' eNumbersPart
+                                , ( i2, row2, col2 )
+                                )
 
                         Just c ->
-                            if Char.isDigit c then
-                                Debug.todo "float: positive E"
-
-                            else
-                                Debug.todo "float: non-number E"
+                            let
+                                ( eNumbersPart, ( i2, row2, col2 ) ) =
+                                    consumeWhile Char.isDigit source i1 row1 col1
+                            in
+                            Ok
+                                ( eNumbersPart
+                                , ( i2, row2, col2 )
+                                )
 
                         Nothing ->
                             Err
@@ -572,7 +582,10 @@ float intPart firstFloat source i row col startRow startCol =
                                 )
 
                 _ ->
-                    Ok ( "", ( i1, row1, col1 ) )
+                    Ok
+                        ( ""
+                        , ( i1, row1, col1 )
+                        )
     in
     case restResult of
         Err e ->
