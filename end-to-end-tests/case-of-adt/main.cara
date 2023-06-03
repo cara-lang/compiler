@@ -1,0 +1,9 @@
+type MyType = Foo | Bar(Int)
+
+val = Bar(3)
+
+num = case val of
+  Foo    -> 0
+  Bar(n) -> n * 10
+
+IO.println!(num)
