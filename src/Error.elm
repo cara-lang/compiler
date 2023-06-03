@@ -24,6 +24,8 @@ type LexerError
     | UnfinishedBlockComment
     | EmptyChar
     | UnescapedTabInChar
+    | UnescapedNewlineInChar
+    | UnescapedNewlineInString
     | UnexpectedEscapedCharacterInChar Char
     | UnexpectedEscapedCharacterInString Char
     | UnexpectedEscapedCharacterInMultilineString Char
@@ -94,6 +96,14 @@ title error =
 
                         UnescapedTabInChar ->
                             "E0018: Unescaped tab in a character"
+
+                        UnescapedNewlineInChar ->
+                            -- TODO error code
+                            "EXXXX: Unescaped newline in a character"
+
+                        UnescapedNewlineInString ->
+                            -- TODO error code
+                            "EXXXX: Unescaped newline in a string"
 
                         UnexpectedEscapedCharacterInChar _ ->
                             "E0028: Unexpected escaped character in a character"

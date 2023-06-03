@@ -901,17 +901,10 @@ char source i row col =
                                     err row_ (col_ + 1) <| UnexpectedEscapedCharacterInChar second
 
                 Just '\u{000D}' ->
-                    -- TODO disallow literal \n in chars
-                    -- optionally read '\n' as well
-                    if (match "\n" source newI row_ newCol).matches then
-                        go (newI + 1) (row_ + 1) 1 ('\n' :: content)
-
-                    else
-                        go newI (row_ + 1) 1 ('\n' :: content)
+                    err row_ col_ UnescapedNewlineInChar
 
                 Just '\n' ->
-                    -- TODO disallow literal \n in chars
-                    go newI (row_ + 1) 1 ('\n' :: content)
+                    err row_ col_ UnescapedNewlineInChar
 
                 Just c ->
                     go newI row_ newCol (c :: content)
@@ -981,11 +974,10 @@ string source i row col =
                                     err row_ (col_ + 1) <| UnexpectedEscapedCharacterInString second
 
                 Just '\u{000D}' ->
-                    -- optionally read '\n' as well
-                    Debug.todo "string \\r"
+                    err row_ col_ UnescapedNewlineInString
 
                 Just '\n' ->
-                    Debug.todo "string \\n"
+                    err row_ col_ UnescapedNewlineInString
 
                 Just c ->
                     go newI row_ newCol (c :: content)
