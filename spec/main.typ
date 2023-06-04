@@ -5,7 +5,7 @@
   authors: (
     (name: "Martin Janiczek", email: "https://cara-lang.com"),
   ),
-  date: "June 4, 2023",
+  date: "June 5, 2023",
 )
 
 // Display inline code in a small box
@@ -140,11 +140,15 @@ IO.println!(ys |> traverse(f)) // -> Just([6,7,8,9,10])
 
 = In this document <in-this-document>
 
+
 #syntax[
 ```py
-# This is how EBNF-like syntax is stylized.
+# This is how Ungrammar-like syntax is stylized.
 # Each syntax section usually begins with this block.
 # It's not meant to be precise, particularly not around whitespace and EOLs.
+# 
+# For more on Ungrammar see:
+# https://rust-analyzer.github.io/blog/2020/10/24/introducing-ungrammar.html
 ```
 ]
 
@@ -1004,6 +1008,8 @@ Tuples start from length 2, since:
 - tuples of length 1 are just the expression they contain.
 
 #todo[Mention how Cara deals with leading/trailing commas in tuples.]
+
+#todo[Mention the implicit getters for tuples: `.el1 .. .elN`, `.first .. .tenth`. Mention them being one-indexed.]
 
 === Lists <list-expr>
 
