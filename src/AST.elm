@@ -3,6 +3,7 @@ module AST exposing
     , Decl(..)
     , Expr(..)
     , LetModifier(..)
+    , LetStmt
     , ModuleModifier(..)
     , Pattern(..)
     , Program
@@ -37,7 +38,7 @@ type Expr
     | Call { fn : Expr, args : List Expr } -- foo(), bar(1,2)
     | RecordGet { record : Expr, field : String } -- record.field
       -- Blocks
-    | Block { stmts : List Stmt, ret : Maybe Expr } -- x = { ... }
+    | Block { letStmts : List LetStmt, ret : Expr } -- x = { ... }
     | EffectBlock { monadModule : Id, stmts : List Stmt, ret : Maybe Expr } -- x = My.Monad { ... }
       -- Other
     | Constructor_ { id : Id, args : List Expr } -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
@@ -80,8 +81,16 @@ type Bang
     | BCall { fn : Expr, args : List Expr } -- foo!(1,2), Bar.foo!(1,2), x |> foo!(1,2), foo.bar!(1,2)
 
 
+type alias LetStmt =
+    { mod : LetModifier
+    , lhs : Pattern
+    , type_ : Maybe Type
+    , expr : Expr
+    }
+
+
 type Stmt
-    = SLet { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, expr : Expr }
+    = SLet LetStmt
     | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
 

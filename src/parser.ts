@@ -1012,6 +1012,9 @@ function boolExpr(state: State): {i: number, match: Expr} {
     }
 }
 
+// TODO if there are () involved, the list inside needs to be non-empty:
+// (LPAREN expr (COMMA expr)* RPAREN)?
+//
 //: QUALIFIER* UPPER_NAME (LPAREN (expr (COMMA expr)*)? RPAREN)?
 //= Bar
 //= Foo.Bar(1,2,3)
@@ -1092,7 +1095,7 @@ function tupleOrParenthesizedExpr(state: State): {i: number, match: Expr} {
     return {i: listResult.i, match};
 }
 
-//: LBRACKET expr (COMMA expr)* RBRACKET
+//: LBRACKET (expr (COMMA expr)*)? RBRACKET
 //= []
 //= [1]
 //= [1,2]
@@ -1236,6 +1239,8 @@ function blockExpr(state: State): {i: number, match: Expr} {
     }
 }
 
+// TODO enforce having expr
+// TODO allow 0 statements before to the expression
 //: LBRACE (EOL+ stmt)+ (EOL+ expr)? EOL+ RBRACE
 function block(state: State): {i: number, match: Block} {
     let {i} = state;
