@@ -458,8 +458,10 @@ prefixExpr =
             [ ( [ P Token.isInt ], intExpr )
             , ( [ P Token.isFloat ], floatExpr )
 
-            {- , ( [ P Token.isChar ], charExpr )
-               , ( [ P Token.isString ], stringExpr )
+            {- , ( [ P Token.isChar ], charExpr ) -}
+            , ( [ P Token.isString ], stringExpr )
+
+            {-
                , ( [ P Token.isBacktickString ], backtickStringExpr )
                , ( [ P Token.isGetter ], recordGetterExpr )
                , ( [ T True_ ], boolExpr )
@@ -495,6 +497,18 @@ prefixExpr =
             --, recordExpr
             ]
         }
+
+
+{-|
+
+    = "abc"
+    : STRING
+
+-}
+stringExpr : Parser Expr
+stringExpr =
+    Parser.tokenData Token.getString
+        |> Parser.map AST.String
 
 
 {-|
