@@ -456,9 +456,9 @@ prefixExpr =
     Parser.oneOf
         { commited =
             [ ( [ P Token.isInt ], intExpr )
+            , ( [ P Token.isFloat ], floatExpr )
 
-            {- , ( [ P Token.isFloat ], floatExpr )
-               , ( [ P Token.isChar ], charExpr )
+            {- , ( [ P Token.isChar ], charExpr )
                , ( [ P Token.isString ], stringExpr )
                , ( [ P Token.isBacktickString ], backtickStringExpr )
                , ( [ P Token.isGetter ], recordGetterExpr )
@@ -478,9 +478,9 @@ prefixExpr =
                , ( [ T Hole ], holeExpr )
             -}
             , ( [ T ColonColon ], rootIdentifierExpr )
+            , ( [ T Minus ], unaryOpExpr Minus NegateNum )
 
             {-
-               , ( [ T Minus ], unaryOpExpr Minus NegateNum )
                , ( [ T Bang ], unaryOpExpr Bang NegateBool )
                , ( [ T Tilde ], unaryOpExpr Tilde NegateBin )
             -}
@@ -529,6 +529,18 @@ intExpr : Parser Expr
 intExpr =
     Parser.tokenData Token.getInt
         |> Parser.map AST.Int
+
+
+{-|
+
+    : FLOAT
+    = 123.45
+
+-}
+floatExpr : Parser Expr
+floatExpr =
+    Parser.tokenData Token.getFloat
+        |> Parser.map AST.Float
 
 
 infixExpr : InfixParserTable Expr
@@ -616,6 +628,18 @@ infixExpr =
             -}
             _ ->
                 Nothing
+
+
+{-|
+
+    : tokenType expr
+
+-}
+unaryOpExpr : Token.Type -> UnaryOp -> Parser Expr
+unaryOpExpr tokenType op =
+    Parser.succeed (\e -> UnaryOp op e)
+        |> Parser.skip (Parser.token tokenType)
+        |> Parser.keep (Parser.lazy (\() -> expr))
 
 
 {-|

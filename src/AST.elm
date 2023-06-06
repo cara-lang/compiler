@@ -10,6 +10,7 @@ module AST exposing
     , RecordTypeField
     , Stmt(..)
     , Type(..)
+    , UnaryOp(..)
     )
 
 import Env exposing (Env)

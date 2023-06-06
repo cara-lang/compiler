@@ -6,6 +6,7 @@ import Intrinsic exposing (Intrinsic)
 
 type Value
     = VInt Int
+    | VFloat Float
     | VUnit
     | VIntrinsic Intrinsic
     | VList (List Value)
@@ -16,6 +17,9 @@ toString value =
     case value of
         VInt int ->
             String.fromInt int
+
+        VFloat float ->
+            String.fromFloat float
 
         VUnit ->
             "()"

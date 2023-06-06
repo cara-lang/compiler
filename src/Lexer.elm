@@ -631,20 +631,20 @@ float intPart firstFloat source i row col startRow startCol =
                         Just '-' ->
                             let
                                 ( eNumbersPart, ( i2, row2, col2 ) ) =
-                                    consumeWhile Char.isDigit source (i1 + 1) row1 (col1 + 1)
+                                    consumeWhile Char.isDigit source (i1 + 2) row1 (col1 + 2)
                             in
                             Ok
-                                ( String.cons '-' eNumbersPart
+                                ( "e-" ++ eNumbersPart
                                 , ( i2, row2, col2 )
                                 )
 
                         Just c ->
                             let
                                 ( eNumbersPart, ( i2, row2, col2 ) ) =
-                                    consumeWhile Char.isDigit source i1 row1 col1
+                                    consumeWhile Char.isDigit source (i1 + 1) row1 (col1 + 1)
                             in
                             Ok
-                                ( eNumbersPart
+                                ( String.cons 'e' eNumbersPart
                                 , ( i2, row2, col2 )
                                 )
 
@@ -670,7 +670,7 @@ float intPart firstFloat source i row col startRow startCol =
                     String.cons firstFloat floatPartWithoutFirstBeforeE
                         ++ ePart
             in
-            case String.toFloat (intPart ++ "." ++ floatPart ++ ePart) of
+            case String.toFloat (intPart ++ "." ++ floatPart) of
                 Nothing ->
                     -- Shouldn't happen if the previous getters are correct?
                     err startRow startCol ExpectedNumber

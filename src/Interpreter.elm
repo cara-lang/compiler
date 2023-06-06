@@ -64,23 +64,20 @@ interpretBang =
 interpretBangCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretBangCall =
     \env { fn, args } ->
-        interpretExpr env fn
-            |> Interpreter.andThen
-                (\env1 fnVal ->
-                    case fnVal of
-                        VIntrinsic IoPrintln ->
-                            case args of
-                                [ arg ] ->
-                                    interpretExpr env1 arg
-                                        |> Interpreter.andThen interpretPrintln
-                                        |> Outcome.map (\() -> VUnit)
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        case fnVal of
+            VIntrinsic IoPrintln ->
+                case args of
+                    [ arg ] ->
+                        interpretExpr env1 arg
+                            |> Interpreter.andThen interpretPrintln
+                            |> Outcome.map (\() -> VUnit)
 
-                                _ ->
-                                    Outcome.fail UnexpectedArity
+                    _ ->
+                        Outcome.fail UnexpectedArity
 
-                        _ ->
-                            Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
-                )
+            _ ->
+                Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
 
 
 interpretLet :
@@ -138,6 +135,9 @@ interpretExpr =
             Int n ->
                 Outcome.succeed env (VInt n)
 
+            Float n ->
+                Outcome.succeed env (VFloat n)
+
             Identifier id ->
                 interpretIdentifier env id
 
@@ -147,8 +147,22 @@ interpretExpr =
             List xs ->
                 interpretList env xs
 
+            UnaryOp op e ->
+                interpretUnaryOp env ( op, e )
+
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
+
+
+interpretUnaryOp : Interpreter ( UnaryOp, Expr ) Value
+interpretUnaryOp =
+    \env ( op, expr ) ->
+        case ( op, expr ) of
+            ( NegateNum, Float n ) ->
+                interpretExpr env (Float (negate n))
+
+            _ ->
+                Debug.todo <| "Unimplemented interpretUnaryOp: " ++ Debug.toString ( op, expr )
 
 
 {-| Try to find the ID in the current Env, then in the parent, ... up to the root.

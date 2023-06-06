@@ -1,7 +1,7 @@
 module Interpreter.Internal exposing
     ( Interpreter
     , succeed, fail
-    , map, contramap, andThen
+    , map, contramap, andThen, do
     , traverse
     )
 
@@ -9,7 +9,7 @@ module Interpreter.Internal exposing
 
 @docs Interpreter
 @docs succeed, fail
-@docs map, contramap, andThen
+@docs map, contramap, andThen, do
 @docs traverse
 
 -}
@@ -94,6 +94,11 @@ andThen interpreter outcome =
         NeedsEffectStr eff k ->
             NeedsEffectStr eff k
                 |> Outcome.andThen interpreter
+
+
+do : Outcome b -> Interpreter b c -> Outcome c
+do outcome interpreter =
+    andThen interpreter outcome
 
 
 contramap : (aa -> a) -> Interpreter a b -> Interpreter aa b

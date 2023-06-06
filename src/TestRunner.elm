@@ -72,23 +72,35 @@ runTests rootPath testDirs =
 
 runTest : String -> String -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
 runTest name fileContents k =
-    effect0 (Effect.Print <| name ++ ": ") <|
-        \() ->
-            let
-                parseResult =
-                    fileContents
-                        |> (Lexer.lex >> Result.mapError LexerError)
-                        |> Result.andThen (Parser.parse >> Result.mapError ParserError)
-            in
-            case parseResult of
-                Err (LexerError ( loc, err )) ->
-                    effect0 (Effect.Println <| "Lexer - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
+    case
+        fileContents
+            |> (Lexer.lex >> Result.mapError LexerError)
+            |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+    of
+        Err (LexerError ( loc, err )) ->
+            if String.endsWith "-err" name then
+                -- TODO and if the err is actually the one we want!
+                k ()
 
-                Err (ParserError ( loc, err )) ->
-                    effect0 (Effect.Println <| "Parser - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
+            else
+                effect0
+                    (Effect.Println <|
+                        name
+                            ++ ": Lexer - "
+                            ++ Loc.toString loc
+                            ++ " - "
+                            ++ Debug.toString err
+                    )
+                    k
 
-                other ->
-                    effect0 (Effect.Println <| Debug.toString other) k
+        Err (ParserError ( loc, err )) ->
+            effect0 (Effect.Println <| name ++ ": Parser - " ++ Loc.toString loc ++ " - " ++ Debug.toString err) k
+
+        Err (InterpreterError err) ->
+            effect0 (Effect.Println <| name ++ ": Interpreter - " ++ Debug.toString err) k
+
+        Ok _ ->
+            k ()
 
 
 effect0 : Effect0 -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
