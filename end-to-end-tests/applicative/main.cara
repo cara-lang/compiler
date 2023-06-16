@@ -1,0 +1,38 @@
+// Identity applicative
+type I[a] = I(a)
+
+succeed : a -> I[a]
+succeed(a) = I(a)
+
+map : (a -> b),I[a] -> I[b]
+map(fn,I(a)) = I(fn(a))
+
+map2 : (a -> b -> c),I[a],I[b] -> I[c]
+map2(fn,I(a),I(b)) = I(fn(a,b))
+
+andMap : I[a],I[a -> b] -> I[b]
+andMap(I(a),I(fn)) = I(fn(a))
+
+// Currently we need this
+x = succeed(\a -> \b -> \c -> a+b+c)
+    |> andMap(succeed(1))
+    |> andMap(succeed(2))
+    |> andMap(succeed(3))
+
+IO.println!(x)
+
+// But what about if we allowed passing higher-arity fns where only curried functions fit?
+y = succeed(\a,b,c -> a+b+c)
+    |> andMap(succeed(4))
+    |> andMap(succeed(5))
+    |> andMap(succeed(6))
+
+IO.println!(y)
+
+// In other words, to be able to use applicatives nicely, we allowed this:
+IO.println!((\a,b,c -> a+b+c)(7)(8)(9))
+// where originally we only were allowed to use:
+IO.println!((\a,b,c -> a+b+c)(10,11,12))
+
+// Another question: do we allow arbitrary number of arguments in these?
+IO.println!((\a,b,c -> a+b+c)(13,14)(15))

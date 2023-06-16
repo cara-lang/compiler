@@ -1,0 +1,33 @@
+add : Int,Int -> Int
+add(a,b) = a+b
+
+add2 : Int,Int -> Int
+add2 = \(a,b) -> a+b
+
+addCurried : Int -> Int -> Int
+addCurried = \a -> \b -> a+b
+
+addCurried2 : Int -> Int -> Int
+addCurried2(a) = \b -> a+b
+
+addCurried3 : Int -> Int -> Int
+addCurried3(a) = {
+  fn(b) = a+b // TODO do we want to allow function declarations in blocks?
+  fn          // Seems like that would be cool!
+}
+
+first : (a,b) -> a
+first(a,_) = a
+
+first2 : (a,b) -> a
+first2 = \(a,_) -> a
+
+driveThePointHome(a) = {
+  a1 : Int        // We want to allow this too!
+  a1 = a + 1 
+
+  fn : Int -> Int // And this!
+  fn(b) = a+b // TODO do we want to allow function declarations in blocks?
+
+  fn(a1)
+}
