@@ -265,7 +265,7 @@ nextToken source i row col =
                         number source i row col
 
                     else
-                        Debug.todo <| "next token fallthrough ?!?!?! : " ++ String.fromChar c
+                        err row col (UnexpectedChar c)
 
 
 {-| TODO this would be nicer if we parameterized TokenResult over the data.
