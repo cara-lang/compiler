@@ -1,6 +1,5 @@
 module Value exposing (Value(..), toString)
 
-import Id
 import Intrinsic exposing (Intrinsic)
 
 

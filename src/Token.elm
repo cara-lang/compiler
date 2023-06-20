@@ -1,21 +1,13 @@
 module Token exposing
     ( Token
     , Type(..)
-    , getBacktickString
-    , getChar
     , getFloat
-    , getGetter
-    , getHole
     , getInt
     , getLowerName
     , getQualifier
     , getString
     , getUpperName
-    , isBacktickString
-    , isChar
     , isFloat
-    , isGetter
-    , isHole
     , isInt
     , isLowerName
     , isQualifier
@@ -120,40 +112,10 @@ isFloat type_ =
             False
 
 
-isChar : Type -> Bool
-isChar type_ =
-    case type_ of
-        Char _ ->
-            True
-
-        _ ->
-            False
-
-
 isString : Type -> Bool
 isString type_ =
     case type_ of
         String _ ->
-            True
-
-        _ ->
-            False
-
-
-isBacktickString : Type -> Bool
-isBacktickString type_ =
-    case type_ of
-        BacktickString _ ->
-            True
-
-        _ ->
-            False
-
-
-isGetter : Type -> Bool
-isGetter type_ =
-    case type_ of
-        Getter _ ->
             True
 
         _ ->
@@ -190,16 +152,6 @@ isUpperName type_ =
             False
 
 
-isHole : Type -> Bool
-isHole type_ =
-    case type_ of
-        Hole _ ->
-            True
-
-        _ ->
-            False
-
-
 getInt : Type -> Maybe Int
 getInt type_ =
     case type_ of
@@ -220,41 +172,11 @@ getFloat type_ =
             Nothing
 
 
-getChar : Type -> Maybe String
-getChar type_ =
-    case type_ of
-        Char c ->
-            Just c
-
-        _ ->
-            Nothing
-
-
 getString : Type -> Maybe String
 getString type_ =
     case type_ of
         String s ->
             Just s
-
-        _ ->
-            Nothing
-
-
-getBacktickString : Type -> Maybe String
-getBacktickString type_ =
-    case type_ of
-        BacktickString s ->
-            Just s
-
-        _ ->
-            Nothing
-
-
-getGetter : Type -> Maybe String
-getGetter type_ =
-    case type_ of
-        Getter g ->
-            Just g
 
         _ ->
             Nothing
@@ -284,16 +206,6 @@ getUpperName : Type -> Maybe String
 getUpperName type_ =
     case type_ of
         UpperName n ->
-            Just n
-
-        _ ->
-            Nothing
-
-
-getHole : Type -> Maybe Int
-getHole type_ =
-    case type_ of
-        Hole n ->
             Just n
 
         _ ->

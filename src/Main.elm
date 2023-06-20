@@ -1,24 +1,13 @@
 module Main exposing (Flags, Model, Msg, main)
 
 import AST
-    exposing
-        ( Bang(..)
-        , Decl(..)
-        , Expr(..)
-        , LetModifier(..)
-        , ModuleModifier(..)
-        , Pattern(..)
-        , Stmt(..)
-        )
 import Effect exposing (Effect0, EffectStr)
-import Env exposing (Env)
+import Env
 import Error exposing (Error(..))
 import Interpreter
 import Interpreter.Outcome as Interpreter
 import Lexer
 import Parser
-import Tree exposing (Tree)
-import Tree.Zipper as Zipper exposing (Zipper)
 
 
 main : Program Flags Model Msg

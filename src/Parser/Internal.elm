@@ -436,7 +436,7 @@ pratt config =
                                                 Nothing ->
                                                     fail DidntGetInfixParser
 
-                                                Just infix ->
+                                                Just _ ->
                                                     Debug.todo "pratt go infix Just"
                                         )
                                 , succeed left
@@ -492,7 +492,7 @@ maybe : Parser a -> Parser (Maybe a)
 maybe parser =
     \tokens ->
         case parser tokens of
-            Err err ->
+            Err _ ->
                 Ok ( Nothing, tokens )
 
             Ok ( a, nextTokens ) ->

@@ -127,17 +127,17 @@ mapRoot getId fn zipper =
 
 mapAtPath : (a -> comparable) -> List comparable -> (Zipper a -> Zipper a) -> Zipper a -> Zipper a
 mapAtPath getId path fn zipper =
-    let
-        originalPath : List comparable
-        originalPath =
-            breadcrumbs zipper
-                |> List.map getId
-    in
     case
         zipper
             |> navigate getId path
             |> Maybe.andThen
                 (\zipperAtPath ->
+                    let
+                        originalPath : List comparable
+                        originalPath =
+                            breadcrumbs zipper
+                                |> List.map getId
+                    in
                     zipperAtPath
                         |> fn
                         |> Zipper.root

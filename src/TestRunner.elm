@@ -24,10 +24,8 @@ type alias Flags =
 
 type Model
     = Done
-    | ExitingWithError
     | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
     | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
-    | RunningTests { rootPath : String, testDirs : List String }
 
 
 type Msg
@@ -123,14 +121,6 @@ update msg model =
         Done ->
             Debug.todo <| "BUG: we're getting a Msg when we're Done: " ++ Debug.toString msg
 
-        ExitingWithError ->
-            case msg of
-                CompletedEprintln ->
-                    ( Done, Cmd.none )
-
-                _ ->
-                    Debug.todo <| "BUG: we're getting a non-eprintln Msg when ExitingWithError: " ++ Debug.toString msg
-
         PausedOnEffect0 effect k ->
             case ( effect, msg ) of
                 ( Effect.Print _, CompletedPrint ) ->
@@ -170,9 +160,6 @@ update msg model =
 
                 ( Effect.ReadFile _, _ ) ->
                     Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
-
-        RunningTests testDirs ->
-            Debug.todo <| "update - running tests - msg: " ++ Debug.toString msg
 
 
 subscriptions : Model -> Sub Msg

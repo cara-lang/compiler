@@ -638,7 +638,7 @@ float intPart firstFloat source i row col startRow startCol =
                                 , ( i2, row2, col2 )
                                 )
 
-                        Just c ->
+                        Just _ ->
                             let
                                 ( eNumbersPart, ( i2, row2, col2 ) ) =
                                     consumeWhile Char.isDigit source (i1 + 1) row1 (col1 + 1)

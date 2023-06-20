@@ -3,11 +3,10 @@ module Parser exposing (parse)
 import AST exposing (..)
 import Error exposing (ParserError(..))
 import Id exposing (Id)
-import List.Zipper as Zipper exposing (Zipper)
+import List.Zipper as Zipper
 import Loc exposing (Loc)
 import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
-import Tree exposing (Tree)
 
 
 parse : List Token -> Result ( Loc, ParserError ) AST.Program

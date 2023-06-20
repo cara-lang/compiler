@@ -1,5 +1,9 @@
 module AST exposing
     ( Bang(..)
+    , BinaryOp
+    , CaseBranch
+    , Constructor
+    , ConstructorArg
     , Decl(..)
     , Expr(..)
     , LetModifier(..)
@@ -7,6 +11,7 @@ module AST exposing
     , ModuleModifier(..)
     , Pattern(..)
     , Program
+    , RecordExprContent
     , RecordTypeField
     , Stmt(..)
     , Type(..)

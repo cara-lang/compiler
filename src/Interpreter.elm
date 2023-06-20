@@ -1,7 +1,7 @@
 module Interpreter exposing (interpretProgram)
 
 import AST exposing (..)
-import Effect exposing (Effect0, EffectStr)
+import Effect
 import Env exposing (Env)
 import EnvDict exposing (EnvDict)
 import Error exposing (InterpreterError(..))
@@ -9,8 +9,7 @@ import Id exposing (Id)
 import Interpreter.Internal as Interpreter exposing (Interpreter)
 import Interpreter.Outcome as Outcome exposing (Outcome(..))
 import Intrinsic exposing (Intrinsic(..))
-import Tree exposing (Tree)
-import Tree.Zipper as Zipper exposing (Zipper)
+import Tree.Zipper as Zipper
 import Value exposing (Value(..))
 
 
@@ -54,7 +53,7 @@ interpretBang : Interpreter Bang Value
 interpretBang =
     \env bang ->
         case bang of
-            BValue expr ->
+            BValue _ ->
                 Debug.todo "branch 'BValue' not implemented"
 
             BCall r ->
@@ -64,20 +63,21 @@ interpretBang =
 interpretBangCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretBangCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
-        case fnVal of
-            VIntrinsic IoPrintln ->
-                case args of
-                    [ arg ] ->
-                        interpretExpr env1 arg
-                            |> Interpreter.andThen interpretPrintln
-                            |> Outcome.map (\() -> VUnit)
+        Interpreter.do (interpretExpr env fn) <|
+            \env1 fnVal ->
+                case fnVal of
+                    VIntrinsic IoPrintln ->
+                        case args of
+                            [ arg ] ->
+                                interpretExpr env1 arg
+                                    |> Interpreter.andThen interpretPrintln
+                                    |> Outcome.map (\() -> VUnit)
+
+                            _ ->
+                                Outcome.fail UnexpectedArity
 
                     _ ->
-                        Outcome.fail UnexpectedArity
-
-            _ ->
-                Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
+                        Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
 
 
 interpretLet :
