@@ -38,6 +38,7 @@ type LexerError
     | OctalIntStartedWith0X
     | ShebangIsNotFirst
     | FloatExpectedNumbersAfterE
+    | FloatExpectedNumbersAfterDot
     | UnexpectedBinaryIntCharacter Char
     | UnexpectedOctIntCharacter Char
     | UnexpectedHexIntCharacter Char
@@ -146,6 +147,10 @@ title error =
                         FloatExpectedNumbersAfterE ->
                             -- TODO error code
                             "Float: expected numbers after E"
+
+                        FloatExpectedNumbersAfterDot ->
+                            -- TODO error code
+                            "Float: expected numbers after dot"
 
                         UnexpectedBinaryIntCharacter c ->
                             -- TODO error code

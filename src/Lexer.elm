@@ -605,10 +605,10 @@ decNumber first source i row col =
                     float intPart c source (i1 + 2) row1 (col1 + 2) row col
 
                 else
-                    Debug.todo "number float 2"
+                    err row1 (col1 + 1) FloatExpectedNumbersAfterDot
 
             Nothing ->
-                Debug.todo "number float 3"
+                err row1 col1 FloatExpectedNumbersAfterDot
 
     else
         -- Definitely an Int!
