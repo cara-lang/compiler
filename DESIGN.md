@@ -8,7 +8,7 @@ WANTED (but doesn't yet have tests):
 * automatic tail recursion (Erlang/Elm style)
   * modulo cons? allowing for `go n = n :: go (n - 1)` to be tail-optimized
     * https://www.microsoft.com/en-us/research/uploads/prod/2022/07/trmc.pdf
-* pattern matching has `A|B|C -> ...`
+* pattern matching has `A | B | C -> ...`
 * integer types: Int8, Int16, ..., Int64, BigInt
   * automatic upcasting from i32 to i64 etc
 * float types: Float32, Float64, BigDecimal
@@ -16,7 +16,7 @@ WANTED (but doesn't yet have tests):
   * They put the left side into the last position of right side by default
     * data |> x(2) --> x(2, data)
     * Can be overriden with _
-      * data |> x(2,_,3) --> x(2,data,3)
+      * data |> #(x(2,_,3)) --> x(2,data,3)
 * ++ for sequence-adding
   * with overloaded operators, it could be arbitrary:
     * A ++ [B,C,D] --> [A,B,C,D]
@@ -30,6 +30,7 @@ WANTED (but doesn't yet have tests):
     * foo(Int, Int): Int       // <- disallowed
     * foo(x: Int, Int): Int    // <- disallowed
     * foo(x: Int, y: Int): Int // <- allowed
+    * in new syntax: foo : x:Int -> y:Int -> Int
   * return type cannot be omitted
 * Int == Int64
 * Float == Float64
@@ -58,9 +59,8 @@ WANTED:
 * Fraction type?
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
 * Probably no <| pipelines? << and >> still might have their place. 
-* 0x, 0b, 0o, floats scientific notation?
 * inline pragmas? for Maybe.map to become tail-safe etc.
-* holes syntax: would it be better to do \(_ + 1) instead of (_ + 1)?
+* holes syntax: #(_ + 1)
 * what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
 * GADTs?
   * https://dev.realworldocaml.org/gadts.html
@@ -71,7 +71,9 @@ WANTED:
   * `pure` and `bind` are used in the monad blocks `MonadName { ... }` by the compiler
   * can we later do something cool with the namespace itself?
     * see `monad-state` test, with `derive IdGen.each as Monad.each`
-  * allow unqualified dot notation on these? myXY.addX(1) if there is a fn XY.addX? and not for other unqualified fns?
+* dot notation: myXY.addX(1) if there is a fn XY.addX
+    * do we want it?
+    * it will undermine the `List.map` preference
 * name collisions of type constructors can have collisions; they need to be distinguished like:
   * type X = A | B(Int)
   * type Y = A | B(Int)
@@ -114,17 +116,13 @@ TODO:
 * does ordered let together with implicit main mean top level declarations are ordered like F# is?
 * how to do multiline strings?
 * `as` to be an allowed identifier
-* dot syntax
-  * can't really be used with qualified functions... in which scenarios would it be useful then? Would it have some automatic resolution?
-    * dstHandle.write("...") == FS.write("...", dstHandle) ?
-  * It still seems very elegant for functions written in this module. Perhaps let's keep it :)
-  * --------------
-  * a single-line alternative to when |> would be too verbose / vertically heavy
-  * encouraged as an alternative to stacking functions g(f(x)), combats the lack of <| or $ a little
-  * `data.x().y()` means `y(x(data))`
-  * `data.x(1).y(2,3)` means `y(2,3,x(1,data))`
-  * as with |>, can be overriden with _
-    * `data.x(_,1).y(2,_,3)` means `y(2,x(data,1),3)`
+* ! for do-notation: do we want to allow it anywhere, not just once per line?
+    * `foo = f!(x!,y,z!)` translates to
+      ```
+      xx = x!
+      zz = z!
+      foo = f!(xx,y,zz)
+      ```
 * postfix op for seq access - desugar to `getAt`? Not all seqs would implement that
   * [1]      -> getAt(i: Int, coll: Seq(a)): Maybe(a) given ...
   * [-1]     -> -//-
@@ -145,19 +143,12 @@ Fast F# - "Writing a dictionary", fast hashing/... etc.
   - https://www.youtube.com/watch?v=Hd1XoubzdK4
   - https://github.com/matthewcrews/FastDictionaryTest
 
-----------------
-
-what about one-line syntax:
-
-value1: Doc = ...
-
-instead of
-
-value1: Doc
-value1 = ...
-
-?
-
+--------------------------
+* `value1: Doc = ...` translates to:
+  ```
+  value1: Doc
+  value1 = ...
+  ```
 --------------------------
 
 WHAT'S MISSING FROM ELM:
@@ -202,7 +193,7 @@ FOMO FROM OTHER LANGUAGES:
 
 ----------------------------
 
-Tests: "they don't run by default; but they are exposed values (if not `private`), they all compile down to (-> TestResult) and you can run them from the REPL etc. or even use them in your program
+Tests: "they don't run by default; but they are exposed values (if not `private`), they all compile down to (() -> TestResult) and you can run them from the REPL etc. or even use them in your program
 
 -----------------------------
 
@@ -229,6 +220,8 @@ Monad syntax sugar:
      log!("hello") // is the same as
      _ = log!("hello")
 7) Non-monadic exprs without an `x =` binding are only allowed as the last stmt
+
+We should allow the last bang (`x!(a,b)`) result to be returned from the expr block
 
 ---------------------------
 

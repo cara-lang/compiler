@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 
-const selectedTest = null; // 'module-nested-root';
+const selectedTest = 'int-arithmetic'; // 'module-nested-root';
 
 ///////////////////////////////////////////
 
