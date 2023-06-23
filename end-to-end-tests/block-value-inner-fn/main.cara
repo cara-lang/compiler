@@ -1,0 +1,14 @@
+value = {
+  x(y) = y + 5
+  x(10)
+}
+
+IO.println!(value)
+
+fn = {
+  x(y) = y + 5
+  x
+}
+
+IO.println!(fn)
+IO.println!(fn(10))
