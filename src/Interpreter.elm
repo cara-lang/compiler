@@ -150,6 +150,9 @@ interpretExpr =
             UnaryOp op e ->
                 interpretUnaryOp env ( op, e )
 
+            BinaryOp left op right ->
+                interpretBinaryOp env ( left, op, right )
+
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
 
@@ -157,12 +160,56 @@ interpretExpr =
 interpretUnaryOp : Interpreter ( UnaryOp, Expr ) Value
 interpretUnaryOp =
     \env ( op, expr ) ->
-        case ( op, expr ) of
-            ( NegateNum, Float n ) ->
-                interpretExpr env (Float (negate n))
+        interpretExpr env expr
+            |> Outcome.andThen (\env1 val -> interpretUnaryOpVal env1 ( op, val ))
+
+
+interpretUnaryOpVal : Interpreter ( UnaryOp, Value ) Value
+interpretUnaryOpVal =
+    \env ( op, val ) ->
+        case ( op, val ) of
+            ( NegateNum, VInt n ) ->
+                Outcome.succeed env <| VInt (negate n)
+
+            ( NegateNum, VFloat n ) ->
+                Outcome.succeed env <| VFloat (negate n)
 
             _ ->
-                Debug.todo <| "Unimplemented interpretUnaryOp: " ++ Debug.toString ( op, expr )
+                Debug.todo <| "Unimplemented interpretUnaryOpVal: " ++ Debug.toString ( op, val )
+
+
+interpretBinaryOp : Interpreter ( Expr, BinaryOp, Expr ) Value
+interpretBinaryOp =
+    \env ( left, op, right ) ->
+        interpretExpr env left
+            |> Outcome.andThen
+                (\env1 leftVal ->
+                    interpretExpr env1 right
+                        |> Outcome.andThen
+                            (\env2 rightVal ->
+                                interpretBinaryOpVal env2 ( leftVal, op, rightVal )
+                            )
+                )
+
+
+interpretBinaryOpVal : Interpreter ( Value, BinaryOp, Value ) Value
+interpretBinaryOpVal =
+    \env ( left, op, right ) ->
+        case ( left, op, right ) of
+            ( VInt a, Plus, VInt b ) ->
+                Outcome.succeed env <| VInt (a + b)
+
+            ( VInt a, Minus, VInt b ) ->
+                Outcome.succeed env <| VInt (a - b)
+
+            ( VInt a, Times, VInt b ) ->
+                Outcome.succeed env <| VInt (a * b)
+
+            ( VInt a, Div, VInt b ) ->
+                Outcome.succeed env <| VInt (a // b)
+
+            _ ->
+                Debug.todo <| "Unimplemented interpretBinaryOp: " ++ Debug.toString ( left, op, right )
 
 
 {-| Try to find the ID in the current Env, then in the parent, ... up to the root.

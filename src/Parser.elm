@@ -188,7 +188,7 @@ letStatement =
                     |> Parser.keep type_
                 )
             )
-        |> Parser.skip (Parser.token Eq)
+        |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep expr
 
@@ -466,8 +466,8 @@ prefixExpr =
                , ( [ T True_ ], boolExpr )
                , ( [ T False_ ], boolExpr )
                , ( [ T LParen, T RParen ], unitExpr )
-               , ( [ T LParen ], tupleOrParenthesizedExpr )
             -}
+            , ( [ T LParen ], tupleOrParenthesizedExpr )
             , ( [ T LBracket ], listExpr )
 
             {-
@@ -479,11 +479,11 @@ prefixExpr =
                , ( [ T Hole ], holeExpr )
             -}
             , ( [ T ColonColon ], rootIdentifierExpr )
-            , ( [ T Minus ], unaryOpExpr Minus NegateNum )
+            , ( [ T Token.Minus ], prefixUnaryOpExpr Token.Minus NegateNum )
 
             {-
-               , ( [ T Bang ], unaryOpExpr Bang NegateBool )
-               , ( [ T Tilde ], unaryOpExpr Tilde NegateBin )
+               , ( [ T Bang ], prefixUnaryOpExpr Bang NegateBool )
+               , ( [ T Tilde ], prefixUnaryOpExpr Tilde NegateBin )
             -}
             ]
         , noncommited =
@@ -496,6 +496,33 @@ prefixExpr =
             --, recordExpr
             ]
         }
+
+
+{-|
+
+    : LPAREN type (COMMA type)* RPAREN
+    = (Int)
+    = (Int,Float,String)
+
+-}
+tupleOrParenthesizedExpr : Parser Expr
+tupleOrParenthesizedExpr =
+    Parser.separatedNonemptyList
+        { left = LParen
+        , right = RParen
+        , sep = Comma
+        , item = Parser.lazy (\() -> expr)
+        , skipEol = True
+        , allowTrailingSep = False
+        }
+        |> Parser.map
+            (\( x, xs ) ->
+                if List.isEmpty xs then
+                    x
+
+                else
+                    Tuple (x :: xs)
+            )
 
 
 {-|
@@ -614,18 +641,20 @@ infixExpr =
 
                Shru ->
                    Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftRU }
+            -}
+            Token.Plus ->
+                Just { precedence = 12, isRight = False, parser = binaryOpExpr AST.Plus }
 
-               Plus ->
-                   Just { precedence = 12, isRight = False, parser = binaryOpExpr Plus }
+            Token.Minus ->
+                Just { precedence = 12, isRight = False, parser = binaryOpExpr AST.Minus }
 
-               Minus ->
-                   Just { precedence = 12, isRight = False, parser = binaryOpExpr Minus }
+            Token.Times ->
+                Just { precedence = 13, isRight = False, parser = binaryOpExpr AST.Times }
 
-               Times ->
-                   Just { precedence = 13, isRight = False, parser = binaryOpExpr Times }
+            Token.Div ->
+                Just { precedence = 13, isRight = False, parser = binaryOpExpr AST.Div }
 
-               Div ->
-                   Just { precedence = 13, isRight = False, parser = binaryOpExpr Div }
+            {-
 
                Percent ->
                    Just { precedence = 13, isRight = False, parser = binaryOpExpr Mod }
@@ -633,11 +662,13 @@ infixExpr =
                Power ->
                    Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
 
+               -- Keeping a space (precedence = 15) for prefix unary ops
+
                LParen ->
-                   Just { precedence = 15, isRight = True, parser = callExpr }
+                   Just { precedence = 16, isRight = True, parser = callExpr }
 
                Getter _ ->
-                   Just { precedence = 16, isRight = False, parser = recordGetExpr }
+                   Just { precedence = 17, isRight = False, parser = recordGetExpr }
             -}
             _ ->
                 Nothing
@@ -648,11 +679,33 @@ infixExpr =
     : tokenType expr
 
 -}
-unaryOpExpr : Token.Type -> UnaryOp -> Parser Expr
-unaryOpExpr tokenType op =
+prefixUnaryOpExpr : Token.Type -> UnaryOp -> Parser Expr
+prefixUnaryOpExpr tokenType op =
+    let
+        -- we've kept a space in the precedence sequence for this
+        -- binary ops are below, fn calls are above
+        precedence =
+            15
+
+        -- this is _prefix_ unary op expr :)
+        isRight =
+            False
+    in
     Parser.succeed (\e -> UnaryOp op e)
         |> Parser.skip (Parser.token tokenType)
-        |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.keep (Parser.lazy (\() -> exprAux precedence isRight))
+
+
+{-|
+
+    : expr ${tokenTag} expr
+      ^^^^^^^^^^^^^^^^ already parsed
+
+-}
+binaryOpExpr : BinaryOp -> InfixParser Expr
+binaryOpExpr op { left, precedence, isRight } =
+    Parser.succeed (\right -> BinaryOp left op right)
+        |> Parser.keep (exprAux precedence isRight)
 
 
 {-|

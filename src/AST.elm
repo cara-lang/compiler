@@ -1,6 +1,6 @@
 module AST exposing
     ( Bang(..)
-    , BinaryOp
+    , BinaryOp(..)
     , CaseBranch
     , Constructor
     , ConstructorArg
