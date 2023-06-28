@@ -9,6 +9,7 @@ module Parser.Internal exposing
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, ifNextIs
+    , moveLeft, moveRight
     , logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
     , TokenPred(..), oneOf
     , InfixParserTable, InfixParser, pratt
@@ -25,7 +26,8 @@ module Parser.Internal exposing
 @docs maybe, butNot
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
-@docs token, tokenData, peekToken, ifNextIs
+@docs token, anyToken, tokenData, peekToken, ifNextIs
+@docs moveLeft, moveRight
 @docs logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
 @docs TokenPred, oneOf
 @docs InfixParserTable, InfixParser, pratt
@@ -400,6 +402,26 @@ oneOfNoncommited noncommited =
         go Nothing noncommited
 
 
+type Step state a
+    = Loop state
+    | Done a
+
+
+loop : state -> (state -> Parser (Step state a)) -> Parser a
+loop state callback tokens =
+    case callback state tokens of
+        Err err ->
+            Err err
+
+        Ok ( step, newTokens ) ->
+            case step of
+                Loop newState ->
+                    loop newState callback newTokens
+
+                Done result ->
+                    Ok ( result, newTokens )
+
+
 pratt :
     { skipEolBeforeIndented : Bool
     , isRight : Bool
@@ -410,41 +432,98 @@ pratt :
     -> Parser a
 pratt config =
     let
-        precedence : Int
-        precedence =
+        initPrecedence : Int
+        initPrecedence =
             if config.isRight then
                 config.precedence - 1
 
             else
                 config.precedence
+
+        skipEol_ : Parser ()
+        skipEol_ =
+            if config.skipEolBeforeIndented then
+                skipEolBeforeIndented
+
+            else
+                succeed ()
     in
     config.prefix
         |> andThen
             (\prefix ->
                 let
-                    go : a -> Parser a
-                    go left =
-                        oneOf
-                            { commited = []
-                            , noncommited =
-                                [ succeed identity
-                                    |> skip skipEolBeforeIndented
-                                    |> keep (peekToken |> map config.infix)
-                                    |> andThen
-                                        (\maybeInfix ->
-                                            case maybeInfix of
-                                                Nothing ->
-                                                    fail DidntGetInfixParser
+                    go :
+                        a
+                        -> Maybe { precedence : Int, isRight : Bool, parser : InfixParser a }
+                        -> Parser a
+                    go left maybeInfix =
+                        case maybeInfix of
+                            Nothing ->
+                                succeed left
 
-                                                Just _ ->
-                                                    Debug.todo "pratt go infix Just"
-                                        )
-                                , succeed left
-                                ]
-                            }
+                            Just infix ->
+                                if initPrecedence < infix.precedence then
+                                    succeed identity
+                                        |> skip moveRight
+                                        |> keep
+                                            (infix.parser
+                                                { left = left
+                                                , precedence = infix.precedence
+                                                , isRight = infix.isRight
+                                                }
+                                            )
+                                        |> andThen
+                                            (\newLeft ->
+                                                oneOf
+                                                    { commited = []
+                                                    , noncommited =
+                                                        [ succeed identity
+                                                            |> skip skipEol_
+                                                            |> keep peekToken
+                                                            |> andThen
+                                                                (\token_ ->
+                                                                    case config.infix token_ of
+                                                                        Nothing ->
+                                                                            fail DidntGetInfixParser
+
+                                                                        justInfix ->
+                                                                            go newLeft justInfix
+                                                                )
+                                                        , succeed newLeft
+                                                        ]
+                                                    }
+                                            )
+
+                                else
+                                    succeed left
                 in
-                go prefix
+                succeed identity
+                    |> skip skipEol_
+                    |> keep peekToken
+                    |> andThen (\token_ -> go prefix (config.infix token_))
             )
+
+
+moveLeft : Parser ()
+moveLeft =
+    \tokens ->
+        case Zipper.previous tokens of
+            Nothing ->
+                fail_ tokens CouldntMoveLeft
+
+            Just prevTokens ->
+                Ok ( (), prevTokens )
+
+
+moveRight : Parser ()
+moveRight =
+    \tokens ->
+        case Zipper.next tokens of
+            Nothing ->
+                fail_ tokens RanPastEndOfTokens
+
+            Just nextTokens ->
+                Ok ( (), nextTokens )
 
 
 token : Token.Type -> Parser ()
@@ -460,6 +539,17 @@ token type_ =
 
                 else
                     fail_ tokens <| ExpectedToken type_
+
+
+anyToken : Parser Token.Type
+anyToken =
+    \tokens ->
+        case Zipper.next tokens of
+            Nothing ->
+                fail_ tokens RanPastEndOfTokens
+
+            Just nextTokens ->
+                Ok ( (Zipper.current tokens).type_, nextTokens )
 
 
 tokenData : (Token.Type -> Maybe a) -> Parser a
