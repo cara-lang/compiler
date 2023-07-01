@@ -9,7 +9,7 @@ module Parser.Internal exposing
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, ifNextIs
-    , moveLeft, moveRight
+    , moveRight
     , logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
     , TokenPred(..), oneOf
     , InfixParserTable, InfixParser, pratt
@@ -26,8 +26,8 @@ module Parser.Internal exposing
 @docs maybe, butNot
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
-@docs token, anyToken, tokenData, peekToken, ifNextIs
-@docs moveLeft, moveRight
+@docs token, tokenData, peekToken, ifNextIs
+@docs moveRight
 @docs logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
 @docs TokenPred, oneOf
 @docs InfixParserTable, InfixParser, pratt
@@ -504,17 +504,6 @@ pratt config =
             )
 
 
-moveLeft : Parser ()
-moveLeft =
-    \tokens ->
-        case Zipper.previous tokens of
-            Nothing ->
-                fail_ tokens CouldntMoveLeft
-
-            Just prevTokens ->
-                Ok ( (), prevTokens )
-
-
 moveRight : Parser ()
 moveRight =
     \tokens ->
@@ -539,17 +528,6 @@ token type_ =
 
                 else
                     fail_ tokens <| ExpectedToken type_
-
-
-anyToken : Parser Token.Type
-anyToken =
-    \tokens ->
-        case Zipper.next tokens of
-            Nothing ->
-                fail_ tokens RanPastEndOfTokens
-
-            Just nextTokens ->
-                Ok ( (Zipper.current tokens).type_, nextTokens )
 
 
 tokenData : (Token.Type -> Maybe a) -> Parser a

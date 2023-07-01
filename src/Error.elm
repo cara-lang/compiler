@@ -53,7 +53,6 @@ type LexerError
 type ParserError
     = ExpectedNonemptyTokens
     | RanPastEndOfTokens
-    | CouldntMoveLeft
     | CouldntGetTokenData
     | ExpectedToken Token.Type
     | AssignmentOfExprToUnderscore
@@ -206,10 +205,6 @@ title error =
                         RanPastEndOfTokens ->
                             -- TODO error code
                             "Ran past end of tokens"
-
-                        CouldntMoveLeft ->
-                            -- TODO error code
-                            "Couldn't move the token zipper left"
 
                         CouldntGetTokenData ->
                             -- TODO error code
