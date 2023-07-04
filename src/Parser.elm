@@ -463,9 +463,9 @@ prefixExpr =
             {-
                , ( [ P Token.isBacktickString ], backtickStringExpr )
                , ( [ P Token.isGetter ], recordGetterExpr )
-               , ( [ T True_ ], boolExpr )
-               , ( [ T False_ ], boolExpr )
             -}
+            , ( [ T True_ ], boolExpr )
+            , ( [ T False_ ], boolExpr )
             , ( [ T LParen, T RParen ], unitExpr )
             , ( [ T LParen ], tupleOrParenthesizedExpr )
             , ( [ T LBracket ], listExpr )
@@ -496,6 +496,25 @@ prefixExpr =
             --, recordExpr
             ]
         }
+
+
+{-|
+
+    : TRUE|FALSE
+    = True
+    = False
+
+-}
+boolExpr : Parser Expr
+boolExpr =
+    Parser.oneOf
+        { commited =
+            [ ( [ T True_ ], Parser.succeed True )
+            , ( [ T False_ ], Parser.succeed False )
+            ]
+        , noncommited = []
+        }
+        |> Parser.map Bool
 
 
 {-|
