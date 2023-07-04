@@ -733,10 +733,9 @@ infixExpr =
                 Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
 
             -- Keeping a space (precedence = 15) for prefix unary ops
-            {-
-               LParen ->
-                   Just { precedence = 16, isRight = True, parser = callExpr }
-            -}
+            LParen ->
+                Just { precedence = 16, isRight = True, parser = callExpr }
+
             Token.Getter _ ->
                 Just { precedence = 17, isRight = False, parser = recordGetExpr }
 
@@ -776,6 +775,33 @@ binaryOpExpr : BinaryOp -> InfixParser Expr
 binaryOpExpr op { left, precedence, isRight } =
     Parser.succeed (\right -> BinaryOp left op right)
         |> Parser.keep (exprAux precedence isRight)
+
+
+{-|
+
+    : expr LPAREN (expr (COMMA expr)*)? RPAREN
+      ^^^^^^^^^^^ already parsed
+    = x()
+    = x(1)
+    = x(1,2)
+
+-}
+callExpr : { a | left : Expr } -> Parser Expr
+callExpr { left } =
+    Parser.succeed (\args -> Call { fn = left, args = args })
+        |> Parser.skip
+            -- to let separatedList eat the LParen again
+            Parser.moveLeft
+        |> Parser.keep
+            (Parser.separatedList
+                { left = LParen
+                , right = RParen
+                , sep = Comma
+                , item = expr
+                , skipEol = True
+                , allowTrailingSep = False
+                }
+            )
 
 
 {-|

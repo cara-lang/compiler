@@ -805,62 +805,7 @@ function prefixExpr(state: State): {i: number, match: Expr} {
     );
 }
 
-//: expr BANG (LPAREN expr (COMMA expr)* RPAREN)?
-//= foo!
-//= foo!()
-//= Bar.foo!(123,456)
-//= x |> IO.println!
-//= x |> f(1) |> Foo.bar!(1,2,3)
-function bang(state: State): {i: number, match: Bang} {
-    let {i} = state;
-    const desc = 'bang';
-    //: expr
-    const exprResult = expr({...state,i});
-    i = exprResult.i;
-    //: BANG
-    i = expect('BANG',desc,i,state.tokens);
-    //: (LPAREN expr (COMMA expr)* RPAREN)?
-    let args: Expr[] = [];
-    if (tagIs('LPAREN',i,state.tokens)) {
-        const listResult = list({
-            left:  'LPAREN',
-            right: 'RPAREN',
-            sep:   'COMMA',
-            item:  expr,
-            state: {...state, i},
-            parsedItem: `${desc} argument list`,
-            skipEol: false,
-            allowTrailingSep: false,
-        });
-        i = listResult.i;
-        args = listResult.match;
-    }
-    // Done!
-    const finalBang: Bang =
-            (args.length == 0)
-                ? {bang: 'value', val: exprResult.match}
-                : {bang: 'call', fn: exprResult.match, args};
-    return { i, match: finalBang };
-}
 
-//: expr ${tokenTag} expr
-//  ^^^^^^^^^^^^^^^^ already parsed
-function binaryOpExpr(op: BinaryOp): InfixParser<Expr> {
-    return function(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-        //: expr
-        const exprResult = exprAux(precedence, isRight, state);
-        // Done!
-        return {
-            i: exprResult.i,
-            match: {
-                expr: 'binary-op',
-                op,
-                left,
-                right: exprResult.match,
-            }
-        };
-    }
-}
 
 //: expr PIPELINE expr
 //  ^^^^^^^^^^^^^ already parsed
@@ -903,88 +848,6 @@ function rangeInclusiveExpr(left: Expr, precedence: number, isRight: boolean, st
     return { i, match };
 }
 
-//: expr LPAREN (expr (COMMA expr)*)? RPAREN
-//  ^^^^^^^^^^^ already parsed
-//= x()
-//= x(1)
-//= x(1,2)
-function callExpr(left: Expr, _precedence: number, _isRight: boolean, state: State): {i: number, match: Expr} {
-    let {i} = state;
-    const desc = 'call expr'
-    //: LPAREN (expr (COMMA expr)*)? RPAREN
-    i--; // we'll parse LPAREN as part of the list()
-    const argsResult = list({
-        left:  'LPAREN',
-        right: 'RPAREN',
-        sep:   'COMMA',
-        item:  expr,
-        state: {...state, i},
-        parsedItem: `${desc} argument list`,
-        skipEol: true,
-        allowTrailingSep: false,
-    });
-    i = argsResult.i;
-    const args = argsResult.match;
-    // Done!
-    return {
-        i,
-        match: {
-            expr: 'call',
-            fn: left,
-            args,
-        },
-    };
-}
-
-//: expr GETTER
-//  ^^^^^^^^^^^ already parsed, we need to i-- to access the GETTER!
-//= foo.abc
-//= getRecord(123).abc
-function recordGetExpr(left: Expr, _precedence: number, _isRight: boolean, state: State): {i: number, match: Expr} {
-    let {i} = state;
-    const desc = 'record access';
-    //: GETTER
-    i--;
-    const getterResult = getRecordGetter(desc,i,state.tokens);
-    i = getterResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            expr: 'record-get',
-            record: left,
-            field: getterResult.match,
-        },
-    };
-}
-
-//: INT
-//= 123
-function intExpr(state: State): {i: number, match: Expr} {
-    const intResult = getInt('int expr',state.i,state.tokens);
-    return {i: intResult.i, match: {expr: 'int', int: intResult.match}};
-}
-
-//: FLOAT
-//= 123.45
-function floatExpr(state: State): {i: number, match: Expr} {
-    const floatResult = getFloat('float expr',state.i,state.tokens);
-    return {i: floatResult.i, match: {expr: 'float', float: floatResult.match}};
-}
-
-//: CHAR
-//= 'a'
-function charExpr(state: State): {i: number, match: Expr} {
-    const charResult = getChar('char expr',state.i,state.tokens);
-    return {i: charResult.i, match: {expr: 'char', char: charResult.match}};
-}
-
-//: STRING
-//= "abc"
-function stringExpr(state: State): {i: number, match: Expr} {
-    const stringResult = getString('string expr',state.i,state.tokens);
-    return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
-}
 
 //: BACKTICK_STRING
 //= `abc`
@@ -993,24 +856,6 @@ function backtickStringExpr(state: State): {i: number, match: Expr} {
     return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
 }
 
-//: GETTER
-//= .abc
-function recordGetterExpr(state: State): {i: number, match: Expr} {
-    const getterResult = getRecordGetter('record getter expr',state.i,state.tokens);
-    return {i: getterResult.i, match: {expr: 'record-getter', field: getterResult.match}};
-}
-
-//: TRUE|FALSE
-//= True
-//= False
-function boolExpr(state: State): {i: number, match: Expr} {
-    const tag = state.tokens[state.i].type.type;
-    switch (tag) {
-        case 'TRUE':  return {i: state.i + 1, match: {expr: 'bool', bool: true}};
-        case 'FALSE': return {i: state.i + 1, match: {expr: 'bool', bool: false}};
-        default:      throw error('Expected TRUE or FALSE',state.i,state.tokens);
-    }
-}
 
 // TODO if there are () involved, the list inside needs to be non-empty:
 // (LPAREN expr (COMMA expr)* RPAREN)?
