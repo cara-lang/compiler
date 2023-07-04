@@ -1164,45 +1164,6 @@ function rootIdentifierExpr(state: State): {i: number, match: Expr} {
     };
 }
 
-//: IF expr THEN expr ELSE expr
-//= if 1 == 2 then foo() else bar()
-function ifExpr(state: State): {i: number, match: Expr} {
-    let {i} = state;
-    const desc = 'if expr';
-    //: IF
-    i = expect('IF',desc,i,state.tokens);
-    i = skipEolBeforeIndented({...state,i});
-    //: expr
-    const conditionResult = expr({...state,i});
-    i = conditionResult.i;
-    i = skipEolBeforeIndented({...state,i});
-    //: THEN
-    i = expect('THEN',desc,i,state.tokens);
-    i = skipEolBeforeIndented({...state,i});
-    //: expr
-    const thenResult = expr({...state,i});
-    i = thenResult.i;
-    i = skipEolBeforeIndented({...state,i});
-    //: ELSE
-    if (!tagIs('ELSE',i,state.tokens)) {
-        throw stopTheWorldError('E0021: If expression without an else branch');
-    }
-    i = expect('ELSE',desc,i,state.tokens);
-    i = skipEolBeforeIndented({...state,i});
-    //: expr
-    const elseResult = expr({...state,i});
-    i = elseResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            expr: 'if',
-            cond: conditionResult.match,
-            then: thenResult.match,
-            else: elseResult.match,
-        },
-    };
-}
 
 //: CASE expr OF (EOL+ caseBranch)*
 //= case foo of

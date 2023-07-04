@@ -1,7 +1,7 @@
 module Interpreter.Internal exposing
     ( Interpreter
     , succeed, fail
-    , map, contramap, andThen, do
+    , map, andThen, do
     , traverse
     )
 
@@ -9,7 +9,7 @@ module Interpreter.Internal exposing
 
 @docs Interpreter
 @docs succeed, fail
-@docs map, contramap, andThen, do
+@docs map, andThen, do
 @docs traverse
 
 -}
@@ -100,12 +100,6 @@ andThen interpreter outcome =
 do : Outcome b -> Interpreter b c -> Outcome c
 do outcome interpreter =
     andThen interpreter outcome
-
-
-contramap : (aa -> a) -> Interpreter a b -> Interpreter aa b
-contramap fn interpreter =
-    \env aa ->
-        interpreter env (fn aa)
 
 
 traverse : Interpreter a b -> Interpreter (List a) (List b)

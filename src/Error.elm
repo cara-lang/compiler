@@ -73,6 +73,7 @@ type InterpreterError
         , length : Int
         }
     | TupleUnknownField String
+    | IfConditionNotBool
 
 
 title : Error -> String
@@ -273,6 +274,10 @@ title error =
                             -- TODO error code
                             "Tried to access field '{FIELD}' on a tuple"
                                 |> String.replace "{FIELD}" field
+
+                        IfConditionNotBool ->
+                            -- TODO error code
+                            "If condition not bool"
                    )
 
 

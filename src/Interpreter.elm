@@ -125,21 +125,20 @@ interpretBang =
 interpretBangCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretBangCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr env fn) <|
-            \env1 fnVal ->
-                case fnVal of
-                    VIntrinsic IoPrintln ->
-                        case args of
-                            [ arg ] ->
-                                interpretExpr env1 arg
-                                    |> Interpreter.andThen interpretPrintln
-                                    |> Outcome.map (\() -> VUnit)
-
-                            _ ->
-                                Outcome.fail UnexpectedArity
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        case fnVal of
+            VIntrinsic IoPrintln ->
+                case args of
+                    [ arg ] ->
+                        interpretExpr env1 arg
+                            |> Interpreter.andThen interpretPrintln
+                            |> Outcome.map (\() -> VUnit)
 
                     _ ->
-                        Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
+                        Outcome.fail UnexpectedArity
+
+            _ ->
+                Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
 
 
 interpretLet :
@@ -217,6 +216,9 @@ interpretExpr =
 
             Unit ->
                 Outcome.succeed env VUnit
+
+            If r ->
+                interpretIf env r
 
             List xs ->
                 interpretList env xs
@@ -430,6 +432,21 @@ interpretConstructor =
     \env { id, args } ->
         Interpreter.traverse interpretExpr env args
             |> Outcome.map (\argValues -> VConstructor { id = id, args = argValues })
+
+
+interpretIf : Interpreter { cond : Expr, then_ : Expr, else_ : Expr } Value
+interpretIf =
+    \env { cond, then_, else_ } ->
+        Interpreter.do (interpretExpr env cond) <| \env1 cond_ ->
+        case cond_ of
+            VBool True ->
+                interpretExpr env1 then_
+
+            VBool False ->
+                interpretExpr env1 else_
+
+            _ ->
+                Outcome.fail IfConditionNotBool
 
 
 interpretList : Interpreter (List Expr) Value
