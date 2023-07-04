@@ -3,8 +3,7 @@ module Parser.Internal exposing
     , succeed, fail
     , map, map2, andThen, skip, keep
     , many, manyUntilEOF
-    , separatedList, nonSeparatedList
-    , separatedNonemptyList
+    , separatedList, separatedNonemptyList
     , maybe, butNot
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
@@ -21,8 +20,7 @@ module Parser.Internal exposing
 @docs succeed, fail
 @docs map, map2, andThen, skip, keep
 @docs many, manyUntilEOF
-@docs separatedList, nonSeparatedList
-@docs separatedNonemptyList, nonSeparatedList
+@docs separatedList, separatedNonemptyList
 @docs maybe, butNot
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
@@ -211,28 +209,49 @@ separatedList :
     }
     -> Parser (List a)
 separatedList config =
-    -- TODO use skipEol
-    -- TODO use allowTrailingSep
+    let
+        eol =
+            if config.skipEol then
+                skipEol
+
+            else
+                succeed ()
+
+        trailingSep =
+            if config.allowTrailingSep then
+                succeed identity
+                    |> keep (token config.sep)
+                    |> skip eol
+
+            else
+                succeed ()
+    in
     succeed identity
         |> skip (token config.left)
+        |> skip eol
         |> keep
             -- (item (sep item)*)?
             (maybe
                 -- item (sep item)*
                 (succeed (::)
                     |> keep config.item
+                    |> skip eol
                     |> keep
                         -- (sep item)*
                         (many
                             -- sep item
                             (succeed identity
+                                |> skip eol
                                 |> skip (token config.sep)
+                                |> skip eol
                                 |> keep config.item
                             )
                         )
                 )
                 |> map (Maybe.withDefault [])
             )
+        |> skip eol
+        |> skip trailingSep
         |> skip (token config.right)
 
 
@@ -251,33 +270,41 @@ separatedNonemptyList :
     }
     -> Parser ( a, List a )
 separatedNonemptyList config =
-    -- TODO use skipEol
-    -- TODO use allowTrailingSep
+    let
+        eol =
+            if config.skipEol then
+                skipEol
+
+            else
+                succeed ()
+
+        trailingSep =
+            if config.allowTrailingSep then
+                succeed identity
+                    |> keep (token config.sep)
+                    |> skip eol
+
+            else
+                succeed ()
+    in
     succeed Tuple.pair
         |> skip (token config.left)
+        |> skip eol
         |> keep config.item
         |> keep
             -- (sep item)*
             (many
                 -- sep item
                 (succeed identity
+                    |> skip eol
                     |> skip (token config.sep)
+                    |> skip eol
                     |> keep config.item
                 )
             )
+        |> skip eol
+        |> skip trailingSep
         |> skip (token config.right)
-
-
-nonSeparatedList :
-    { left : Token.Type
-    , right : Token.Type
-    , item : Parser a
-    , skipEol : Bool
-    , allowTrailingSep : Bool
-    }
-    -> Parser (List a)
-nonSeparatedList config =
-    Debug.todo "nonSeparatedList"
 
 
 {-| Doesn't advance the tokens stream.
