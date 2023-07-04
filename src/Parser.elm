@@ -89,7 +89,7 @@ declaration =
 -}
 typeDecl : Parser Decl
 typeDecl =
-    Parser.succeed (\mod name vars constructors -> DTypeDecl { mod = mod, name = name, vars = vars, constructors = constructors })
+    Parser.succeed (\mod name vars constructors -> DType { mod = mod, name = name, vars = vars, constructors = constructors })
         |> Parser.keep typeModifier
         |> Parser.skip (Parser.token Type)
         |> Parser.keep upperName

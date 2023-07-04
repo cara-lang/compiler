@@ -121,7 +121,7 @@ type LetModifier
 
 type Decl
     = DTypeAlias { mod : TypeAliasModifier, name : String, vars : List String, body : Type }
-    | DTypeDecl { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
+    | DType { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }
     | DFunction { name : String, body : Expr } -- TODO mod, args, resultType
