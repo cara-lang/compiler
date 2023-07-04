@@ -1729,59 +1729,6 @@ function unaryOpExpr(desc: string, tokenTag: TokenTag, op: UnaryOp): Parser<Expr
     }
 }
 
-//: PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ EOL* type
-//= type alias Foo = Int
-//= private type alias Bar[a,b] = Result[a,b]
-function typeAliasDecl(state: State): {i: number, match: Decl} {
-    const desc = 'type alias';
-    let {i} = state;
-    //: PRIVATE?
-    let mod: TypeAliasModifier = 'NoModifier';
-    if (tagIs('PRIVATE',i,state.tokens)) {
-        mod = 'Private';
-        i++;
-    }
-    //: TYPE ALIAS
-    i = expect('TYPE', desc,i,state.tokens);
-    i = expect('ALIAS',desc,i,state.tokens);
-    //: UPPER_NAME
-    const nameResult = getUpperName(desc,i,state.tokens);
-    i = nameResult.i;
-    //: (LBRACKET typevar (COMMA typevar)* RBRACKET)?
-    let vars: Typevar[] = [];
-    if (tagIs('LBRACKET',i,state.tokens)) {
-        const listResult = nonemptyList({
-            left:  'LBRACKET',
-            right: 'RBRACKET',
-            sep:   'COMMA',
-            item:  typevar,
-            state: {...state, i},
-            parsedItem: `${desc} typevar list`,
-            skipEol: false,
-            allowTrailingSep: false,
-        });
-        i = listResult.i;
-        vars = listResult.match;
-    }
-    //: EQ
-    i = expect('EQ',desc,i,state.tokens);
-    //: EOL*
-    i = skipEolBeforeIndented({...state,i});
-    //: type
-    const typeResult = type({...state, i});
-    i = typeResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            decl: 'type-alias',
-            mod,
-            name: nameResult.match,
-            vars,
-            body: typeResult.match,
-        }
-    }
-}
 
 //: (PRIVATE | OPAQUE)? TYPE UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ constructorList
 //= type Unit = Unit

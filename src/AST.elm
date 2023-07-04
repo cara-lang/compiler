@@ -15,6 +15,7 @@ module AST exposing
     , RecordTypeField
     , Stmt(..)
     , Type(..)
+    , TypeAliasModifier(..)
     , TypeModifier(..)
     , UnaryOp(..)
     )
@@ -108,13 +109,18 @@ type TypeModifier
     | TypeOpaque
 
 
+type TypeAliasModifier
+    = TypeAliasNoModifier
+    | TypeAliasPrivate
+
+
 type LetModifier
     = LetNoModifier
     | LetPrivate
 
 
 type Decl
-    = DTypeAlias { name : String, body : Type } -- TODO mod, vars
+    = DTypeAlias { mod : TypeAliasModifier, name : String, vars : List String, body : Type }
     | DTypeDecl { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }

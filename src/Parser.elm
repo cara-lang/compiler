@@ -37,10 +37,9 @@ declaration : Parser Decl
 declaration =
     Parser.oneOf
         { commited =
-            [ {- ( [ T Private, T Type, T Alias ], typeAliasDecl )
-                 , ( [ T Type, T Alias ], typeAliasDecl )
-              -}
-              ( [ T Private, T Type ], typeDecl )
+            [ ( [ T Private, T Type, T Alias ], typeAliasDecl )
+            , ( [ T Type, T Alias ], typeAliasDecl )
+            , ( [ T Private, T Type ], typeDecl )
             , ( [ T Opaque, T Type ], typeDecl )
             , ( [ T Type ], typeDecl )
 
@@ -117,6 +116,55 @@ typeDecl =
             )
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.keep constructorList
+
+
+{-|
+
+    : PRIVATE? TYPE ALIAS UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ EOL* type
+    = type alias Foo = Int
+    = private type alias Bar[a,b] = Result[a,b]
+
+-}
+typeAliasDecl : Parser Decl
+typeAliasDecl =
+    Parser.succeed (\mod name vars body -> DTypeAlias { mod = mod, name = name, vars = vars, body = body })
+        |> Parser.keep
+            (Parser.oneOf
+                { commited = []
+                , noncommited =
+                    [ Parser.succeed TypeAliasPrivate
+                        |> Parser.skip (Parser.token Token.Private)
+                    , Parser.succeed TypeAliasNoModifier
+                    ]
+                }
+            )
+        |> Parser.skip (Parser.token Type)
+        |> Parser.skip (Parser.token Alias)
+        |> Parser.keep upperName
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.separatedNonemptyList
+                    { left = Token.LBracket
+                    , right = Token.RBracket
+                    , sep = Token.Comma
+                    , item = typevar
+                    , skipEol = True
+                    , allowTrailingSep = False
+                    }
+                )
+                |> Parser.map
+                    (\maybeVars ->
+                        case maybeVars of
+                            Nothing ->
+                                []
+
+                            Just ( var, vars ) ->
+                                var :: vars
+                    )
+            )
+        |> Parser.skip (Parser.token Token.Eq)
+        |> Parser.skip Parser.skipEolBeforeIndented
+        |> Parser.keep type_
 
 
 {-|
