@@ -209,6 +209,9 @@ interpretExpr =
             RootIdentifier id ->
                 interpretRootIdentifier env id
 
+            Constructor_ r ->
+                interpretConstructor env r
+
             Unit ->
                 Outcome.succeed env VUnit
 
@@ -417,6 +420,13 @@ interpretRootIdentifier =
 
             Just value ->
                 Outcome.succeed env value
+
+
+interpretConstructor : Interpreter { id : Id, args : List Expr } Value
+interpretConstructor =
+    \env { id, args } ->
+        Interpreter.traverse interpretExpr env args
+            |> Outcome.map (\argValues -> VConstructor { id = id, args = argValues })
 
 
 interpretList : Interpreter (List Expr) Value
