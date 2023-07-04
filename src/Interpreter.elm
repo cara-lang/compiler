@@ -288,15 +288,9 @@ interpretUnaryOpVal =
 interpretBinaryOp : Interpreter ( Expr, BinaryOp, Expr ) Value
 interpretBinaryOp =
     \env ( left, op, right ) ->
-        interpretExpr env left
-            |> Outcome.andThen
-                (\env1 leftVal ->
-                    interpretExpr env1 right
-                        |> Outcome.andThen
-                            (\env2 rightVal ->
-                                interpretBinaryOpVal env2 ( leftVal, op, rightVal )
-                            )
-                )
+        Interpreter.do (interpretExpr env left) <| \env1 leftVal ->
+        Interpreter.do (interpretExpr env1 right) <| \env2 rightVal ->
+        interpretBinaryOpVal env2 ( leftVal, op, rightVal )
 
 
 interpretBinaryOpVal : Interpreter ( Value, BinaryOp, Value ) Value
@@ -317,6 +311,9 @@ interpretBinaryOpVal =
 
             ( VInt a, Pow, VInt b ) ->
                 Outcome.succeed env <| VInt (a ^ b)
+
+            ( VInt a, Eq, VInt b ) ->
+                Outcome.succeed env <| VBool (a == b)
 
             _ ->
                 Debug.todo <| "Unimplemented interpretBinaryOp: " ++ Debug.toString ( left, op, right )

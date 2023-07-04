@@ -856,61 +856,61 @@ infixExpr : InfixParserTable Expr
 infixExpr =
     \token ->
         case token of
+            AndAnd ->
+                Just { precedence = 1, isRight = False, parser = binaryOpExpr AndBool }
+
+            OrOr ->
+                Just { precedence = 2, isRight = False, parser = binaryOpExpr OrBool }
+
+            PlusPlus ->
+                Just { precedence = 3, isRight = False, parser = binaryOpExpr Append }
+
             {-
-               AndAnd ->
-                   Just { precedence = 1, isRight = False, parser = binaryOpExpr AndBool }
-
-               OrOr ->
-                   Just { precedence = 2, isRight = False, parser = binaryOpExpr OrBool }
-
-               PlusPlus ->
-                   Just { precedence = 3, isRight = False, parser = binaryOpExpr Append }
-
                Pipeline ->
                    Just { precedence = 4, isRight = False, parser = pipelineExpr }
 
                DotDot ->
                    Just { precedence = 5, isRight = False, parser = rangeInclusiveExpr }
-
-               DotDotDot ->
-                   Just { precedence = 5, isRight = False, parser = binaryOpExpr RangeExclusive }
-
-               Pipe ->
-                   Just { precedence = 6, isRight = False, parser = binaryOpExpr OrBin }
-
-               Caret ->
-                   Just { precedence = 7, isRight = False, parser = binaryOpExpr XorBin }
-
-               And ->
-                   Just { precedence = 8, isRight = False, parser = binaryOpExpr AndBin }
-
-               EqEq ->
-                   Just { precedence = 9, isRight = False, parser = binaryOpExpr Eq }
-
-               Neq ->
-                   Just { precedence = 9, isRight = False, parser = binaryOpExpr Neq }
-
-               Lte ->
-                   Just { precedence = 10, isRight = False, parser = binaryOpExpr Lte }
-
-               Lt ->
-                   Just { precedence = 10, isRight = False, parser = binaryOpExpr Lt }
-
-               Gt ->
-                   Just { precedence = 10, isRight = False, parser = binaryOpExpr Gt }
-
-               Gte ->
-                   Just { precedence = 10, isRight = False, parser = binaryOpExpr Gte }
-
-               Shl ->
-                   Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftL }
-
-               Shr ->
-                   Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftR }
-
-               Shru ->
-                   Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftRU }
             -}
+            DotDotDot ->
+                Just { precedence = 5, isRight = False, parser = binaryOpExpr RangeExclusive }
+
+            Pipe ->
+                Just { precedence = 6, isRight = False, parser = binaryOpExpr OrBin }
+
+            Caret ->
+                Just { precedence = 7, isRight = False, parser = binaryOpExpr XorBin }
+
+            And ->
+                Just { precedence = 8, isRight = False, parser = binaryOpExpr AndBin }
+
+            EqEq ->
+                Just { precedence = 9, isRight = False, parser = binaryOpExpr AST.Eq }
+
+            Token.Neq ->
+                Just { precedence = 9, isRight = False, parser = binaryOpExpr AST.Neq }
+
+            Token.Lte ->
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Lte }
+
+            Token.Lt ->
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Lt }
+
+            Token.Gt ->
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Gt }
+
+            Token.Gte ->
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Gte }
+
+            Shl ->
+                Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftL }
+
+            Shr ->
+                Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftR }
+
+            Shru ->
+                Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftRU }
+
             Token.Plus ->
                 Just { precedence = 12, isRight = False, parser = binaryOpExpr AST.Plus }
 
