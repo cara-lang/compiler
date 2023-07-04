@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 
-const selectedTest = 'int-arithmetic-right-associativity'; // 'module-nested-root';
+const selectedTest = null;
 
 ///////////////////////////////////////////
 

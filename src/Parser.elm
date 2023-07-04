@@ -465,8 +465,8 @@ prefixExpr =
                , ( [ P Token.isGetter ], recordGetterExpr )
                , ( [ T True_ ], boolExpr )
                , ( [ T False_ ], boolExpr )
-               , ( [ T LParen, T RParen ], unitExpr )
             -}
+            , ( [ T LParen, T RParen ], unitExpr )
             , ( [ T LParen ], tupleOrParenthesizedExpr )
             , ( [ T LBracket ], listExpr )
 
@@ -496,6 +496,19 @@ prefixExpr =
             --, recordExpr
             ]
         }
+
+
+{-|
+
+    : LPAREN RPAREN
+    = ()
+
+-}
+unitExpr : Parser Expr
+unitExpr =
+    Parser.succeed Unit
+        |> Parser.skip (Parser.token LParen)
+        |> Parser.skip (Parser.token RParen)
 
 
 {-|
