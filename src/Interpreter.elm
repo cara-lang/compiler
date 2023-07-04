@@ -245,6 +245,9 @@ interpretExpr =
             Tuple xs ->
                 interpretTuple env xs
 
+            Record fields ->
+                interpretRecord env fields
+
             UnaryOp op e ->
                 interpretUnaryOp env ( op, e )
 
@@ -507,6 +510,12 @@ interpretTuple : Interpreter (List Expr) Value
 interpretTuple =
     Interpreter.traverse interpretExpr
         |> Interpreter.map VTuple
+
+
+interpretRecord : Interpreter (List RecordExprContent) Value
+interpretRecord =
+    \env contents ->
+        Debug.todo <| "interpret record: " ++ Debug.toString contents
 
 
 interpretModule : Interpreter { mod : ModuleModifier, name : String, decls : List Decl } ()

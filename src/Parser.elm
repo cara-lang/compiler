@@ -737,10 +737,86 @@ prefixExpr =
             [ -- blockExpr
               constructorExpr
             , identifierExpr
-
-            --, recordExpr
+            , recordExpr
             ]
         }
+
+
+{-|
+
+    : LBRACE (recordExprContent (COMMA recordExprContent)*)? RBRACE
+    = {a:1, b:True}
+    = {...a, x:123}
+
+-}
+recordExpr : Parser Expr
+recordExpr =
+    Parser.separatedList
+        { left = LBrace
+        , right = RBrace
+        , sep = Comma
+        , item = recordExprContent
+        , skipEol = True
+        , allowTrailingSep = True
+        }
+        |> Parser.map Record
+
+
+{-|
+
+    = foo: 123
+    = foo
+    = ...foo
+
+-}
+recordExprContent : Parser RecordExprContent
+recordExprContent =
+    Parser.oneOf
+        { commited =
+            [ ( [ P Token.isLowerName, T Colon ], recordExprFieldContent )
+            , ( [ P Token.isLowerName ], recordExprPunContent )
+            , ( [ T DotDotDot ], recordExprSpreadContent )
+            ]
+        , noncommited = []
+        }
+
+
+{-|
+
+    : LOWER_NAME COLON expr
+    = a: 1
+
+-}
+recordExprFieldContent : Parser RecordExprContent
+recordExprFieldContent =
+    Parser.succeed (\field expr_ -> Field { field = field, value = expr_ })
+        |> Parser.keep lowerName
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep (Parser.lazy (\() -> expr))
+
+
+{-|
+
+    : LOWER_NAME
+    = a
+
+-}
+recordExprPunContent : Parser RecordExprContent
+recordExprPunContent =
+    Parser.map Pun lowerName
+
+
+{-|
+
+    : DOTDOTDOT lowerIdentifier
+    = ...a, ...Foo.a
+
+-}
+recordExprSpreadContent : Parser RecordExprContent
+recordExprSpreadContent =
+    Parser.succeed Spread
+        |> Parser.skip (Parser.token DotDotDot)
+        |> Parser.keep lowerIdentifier
 
 
 {-|

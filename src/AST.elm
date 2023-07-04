@@ -11,7 +11,7 @@ module AST exposing
     , ModuleModifier(..)
     , Pattern(..)
     , Program
-    , RecordExprContent
+    , RecordExprContent(..)
     , RecordTypeField
     , Stmt(..)
     , Type(..)

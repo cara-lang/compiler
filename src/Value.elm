@@ -15,6 +15,7 @@ type Value
     | VIntrinsic Intrinsic
     | VList (List Value)
     | VTuple (List Value)
+    | VRecord (List { field : String, value : Value })
     | VRecordGetter String
     | VConstructor { id : Id, args : List Value }
     | VClosure { args : List Pattern, body : Expr, env : Env Value }
@@ -53,6 +54,14 @@ toString value =
 
         VTuple values ->
             "(" ++ String.join "," (List.map toString values) ++ ")"
+
+        VRecord fields ->
+            "{"
+                ++ (fields
+                        |> List.map (\f -> f.field ++ ":" ++ toString f.value)
+                        |> String.join ","
+                   )
+                ++ "}"
 
         VRecordGetter field ->
             "<record getter .{FIELD}>"
