@@ -212,6 +212,9 @@ interpretExpr =
             Constructor_ r ->
                 interpretConstructor env r
 
+            Bool bool ->
+                Outcome.succeed env (VBool bool)
+
             Unit ->
                 Outcome.succeed env VUnit
 

@@ -10,6 +10,7 @@ type Value
     = VInt Int
     | VFloat Float
     | VString String
+    | VBool Bool
     | VUnit
     | VIntrinsic Intrinsic
     | VList (List Value)
@@ -32,6 +33,13 @@ toString value =
             -- TODO quoting?
             -- TODO escaping?
             str
+
+        VBool bool ->
+            if bool then
+                "True"
+
+            else
+                "False"
 
         VUnit ->
             "()"

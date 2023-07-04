@@ -702,11 +702,13 @@ prefixExpr =
 boolExpr : Parser Expr
 boolExpr =
     Parser.oneOf
-        { commited =
-            [ ( [ T True_ ], Parser.succeed True )
-            , ( [ T False_ ], Parser.succeed False )
+        { commited = []
+        , noncommited =
+            [ Parser.succeed True
+                |> Parser.skip (Parser.token True_)
+            , Parser.succeed False
+                |> Parser.skip (Parser.token False_)
             ]
-        , noncommited = []
         }
         |> Parser.map Bool
 
