@@ -208,6 +208,9 @@ interpretBinaryOpVal =
             ( VInt a, Div, VInt b ) ->
                 Outcome.succeed env <| VInt (a // b)
 
+            ( VInt a, Pow, VInt b ) ->
+                Outcome.succeed env <| VInt (a ^ b)
+
             _ ->
                 Debug.todo <| "Unimplemented interpretBinaryOp: " ++ Debug.toString ( left, op, right )
 

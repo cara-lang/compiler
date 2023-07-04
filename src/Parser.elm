@@ -659,11 +659,12 @@ infixExpr =
                Percent ->
                    Just { precedence = 13, isRight = False, parser = binaryOpExpr Mod }
 
-               Power ->
-                   Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
+            -}
+            Token.Power ->
+                Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
 
-               -- Keeping a space (precedence = 15) for prefix unary ops
-
+            -- Keeping a space (precedence = 15) for prefix unary ops
+            {-
                LParen ->
                    Just { precedence = 16, isRight = True, parser = callExpr }
 
