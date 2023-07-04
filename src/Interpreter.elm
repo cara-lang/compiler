@@ -241,6 +241,9 @@ interpretExpr =
             Call r ->
                 interpretCall env r
 
+            Lambda r ->
+                interpretLambda env r
+
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
 
@@ -248,27 +251,27 @@ interpretExpr =
 interpretCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretCall =
     \env { fn, args } ->
-        interpretExpr env fn
-            |> Outcome.andThen
-                (\env1 fnVal ->
-                    Interpreter.traverse interpretExpr env1 args
-                        |> Outcome.andThen
-                            (\env2 argVals ->
-                                case ( fnVal, argVals ) of
-                                    ( VRecordGetter field, [ VTuple values ] ) ->
-                                        interpretRecordGetTuple env2 ( values, field )
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        Interpreter.do (Interpreter.traverse interpretExpr env1 args) <| \env2 argVals ->
+        case ( fnVal, argVals ) of
+            ( VRecordGetter field, [ VTuple values ] ) ->
+                interpretRecordGetTuple env2 ( values, field )
 
-                                    _ ->
-                                        Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
-                            )
-                )
+            _ ->
+                Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
+
+
+interpretLambda : Interpreter { args : List Pattern, body : Expr } Value
+interpretLambda =
+    \env { args, body } ->
+        Outcome.succeed env <| VClosure { args = args, body = body, env = env }
 
 
 interpretUnaryOp : Interpreter ( UnaryOp, Expr ) Value
 interpretUnaryOp =
     \env ( op, expr ) ->
-        interpretExpr env expr
-            |> Outcome.andThen (\env1 val -> interpretUnaryOpVal env1 ( op, val ))
+        Interpreter.do (interpretExpr env expr) <| \env1 val ->
+        interpretUnaryOpVal env1 ( op, val )
 
 
 interpretUnaryOpVal : Interpreter ( UnaryOp, Value ) Value
@@ -322,16 +325,13 @@ interpretBinaryOpVal =
 interpretRecordGet : Interpreter { record : Expr, field : String } Value
 interpretRecordGet =
     \env { record, field } ->
-        interpretExpr env record
-            |> Outcome.andThen
-                (\env1 recordVal ->
-                    case recordVal of
-                        VTuple values ->
-                            interpretRecordGetTuple env ( values, field )
+        Interpreter.do (interpretExpr env record) <| \env1 recordVal ->
+        case recordVal of
+            VTuple values ->
+                interpretRecordGetTuple env ( values, field )
 
-                        _ ->
-                            Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
-                )
+            _ ->
+                Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
 
 
 specialTupleGetters : Dict String Int

@@ -1258,35 +1258,6 @@ function caseBranch(state: State): {i: number, match: CaseBranch} {
     }
 }
 
-//: BACKSLASH LOWER_NAME (COMMA LOWER_NAME)* ARROW expr
-function lambdaExpr(state: State): {i: number, match: Expr} {
-    let {i} = state;
-    const desc = 'lambda expr';
-    //: BACKSLASH LOWER_NAME (COMMA LOWER_NAME)* ARROW
-    const argsResult = list({
-        left:  'BACKSLASH',
-        right: 'ARROW',
-        sep:   'COMMA',
-        item:  pattern,
-        state,
-        parsedItem: `${desc} argument list`,
-        skipEol: true,
-        allowTrailingSep: false,
-    });
-    i = argsResult.i;
-    //: expr
-    const bodyResult = expr({...state,i});
-    i = bodyResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            expr: 'lambda',
-            args: argsResult.match,
-            body: bodyResult.match,
-        },
-    };
-}
 
 //: HOLE|UNDERSCORE
 //= _

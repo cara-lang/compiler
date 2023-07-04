@@ -669,7 +669,10 @@ prefixExpr =
 
             {-
                , ( [ T Case ], caseExpr )
-               , ( [ T Backslash ], lambdaExpr )
+            -}
+            , ( [ T Backslash ], lambdaExpr )
+
+            {-
                , ( [ T LHole ], holeLambdaExpr )
                , ( [ T Underscore ], holeExpr )
                , ( [ T Hole ], holeExpr )
@@ -706,6 +709,29 @@ ifExpr =
         |> Parser.skip (Parser.token Token.Then)
         |> Parser.keep (Parser.lazy (\() -> expr))
         |> Parser.skip (Parser.token Token.Else)
+        |> Parser.keep (Parser.lazy (\() -> expr))
+
+
+{-|
+
+    : BACKSLASH pattern (COMMA pattern)* ARROW expr
+    = \x -> 1
+    = \x,y -> x+y
+
+-}
+lambdaExpr : Parser Expr
+lambdaExpr =
+    Parser.succeed (\( arg, args ) body -> Lambda { args = arg :: args, body = body })
+        |> Parser.keep
+            (Parser.separatedNonemptyList
+                { left = Backslash
+                , right = Arrow
+                , sep = Comma
+                , item = pattern
+                , skipEol = False
+                , allowTrailingSep = False
+                }
+            )
         |> Parser.keep (Parser.lazy (\() -> expr))
 
 
@@ -923,12 +949,9 @@ infixExpr =
             Token.Div ->
                 Just { precedence = 13, isRight = False, parser = binaryOpExpr AST.Div }
 
-            {-
+            Percent ->
+                Just { precedence = 13, isRight = False, parser = binaryOpExpr Mod }
 
-               Percent ->
-                   Just { precedence = 13, isRight = False, parser = binaryOpExpr Mod }
-
-            -}
             Token.Power ->
                 Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
 
