@@ -1,12 +1,14 @@
 module Token exposing
     ( Token
     , Type(..)
+    , getChar
     , getFloat
     , getInt
     , getLowerName
     , getQualifier
     , getString
     , getUpperName
+    , isChar
     , isFloat
     , isInt
     , isLowerName
@@ -112,6 +114,16 @@ isFloat type_ =
             False
 
 
+isChar : Type -> Bool
+isChar type_ =
+    case type_ of
+        Char _ ->
+            True
+
+        _ ->
+            False
+
+
 isString : Type -> Bool
 isString type_ =
     case type_ of
@@ -167,6 +179,16 @@ getFloat type_ =
     case type_ of
         Float n ->
             Just n
+
+        _ ->
+            Nothing
+
+
+getChar : Type -> Maybe String
+getChar type_ =
+    case type_ of
+        Char s ->
+            Just s
 
         _ ->
             Nothing

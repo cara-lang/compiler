@@ -456,8 +456,7 @@ prefixExpr =
         { commited =
             [ ( [ P Token.isInt ], intExpr )
             , ( [ P Token.isFloat ], floatExpr )
-
-            {- , ( [ P Token.isChar ], charExpr ) -}
+            , ( [ P Token.isChar ], charExpr )
             , ( [ P Token.isString ], stringExpr )
 
             {-
@@ -555,6 +554,18 @@ tupleOrParenthesizedExpr =
                 else
                     Tuple (x :: xs)
             )
+
+
+{-|
+
+    = 'a'
+    : CHAR
+
+-}
+charExpr : Parser Expr
+charExpr =
+    Parser.tokenData Token.getChar
+        |> Parser.map AST.Char
 
 
 {-|
