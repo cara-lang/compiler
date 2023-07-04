@@ -448,9 +448,16 @@ infixType =
                 Nothing
 
 
+{-|
+
+    : typevar
+    = a
+    = comparable123
+
+-}
 varType : Parser AST.Type
 varType =
-    \_ -> Debug.todo "varType"
+    Parser.map TVar typevar
 
 
 {-|
@@ -549,9 +556,29 @@ fnType =
             |> Parser.map (\right -> TFn { from = config.left, to = right })
 
 
+{-|
+
+    : type LBRACKET type (COMMA type)* RBRACKET
+      ^^^^^^^^^^^^^ already parsed
+    = List[a]
+
+-}
 applicationType : InfixParser AST.Type
-applicationType =
-    \_ -> Debug.todo "applicationType"
+applicationType { left } =
+    Parser.succeed (\( arg, args ) -> TApplication { type_ = left, args = arg :: args })
+        |> Parser.skip
+            -- to be able to use separatedNonemptyList
+            Parser.moveLeft
+        |> Parser.keep
+            (Parser.separatedNonemptyList
+                { left = LBracket
+                , right = RBracket
+                , sep = Comma
+                , item = type_
+                , skipEol = True
+                , allowTrailingSep = False
+                }
+            )
 
 
 {-|

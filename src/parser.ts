@@ -2133,50 +2133,6 @@ function pratt<T>(c: PrattConfig<T>): {i: number, match: T} {
     return {i, match: left};
 }
 
-//: type ARROW type
-//  ^^^^^^^^^^ already parsed
-//= x -> y
-function fnType(left: Type, precedence: number, isRight: boolean, state: State): {i: number, match: Type} {
-    const typeResult = typeAux(precedence, isRight, state);
-    const i = typeResult.i;
-    const right = typeResult.match;
-    return {i, match: {type: 'fn', from: left, to: right}};
-}
-
-//: type LBRACKET type (COMMA type)* RBRACKET
-//  ^^^^^^^^^^^^^ already parsed
-//= List[a]
-function callType(left: Type, _precedence: number, _isRight: boolean, state: State): {i: number, match: Type} {
-    let {i} = state;
-    const desc = 'call type';
-    i--; // we'll parse LBRACKET as part of the list
-    //: LBRACKET type (COMMA type)* RBRACKET
-    const argsResult = nonemptyList({
-        left:  'LBRACKET',
-        right: 'RBRACKET',
-        sep:   'COMMA',
-        item:  type,
-        state: {...state, i},
-        parsedItem: `${desc} arg list`,
-        skipEol: false,
-        allowTrailingSep: false,
-    });
-    i = argsResult.i;
-    const args = argsResult.match;
-    return {i, match: {type: 'call', fn: left, args}};
-}
-
-//: typevar
-//= a
-//= comparable123
-function varType(state: State): {i: number, match: Type} {
-    const varResult = typevar(state);
-    return {
-        i: varResult.i,
-        match: { type:'var', var: varResult.match },
-    };
-}
-
 //: QUALIFIER* UPPER_NAME
 //= Int
 //= Base.Maybe
