@@ -11,6 +11,7 @@ type Value
     | VIntrinsic Intrinsic
     | VList (List Value)
     | VTuple (List Value)
+    | VRecordGetter String
 
 
 toString : Value -> String
@@ -38,3 +39,7 @@ toString value =
 
         VTuple values ->
             "(" ++ String.join "," (List.map toString values) ++ ")"
+
+        VRecordGetter field ->
+            "<record getter .{FIELD}>"
+                |> String.replace "{FIELD}" field

@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 
-const selectedTest = 'tuple-2-el1-standalone';
+const selectedTest = null;
 
 ///////////////////////////////////////////
 

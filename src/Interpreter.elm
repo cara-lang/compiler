@@ -177,8 +177,33 @@ interpretExpr =
             RecordGet r ->
                 interpretRecordGet env r
 
+            RecordGetter field ->
+                Outcome.succeed env (VRecordGetter field)
+
+            Call r ->
+                interpretCall env r
+
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
+
+
+interpretCall : Interpreter { fn : Expr, args : List Expr } Value
+interpretCall =
+    \env { fn, args } ->
+        interpretExpr env fn
+            |> Outcome.andThen
+                (\env1 fnVal ->
+                    Interpreter.traverse interpretExpr env1 args
+                        |> Outcome.andThen
+                            (\env2 argVals ->
+                                case ( fnVal, argVals ) of
+                                    ( VRecordGetter field, [ VTuple values ] ) ->
+                                        interpretRecordGetTuple env2 ( values, field )
+
+                                    _ ->
+                                        Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
+                            )
+                )
 
 
 interpretUnaryOp : Interpreter ( UnaryOp, Expr ) Value
