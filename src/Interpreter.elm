@@ -11,6 +11,7 @@ import Interpreter.Internal as Interpreter exposing (Interpreter)
 import Interpreter.Outcome as Outcome exposing (Outcome(..))
 import Intrinsic exposing (Intrinsic(..))
 import List.Extra as List
+import Maybe.Extra as Maybe
 import Tree.Zipper as Zipper
 import Value exposing (Value(..))
 
@@ -256,6 +257,29 @@ interpretCall =
         case ( fnVal, argVals ) of
             ( VRecordGetter field, [ VTuple values ] ) ->
                 interpretRecordGetTuple env2 ( values, field )
+
+            ( VClosure r, _ ) ->
+                case compare (List.length r.args) (List.length argVals) of
+                    LT ->
+                        Debug.todo "call closure #args < #values"
+
+                    GT ->
+                        Debug.todo "call closure #args > #values"
+
+                    EQ ->
+                        let
+                            pairs : List ( Pattern, Value )
+                            pairs =
+                                List.map2 Tuple.pair r.args argVals
+                        in
+                        Interpreter.do (Interpreter.traverse interpretPattern env2 pairs) <| \env3 maybeDicts ->
+                        case Maybe.combine maybeDicts of
+                            Nothing ->
+                                Outcome.fail PatternMismatch
+
+                            Just dicts ->
+                                Interpreter.do (interpretExpr (List.foldl Env.addDict r.env dicts) r.body) <| \_ callResult ->
+                                Outcome.succeed env3 callResult
 
             _ ->
                 Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )

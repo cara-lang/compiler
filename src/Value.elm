@@ -67,5 +67,5 @@ toString value =
                         "(" ++ String.join "," (List.map toString args) ++ ")"
                    )
 
-        VClosure { args, body, env } ->
-            Debug.todo "toString VClosure"
+        VClosure _ ->
+            "<closure>"

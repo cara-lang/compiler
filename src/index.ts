@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 
-const selectedTest = 'lambda-1arg';
+const selectedTest = null;
 
 ///////////////////////////////////////////
 

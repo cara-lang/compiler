@@ -74,6 +74,7 @@ type InterpreterError
         }
     | TupleUnknownField String
     | IfConditionNotBool
+    | PatternMismatch
 
 
 title : Error -> String
@@ -278,6 +279,10 @@ title error =
                         IfConditionNotBool ->
                             -- TODO error code
                             "If condition not bool"
+
+                        PatternMismatch ->
+                            -- TODO error code
+                            "Pattern mismatch"
                    )
 
 
