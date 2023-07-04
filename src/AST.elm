@@ -15,11 +15,13 @@ module AST exposing
     , RecordTypeField
     , Stmt(..)
     , Type(..)
+    , TypeModifier(..)
     , UnaryOp(..)
     )
 
 import Env exposing (Env)
 import Id exposing (Id)
+import Intrinsic exposing (Intrinsic)
 
 
 type alias Program =
@@ -51,7 +53,6 @@ type Expr
     | Identifier Id -- foo, Bar.foo
     | RootIdentifier Id -- ::foo, ::Bar.foo
     | Lambda { args : List Pattern, body : Expr }
-    | Closure { args : List Pattern, body : Expr, env : Env }
     | RecordGetter String -- .field
     | If { cond : Expr, then_ : Expr, else_ : Expr }
     | Case { subject : Expr, branches : List CaseBranch }
@@ -101,6 +102,12 @@ type Stmt
     | SBang Bang
 
 
+type TypeModifier
+    = TypeNoModifier
+    | TypePrivate
+    | TypeOpaque
+
+
 type LetModifier
     = LetNoModifier
     | LetPrivate
@@ -108,7 +115,7 @@ type LetModifier
 
 type Decl
     = DTypeAlias { name : String, body : Type } -- TODO mod, vars
-    | DTypeDecl { name : String, constructors : List Constructor } --  TODO mod, vars
+    | DTypeDecl { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }
     | DFunction { name : String, body : Expr } -- TODO mod, args, resultType
@@ -145,14 +152,17 @@ type alias RecordTypeField =
 
 
 type alias Constructor =
-    -- Foo, Bar(Int), Baz(n: Int, verbose: Bool)
+    -- Foo
+    -- Bar(Int)
+    -- Baz(n: Int, verbose: Bool)
     { name : String
     , args : List ConstructorArg
     }
 
 
 type alias ConstructorArg =
-    -- a:Int, Int
+    -- a:Int
+    -- Int
     { name : Maybe String
     , type_ : Type
     }

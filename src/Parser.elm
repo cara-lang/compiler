@@ -39,14 +39,17 @@ declaration =
         { commited =
             [ {- ( [ T Private, T Type, T Alias ], typeAliasDecl )
                  , ( [ T Type, T Alias ], typeAliasDecl )
-                 , ( [ T Private,T Type ], typeDecl )
-                 , ( [ T Opaque,T Type ], typeDecl )
-                 , ( [ T Type ], typeDecl )
-                 , ( [ T Extend,T Module ], extendModuleDecl )
-                 , ( [ T Private,T Module ], moduleDecl )
-                 ,
               -}
-              ( [ T Module ], moduleDecl )
+              ( [ T Private, T Type ], typeDecl )
+            , ( [ T Opaque, T Type ], typeDecl )
+            , ( [ T Type ], typeDecl )
+
+            {-
+               , ( [ T Extend,T Module ], extendModuleDecl )
+               , ( [ T Private,T Module ], moduleDecl )
+               ,
+            -}
+            , ( [ T Module ], moduleDecl )
             ]
         , noncommited =
             [ -- x = 123
@@ -74,6 +77,159 @@ declaration =
                  functionAnnotationDecl
             -}
             ]
+        }
+
+
+{-|
+
+    : (PRIVATE | OPAQUE)? TYPE UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ constructorList
+    = type Unit = Unit
+    = private type MyList[a] = Empty | Cons(a,MyList[a])
+    = opaque type Html[msg] = Inert(InertHtml) | Eventful(EventfulHtml[msg])
+
+-}
+typeDecl : Parser Decl
+typeDecl =
+    Parser.succeed (\mod name vars constructors -> DTypeDecl { mod = mod, name = name, vars = vars, constructors = constructors })
+        |> Parser.keep typeModifier
+        |> Parser.skip (Parser.token Type)
+        |> Parser.keep upperName
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.separatedNonemptyList
+                    { left = Token.LBracket
+                    , right = Token.RBracket
+                    , sep = Token.Comma
+                    , item = typevar
+                    , skipEol = False
+                    , allowTrailingSep = False
+                    }
+                )
+                |> Parser.map
+                    (\maybeTypevars ->
+                        case maybeTypevars of
+                            Nothing ->
+                                []
+
+                            Just ( t, ts ) ->
+                                t :: ts
+                    )
+            )
+        |> Parser.skip (Parser.token Token.Eq)
+        |> Parser.keep constructorList
+
+
+{-|
+
+    : LOWER_NAME
+    = a
+    = comparable123
+
+-}
+typevar : Parser String
+typevar =
+    lowerName
+
+
+{-|
+
+    : (EOL+ PIPE)? EOL* constructor (EOL* PIPE EOL* constructor)*
+    = Foo | Bar(Bool) | Baz(Int,String)
+    = | Foo | Bar(Bool) | Baz(Int,String)
+
+-}
+constructorList : Parser (List Constructor)
+constructorList =
+    Parser.succeed (::)
+        |> Parser.skip
+            (Parser.maybe
+                (Parser.succeed identity
+                    |> Parser.skip Parser.skipEol
+                    |> Parser.skip (Parser.token Pipe)
+                )
+            )
+        |> Parser.skip Parser.skipEol
+        |> Parser.keep constructor
+        |> Parser.keep
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.skip Parser.skipEol
+                    |> Parser.skip (Parser.token Pipe)
+                    |> Parser.skip Parser.skipEol
+                    |> Parser.keep constructor
+                )
+            )
+
+
+{-|
+
+    : UPPER_NAME (LPAREN constructorArg (COMMA constructorArg)* RPAREN)?
+    = Foo
+    = Bar(Int)
+    = Bar(n: Int, verbose: Bool)
+
+-}
+constructor : Parser Constructor
+constructor =
+    Parser.succeed (\name args -> { name = name, args = args })
+        |> Parser.keep upperName
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.separatedNonemptyList
+                    { left = Token.LParen
+                    , right = Token.RParen
+                    , sep = Token.Comma
+                    , item = constructorArg
+                    , skipEol = True
+                    , allowTrailingSep = False
+                    }
+                )
+                |> Parser.map
+                    (\maybeArgs ->
+                        case maybeArgs of
+                            Nothing ->
+                                []
+
+                            Just ( arg, args ) ->
+                                arg :: args
+                    )
+            )
+
+
+{-|
+
+    : (LOWER_NAME COLON)? type
+    = Int
+    = n: Int
+
+-}
+constructorArg : Parser ConstructorArg
+constructorArg =
+    Parser.succeed (\name type__ -> { name = name, type_ = type__ })
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.succeed identity
+                    |> Parser.keep lowerName
+                    |> Parser.skip (Parser.token Colon)
+                )
+            )
+        |> Parser.keep type_
+
+
+typeModifier : Parser TypeModifier
+typeModifier =
+    Parser.oneOf
+        { commited =
+            [ ( [ T Private ]
+              , Parser.succeed TypePrivate
+                    |> Parser.skip (Parser.token Private)
+              )
+            , ( [ T Opaque ]
+              , Parser.succeed TypeOpaque
+                    |> Parser.skip (Parser.token Opaque)
+              )
+            ]
+        , noncommited = [ Parser.succeed TypeNoModifier ]
         }
 
 
@@ -500,11 +656,9 @@ prefixExpr =
             -}
             ]
         , noncommited =
-            [ {- blockExpr
-                 , constructorExpr
-                 ,
-              -}
-              identifierExpr
+            [ -- blockExpr
+              constructorExpr
+            , identifierExpr
 
             --, recordExpr
             ]
@@ -817,6 +971,40 @@ recordGetExpr { left } =
     Parser.succeed (\field -> RecordGet { record = left, field = field })
         |> Parser.skip Parser.moveLeft
         |> Parser.keep (Parser.tokenData Token.getGetter)
+
+
+{-|
+
+    : QUALIFIER* UPPER_NAME (LPAREN expr (COMMA expr)* RPAREN)?
+    = Bar
+    = Foo.Bar(1,2,3)
+
+-}
+constructorExpr : Parser Expr
+constructorExpr =
+    Parser.succeed (\id args -> Constructor_ { id = id, args = args })
+        |> Parser.keep upperIdentifier
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.separatedNonemptyList
+                    { left = Token.LParen
+                    , right = Token.RParen
+                    , sep = Token.Comma
+                    , item = Parser.lazy (\() -> expr)
+                    , skipEol = True
+                    , allowTrailingSep = False
+                    }
+                )
+                |> Parser.map
+                    (\maybeArgs ->
+                        case maybeArgs of
+                            Nothing ->
+                                []
+
+                            Just ( arg, args ) ->
+                                arg :: args
+                    )
+            )
 
 
 {-|

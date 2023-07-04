@@ -17,16 +17,17 @@ module Interpreter.Outcome exposing
 import Effect exposing (Effect0, EffectStr)
 import Env exposing (Env)
 import Error exposing (InterpreterError)
+import Value exposing (Value)
 
 
 type Outcome a
-    = DoneInterpreting Env a
+    = DoneInterpreting (Env Value) a
     | NeedsEffect0 Effect0 (() -> Outcome a)
     | NeedsEffectStr EffectStr (String -> Outcome a)
     | FoundError InterpreterError
 
 
-succeed : Env -> a -> Outcome a
+succeed : Env Value -> a -> Outcome a
 succeed env a =
     DoneInterpreting env a
 
@@ -52,7 +53,7 @@ map fn outcome =
             FoundError err
 
 
-mapBoth : (Env -> a -> ( Env, b )) -> Outcome a -> Outcome b
+mapBoth : (Env Value -> a -> ( Env Value, b )) -> Outcome a -> Outcome b
 mapBoth fn outcome =
     case outcome of
         DoneInterpreting env a ->
@@ -72,7 +73,7 @@ mapBoth fn outcome =
             FoundError err
 
 
-mapEnv : (Env -> Env) -> Outcome a -> Outcome a
+mapEnv : (Env Value -> Env Value) -> Outcome a -> Outcome a
 mapEnv fn outcome =
     case outcome of
         DoneInterpreting env a ->
@@ -88,7 +89,7 @@ mapEnv fn outcome =
             FoundError err
 
 
-attemptMapEnv : (Env -> Maybe Env) -> InterpreterError -> Outcome a -> Outcome a
+attemptMapEnv : (Env Value -> Maybe (Env Value)) -> InterpreterError -> Outcome a -> Outcome a
 attemptMapEnv fn error outcome =
     case outcome of
         DoneInterpreting env a ->
@@ -109,7 +110,7 @@ attemptMapEnv fn error outcome =
             FoundError err
 
 
-andThen : (Env -> a -> Outcome b) -> Outcome a -> Outcome b
+andThen : (Env Value -> a -> Outcome b) -> Outcome a -> Outcome b
 andThen fn outcome1 =
     case outcome1 of
         DoneInterpreting env1 a ->

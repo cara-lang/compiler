@@ -1,4 +1,4 @@
-module Id exposing (Id, toString)
+module Id exposing (Id, local, toString)
 
 
 type alias Id =
@@ -10,3 +10,10 @@ type alias Id =
 toString : Id -> String
 toString id =
     String.join "." (id.qualifiers ++ [ id.name ])
+
+
+local : String -> Id
+local name =
+    { qualifiers = []
+    , name = name
+    }

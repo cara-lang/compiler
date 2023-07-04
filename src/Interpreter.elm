@@ -34,6 +34,9 @@ interpretDecl =
             DValueAnnotation r ->
                 interpretValueAnnotation env r
 
+            DTypeDecl r ->
+                interpretTypeDecl env r
+
             _ ->
                 Debug.todo <| "Unimplemented interpretDecl: " ++ Debug.toString decl
 
@@ -59,6 +62,53 @@ interpretValueAnnotation =
     \env { name, type_ } ->
         -- TODO make type annotations do something
         Outcome.succeed env ()
+
+
+interpretTypeDecl :
+    Interpreter
+        { mod : TypeModifier
+        , name : String
+        , vars : List String
+        , constructors : List Constructor
+        }
+        ()
+interpretTypeDecl =
+    \env r ->
+        -- TODO interpret the modifier
+        let
+            additions : EnvDict Value
+            additions =
+                r.constructors
+                    |> List.map
+                        (\c ->
+                            let
+                                names : List String
+                                names =
+                                    List.indexedMap
+                                        (\i _ -> "arg" ++ String.fromInt i)
+                                        c.args
+                            in
+                            ( Id.local c.name
+                            , VClosure
+                                { args = List.map PVar names
+                                , body =
+                                    Constructor_
+                                        { id =
+                                            -- TODO what about the module?
+                                            Id.local r.name
+                                        , args = List.map (Identifier << Id.local) names
+                                        }
+                                , env = env
+                                }
+                            )
+                        )
+                    |> EnvDict.fromList
+
+            newEnv : Env Value
+            newEnv =
+                Env.addDict additions env
+        in
+        Outcome.succeed newEnv ()
 
 
 interpretBang : Interpreter Bang Value
@@ -123,7 +173,7 @@ interpretLet =
 {-| Returns (NEW) env additions, instead of the whole env.
 Nothing is returned if the pattern doesn't match the expr.
 -}
-interpretPattern : Interpreter ( Pattern, Value ) (Maybe EnvDict)
+interpretPattern : Interpreter ( Pattern, Value ) (Maybe (EnvDict Value))
 interpretPattern =
     \env ( pattern, value ) ->
         case pattern of
@@ -386,7 +436,7 @@ interpretModule =
     \env { mod, name, decls } ->
         -- TODO handle the modifier
         let
-            envWithOpenModule : Maybe Env
+            envWithOpenModule : Maybe (Env Value)
             envWithOpenModule =
                 env
                     |> Env.createModule name

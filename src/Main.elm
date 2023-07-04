@@ -8,6 +8,7 @@ import Interpreter
 import Interpreter.Outcome as Interpreter
 import Lexer
 import Parser
+import Value exposing (Value(..))
 
 
 main : Program Flags Model Msg
@@ -63,7 +64,7 @@ init flags =
 
         Ok astTree ->
             astTree
-                |> Interpreter.interpretProgram Env.initWithIntrinsics
+                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                 |> handleInterpreterOutcome
 
 

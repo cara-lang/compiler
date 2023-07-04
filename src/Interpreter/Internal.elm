@@ -17,10 +17,11 @@ module Interpreter.Internal exposing
 import Env exposing (Env)
 import Error exposing (InterpreterError)
 import Interpreter.Outcome as Outcome exposing (Outcome(..))
+import Value exposing (Value)
 
 
 type alias Interpreter a b =
-    Env -> a -> Outcome b
+    Env Value -> a -> Outcome b
 
 
 succeed : b -> Interpreter a b
@@ -111,7 +112,7 @@ traverse : Interpreter a b -> Interpreter (List a) (List b)
 traverse innerInterpreter =
     \env list ->
         let
-            go : Env -> List b -> List a -> Outcome (List b)
+            go : Env Value -> List b -> List a -> Outcome (List b)
             go env1 acc todo =
                 case todo of
                     [] ->

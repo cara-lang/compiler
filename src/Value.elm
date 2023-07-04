@@ -1,5 +1,8 @@
 module Value exposing (Value(..), toString)
 
+import AST exposing (Expr, Pattern)
+import Env exposing (Env)
+import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
 
 
@@ -12,6 +15,8 @@ type Value
     | VList (List Value)
     | VTuple (List Value)
     | VRecordGetter String
+    | VConstructor { id : Id, args : List Value }
+    | VClosure { args : List Pattern, body : Expr, env : Env Value }
 
 
 toString : Value -> String
@@ -31,8 +36,9 @@ toString value =
         VUnit ->
             "()"
 
-        VIntrinsic _ ->
-            "<intrinsic>"
+        VIntrinsic intrinsic ->
+            "<intrinsic {ID}>"
+                |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
 
         VList values ->
             "[" ++ String.join "," (List.map toString values) ++ "]"
@@ -43,3 +49,15 @@ toString value =
         VRecordGetter field ->
             "<record getter .{FIELD}>"
                 |> String.replace "{FIELD}" field
+
+        VConstructor { id, args } ->
+            Id.toString id
+                ++ (if List.isEmpty args then
+                        ""
+
+                    else
+                        "(" ++ String.join "," (List.map toString args) ++ ")"
+                   )
+
+        VClosure { args, body, env } ->
+            Debug.todo "toString VClosure"
