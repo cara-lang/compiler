@@ -1,6 +1,7 @@
 module Interpreter exposing (interpretProgram)
 
 import AST exposing (..)
+import Dict exposing (Dict)
 import Effect
 import Env exposing (Env)
 import EnvDict exposing (EnvDict)
@@ -9,6 +10,7 @@ import Id exposing (Id)
 import Interpreter.Internal as Interpreter exposing (Interpreter)
 import Interpreter.Outcome as Outcome exposing (Outcome(..))
 import Intrinsic exposing (Intrinsic(..))
+import List.Extra as List
 import Tree.Zipper as Zipper
 import Value exposing (Value(..))
 
@@ -138,6 +140,9 @@ interpretExpr =
             Float n ->
                 Outcome.succeed env (VFloat n)
 
+            String s ->
+                Outcome.succeed env (VString s)
+
             Identifier id ->
                 interpretIdentifier env id
 
@@ -147,11 +152,17 @@ interpretExpr =
             List xs ->
                 interpretList env xs
 
+            Tuple xs ->
+                interpretTuple env xs
+
             UnaryOp op e ->
                 interpretUnaryOp env ( op, e )
 
             BinaryOp left op right ->
                 interpretBinaryOp env ( left, op, right )
+
+            RecordGet r ->
+                interpretRecordGet env r
 
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
@@ -215,6 +226,76 @@ interpretBinaryOpVal =
                 Debug.todo <| "Unimplemented interpretBinaryOp: " ++ Debug.toString ( left, op, right )
 
 
+interpretRecordGet : Interpreter { record : Expr, field : String } Value
+interpretRecordGet =
+    \env { record, field } ->
+        interpretExpr env record
+            |> Outcome.andThen
+                (\env1 recordVal ->
+                    case recordVal of
+                        VTuple values ->
+                            interpretRecordGetTuple env ( values, field )
+
+                        _ ->
+                            Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
+                )
+
+
+specialTupleGetters : Dict String Int
+specialTupleGetters =
+    Dict.fromList
+        [ ( "first", 0 )
+        , ( "second", 1 )
+        , ( "third", 2 )
+        , ( "fourth", 3 )
+        , ( "fifth", 4 )
+        , ( "sixth", 5 )
+        , ( "seventh", 6 )
+        , ( "eighth", 7 )
+        , ( "ninth", 8 )
+        , ( "tenth", 9 )
+        ]
+
+
+interpretRecordGetTuple : Interpreter ( List Value, String ) Value
+interpretRecordGetTuple =
+    \env ( values, field ) ->
+        let
+            accessIndex : Int -> Outcome Value
+            accessIndex index =
+                case List.getAt index values of
+                    Just value ->
+                        Outcome.succeed env value
+
+                    Nothing ->
+                        Outcome.fail
+                            (TupleLengthMismatch
+                                { wanted = index
+                                , length = List.length values
+                                }
+                            )
+
+            unknownField : () -> Outcome Value
+            unknownField () =
+                Outcome.fail (TupleUnknownField field)
+        in
+        case Dict.get field specialTupleGetters of
+            Just index ->
+                accessIndex index
+
+            Nothing ->
+                if String.startsWith "el" field then
+                    case String.toInt (String.dropLeft 2 field) of
+                        Nothing ->
+                            unknownField ()
+
+                        Just index ->
+                            accessIndex index
+
+                else
+                    unknownField ()
+
+
 {-| Try to find the ID in the current Env, then in the parent, ... up to the root.
 -}
 interpretIdentifier : Interpreter Id Value
@@ -254,6 +335,12 @@ interpretList : Interpreter (List Expr) Value
 interpretList =
     Interpreter.traverse interpretExpr
         |> Interpreter.map VList
+
+
+interpretTuple : Interpreter (List Expr) Value
+interpretTuple =
+    Interpreter.traverse interpretExpr
+        |> Interpreter.map VTuple
 
 
 interpretModule : Interpreter { mod : ModuleModifier, name : String, decls : List Decl } ()

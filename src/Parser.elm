@@ -461,8 +461,8 @@ prefixExpr =
 
             {-
                , ( [ P Token.isBacktickString ], backtickStringExpr )
-               , ( [ P Token.isGetter ], recordGetterExpr )
             -}
+            , ( [ P Token.isGetter ], recordGetterExpr )
             , ( [ T True_ ], boolExpr )
             , ( [ T False_ ], boolExpr )
             , ( [ T LParen, T RParen ], unitExpr )
@@ -531,9 +531,9 @@ unitExpr =
 
 {-|
 
-    : LPAREN type (COMMA type)* RPAREN
-    = (Int)
-    = (Int,Float,String)
+    : LPAREN expr (COMMA expr)* RPAREN
+    = (1)
+    = (1,1.25,"Hello")
 
 -}
 tupleOrParenthesizedExpr : Parser Expr
@@ -554,6 +554,18 @@ tupleOrParenthesizedExpr =
                 else
                     Tuple (x :: xs)
             )
+
+
+{-|
+
+    : GETTER
+    = .abc
+
+-}
+recordGetterExpr : Parser Expr
+recordGetterExpr =
+    Parser.tokenData Token.getGetter
+        |> Parser.map AST.RecordGetter
 
 
 {-|
@@ -710,10 +722,10 @@ infixExpr =
             {-
                LParen ->
                    Just { precedence = 16, isRight = True, parser = callExpr }
-
-               Getter _ ->
-                   Just { precedence = 17, isRight = False, parser = recordGetExpr }
             -}
+            Token.Getter _ ->
+                Just { precedence = 17, isRight = False, parser = recordGetExpr }
+
             _ ->
                 Nothing
 
@@ -750,6 +762,21 @@ binaryOpExpr : BinaryOp -> InfixParser Expr
 binaryOpExpr op { left, precedence, isRight } =
     Parser.succeed (\right -> BinaryOp left op right)
         |> Parser.keep (exprAux precedence isRight)
+
+
+{-|
+
+    : expr GETTER
+      ^^^^^^^^^^^ already parsed, we need to move left to access the GETTER!
+    = foo.abc
+    = getRecord(123).abc
+
+-}
+recordGetExpr : { a | left : Expr } -> Parser Expr
+recordGetExpr { left } =
+    Parser.succeed (\field -> RecordGet { record = left, field = field })
+        |> Parser.skip Parser.moveLeft
+        |> Parser.keep (Parser.tokenData Token.getGetter)
 
 
 {-|

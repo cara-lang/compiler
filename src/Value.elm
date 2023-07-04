@@ -6,9 +6,11 @@ import Intrinsic exposing (Intrinsic)
 type Value
     = VInt Int
     | VFloat Float
+    | VString String
     | VUnit
     | VIntrinsic Intrinsic
     | VList (List Value)
+    | VTuple (List Value)
 
 
 toString : Value -> String
@@ -20,6 +22,11 @@ toString value =
         VFloat float ->
             String.fromFloat float
 
+        VString str ->
+            -- TODO quoting?
+            -- TODO escaping?
+            str
+
         VUnit ->
             "()"
 
@@ -28,3 +35,6 @@ toString value =
 
         VList values ->
             "[" ++ String.join "," (List.map toString values) ++ "]"
+
+        VTuple values ->
+            "(" ++ String.join "," (List.map toString values) ++ ")"

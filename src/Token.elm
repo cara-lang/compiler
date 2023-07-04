@@ -3,6 +3,7 @@ module Token exposing
     , Type(..)
     , getChar
     , getFloat
+    , getGetter
     , getInt
     , getLowerName
     , getQualifier
@@ -10,6 +11,7 @@ module Token exposing
     , getUpperName
     , isChar
     , isFloat
+    , isGetter
     , isInt
     , isLowerName
     , isQualifier
@@ -134,6 +136,16 @@ isString type_ =
             False
 
 
+isGetter : Type -> Bool
+isGetter type_ =
+    case type_ of
+        Getter _ ->
+            True
+
+        _ ->
+            False
+
+
 isQualifier : Type -> Bool
 isQualifier type_ =
     case type_ of
@@ -198,6 +210,16 @@ getString : Type -> Maybe String
 getString type_ =
     case type_ of
         String s ->
+            Just s
+
+        _ ->
+            Nothing
+
+
+getGetter : Type -> Maybe String
+getGetter type_ =
+    case type_ of
+        Getter s ->
             Just s
 
         _ ->

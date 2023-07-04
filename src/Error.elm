@@ -52,6 +52,7 @@ type LexerError
 
 type ParserError
     = ExpectedNonemptyTokens
+    | CouldntMoveLeft
     | RanPastEndOfTokens
     | CouldntGetTokenData
     | ExpectedToken Token.Type
@@ -67,6 +68,11 @@ type InterpreterError
     | ExpectedModule String
     | ExpectedParent
     | UnexpectedArity
+    | TupleLengthMismatch
+        { wanted : Int -- 0-based
+        , length : Int
+        }
+    | TupleUnknownField String
 
 
 title : Error -> String
@@ -202,6 +208,10 @@ title error =
                             -- Shouldn't happen
                             "Expected nonempty tokens"
 
+                        CouldntMoveLeft ->
+                            -- TODO error code
+                            "Couldn't move the token list left"
+
                         RanPastEndOfTokens ->
                             -- TODO error code
                             "Ran past end of tokens"
@@ -252,4 +262,31 @@ title error =
                         UnexpectedArity ->
                             -- TODO error code
                             "Unexpected arity"
+
+                        TupleLengthMismatch { wanted, length } ->
+                            -- TODO error code
+                            "Tuple length mismatch: wanted to get {WHICH} field of a tuple that has only {LENGTH} items"
+                                |> String.replace "{WHICH}" (String.fromInt wanted ++ th (wanted + 1))
+                                |> String.replace "{LENGTH}" (String.fromInt length)
+
+                        TupleUnknownField field ->
+                            -- TODO error code
+                            "Tried to access field '{FIELD}' on a tuple"
+                                |> String.replace "{FIELD}" field
                    )
+
+
+th : Int -> String
+th n =
+    case n of
+        1 ->
+            "st"
+
+        2 ->
+            "nd"
+
+        3 ->
+            "rd"
+
+        _ ->
+            "th"
