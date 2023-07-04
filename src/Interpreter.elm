@@ -31,6 +31,9 @@ interpretDecl =
             DStatement stmt ->
                 interpretStatement env stmt
 
+            DValueAnnotation r ->
+                interpretValueAnnotation env r
+
             _ ->
                 Debug.todo <| "Unimplemented interpretDecl: " ++ Debug.toString decl
 
@@ -49,6 +52,13 @@ interpretStatement =
                 interpretBang env bang
                     -- Throw the result away
                     |> Outcome.map (\_ -> ())
+
+
+interpretValueAnnotation : Interpreter { name : String, type_ : Type } ()
+interpretValueAnnotation =
+    \env { name, type_ } ->
+        -- TODO make type annotations do something
+        Outcome.succeed env ()
 
 
 interpretBang : Interpreter Bang Value
@@ -148,6 +158,9 @@ interpretExpr =
 
             RootIdentifier id ->
                 interpretRootIdentifier env id
+
+            Unit ->
+                Outcome.succeed env VUnit
 
             List xs ->
                 interpretList env xs

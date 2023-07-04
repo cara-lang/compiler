@@ -56,13 +56,13 @@ declaration =
               -- x: Int = 123
               -- This needs to be before the valueAnnotationDecl to parse `x: Int = 123`
               statementDecl
+            , -- x : Int
+              {- can't prefix it because `x:Int = 123` is also possible and needs
+                 to be handled inside statementDecl (because of `private`!)
+              -}
+              valueAnnotationDecl
 
-            {- , -- x : Int
-                 {- can't prefix it because `x:Int = 123` is also possible and needs
-                    to be handled inside statementDecl (because of `private`!)
-                 -}
-                 valueAnnotationDecl
-               , -- f(a,b) = expr
+            {- , -- f(a,b) = expr
                  -- private f(a,b) = expr
                  -- `-`(a,b) = expr
                  -- `-`(a) = expr
@@ -75,6 +75,20 @@ declaration =
             -}
             ]
         }
+
+
+{-|
+
+    : LOWER_NAME COLON type
+    = x : Int
+
+-}
+valueAnnotationDecl : Parser Decl
+valueAnnotationDecl =
+    Parser.succeed (\name type__ -> DValueAnnotation { name = name, type_ = type__ })
+        |> Parser.keep (Parser.tokenData Token.getLowerName)
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep type_
 
 
 statementDecl : Parser Decl
