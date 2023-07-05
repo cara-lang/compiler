@@ -365,6 +365,7 @@ testDecl =
     : TEST STRING? COLON expr
     = test: 1 == 1
     = test "Example": 1 == 2
+    = test: IO { 1 == 1 }
 
 -}
 unitTestDecl : Parser Decl
@@ -824,11 +825,11 @@ prefixExpr =
             -}
             ]
         , noncommited =
-            [ constructorExpr
+            [ blockExpr
+            , effectBlockExpr
+            , constructorExpr
             , identifierExpr
             , recordExpr
-            , blockExpr
-            , effectBlockExpr
             ]
         }
 
