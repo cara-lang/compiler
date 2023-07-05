@@ -220,8 +220,9 @@ separatedList config =
         trailingSep =
             if config.allowTrailingSep then
                 succeed identity
-                    |> keep (token config.sep)
+                    |> skip (maybe (token config.sep))
                     |> skip eol
+                    |> keep (succeed ())
 
             else
                 succeed ()
@@ -281,8 +282,9 @@ separatedNonemptyList config =
         trailingSep =
             if config.allowTrailingSep then
                 succeed identity
-                    |> keep (token config.sep)
+                    |> skip (maybe (token config.sep))
                     |> skip eol
+                    |> keep (succeed ())
 
             else
                 succeed ()
