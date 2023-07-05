@@ -101,7 +101,14 @@ interpretFunction =
         let
             envWithFn : Env Value
             envWithFn =
-                Debug.todo "env with fn"
+                env
+                    |> Env.add name
+                        (VClosure
+                            { args = args
+                            , body = body
+                            , env = env
+                            }
+                        )
         in
         Outcome.succeed envWithFn ()
 
