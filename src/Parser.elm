@@ -789,7 +789,7 @@ recordExprContent =
 -}
 recordExprFieldContent : Parser RecordExprContent
 recordExprFieldContent =
-    Parser.succeed (\field expr_ -> Field { field = field, value = expr_ })
+    Parser.succeed (\field expr_ -> Field { field = field, expr = expr_ })
         |> Parser.keep lowerName
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep (Parser.lazy (\() -> expr))

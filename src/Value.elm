@@ -1,6 +1,7 @@
 module Value exposing (Value(..), toString)
 
 import AST exposing (Expr, Pattern)
+import Dict exposing (Dict)
 import Env exposing (Env)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
@@ -15,7 +16,7 @@ type Value
     | VIntrinsic Intrinsic
     | VList (List Value)
     | VTuple (List Value)
-    | VRecord (List { field : String, value : Value })
+    | VRecord (Dict String Value)
     | VRecordGetter String
     | VConstructor { id : Id, args : List Value }
     | VClosure { args : List Pattern, body : Expr, env : Env Value }
@@ -58,7 +59,8 @@ toString value =
         VRecord fields ->
             "{"
                 ++ (fields
-                        |> List.map (\f -> f.field ++ ":" ++ toString f.value)
+                        |> Dict.toList
+                        |> List.map (\( field, value_ ) -> field ++ ":" ++ toString value_)
                         |> String.join ","
                    )
                 ++ "}"

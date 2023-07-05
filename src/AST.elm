@@ -145,7 +145,7 @@ type alias CaseBranch =
 
 
 type RecordExprContent
-    = Field { field : String, value : Expr } -- a:123
+    = Field { field : String, expr : Expr } -- a:123
     | Pun String -- a
     | Spread Id -- ...b
 
