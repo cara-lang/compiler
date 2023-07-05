@@ -32,6 +32,9 @@ interpretDecl =
             DStatement stmt ->
                 interpretStatement env stmt
 
+            DFunction r ->
+                interpretFunction env r
+
             DValueAnnotation r ->
                 interpretValueAnnotation env r
 
@@ -87,6 +90,20 @@ interpretStatement =
                 interpretBang env bang
                     -- Throw the result away
                     |> Outcome.map (\_ -> ())
+
+
+interpretFunction : Interpreter { mod : FunctionModifier, name : String, args : List Argument, retType : Maybe Type, body : Expr } ()
+interpretFunction =
+    \env { mod, name, args, retType, body } ->
+        -- TODO interpret the modifier
+        -- TODO interpret the retType
+        -- TODO somehow group related function declarations together and make one case..of from them
+        let
+            envWithFn : Env Value
+            envWithFn =
+                Debug.todo "env with fn"
+        in
+        Outcome.succeed envWithFn ()
 
 
 interpretValueAnnotation : Interpreter { name : String, type_ : Type } ()
