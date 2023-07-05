@@ -404,6 +404,12 @@ lower source i row col =
                 "else" ->
                     token Else
 
+                "test" ->
+                    token Test
+
+                "with" ->
+                    token With
+
                 "type" ->
                     token Type
 

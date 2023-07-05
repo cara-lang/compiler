@@ -92,6 +92,8 @@ type Type
     | Colon
     | Bang
     | Pipe
+    | Test
+    | With
     | EOL
     | EOF
 

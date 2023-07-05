@@ -49,6 +49,7 @@ declaration =
                ,
             -}
             , ( [ T Module ], moduleDecl )
+            , ( [ T Test ], testDecl )
             ]
         , noncommited =
             [ -- x = 123
@@ -344,6 +345,91 @@ moduleDecl =
         |> Parser.skip (Parser.token RBrace)
 
 
+testDecl : Parser Decl
+testDecl =
+    Parser.oneOf
+        { commited =
+            [ ( [ T Test, T Colon ], unitTestDecl )
+            , ( [ T Test, P Token.isString, T Colon ], unitTestDecl )
+            ]
+        , noncommited =
+            [ parameterizedTestDecl
+            , propertyTypeTestDecl
+            , propertyGenTestDecl
+            ]
+        }
+
+
+{-|
+
+    : TEST STRING? COLON expr
+    = test: 1 == 1
+    = test "Example": 1 == 2
+
+-}
+unitTestDecl : Parser Decl
+unitTestDecl =
+    Parser.succeed (\name expr_ -> DUnitTest { name = name, expr = expr_ })
+        |> Parser.skip (Parser.token Test)
+        |> Parser.keep (Parser.maybe (Parser.tokenData Token.getString))
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep expr
+
+
+{-|
+
+    : TEST STRING? WITH list COLON lambda
+    = test with [(1,2), (2,3)]: \a,b -> a+1 == b
+    = test "Example" with [(1,2)]: \a,b -> a+1 == b
+
+-}
+parameterizedTestDecl : Parser Decl
+parameterizedTestDecl =
+    Parser.succeed (\name table ( args, expr_ ) -> DParameterizedTest { name = name, table = table, args = args, expr = expr_ })
+        |> Parser.skip (Parser.token Test)
+        |> Parser.keep (Parser.maybe (Parser.tokenData Token.getString))
+        |> Parser.skip (Parser.token With)
+        |> Parser.keep listExprRaw
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep lambdaExprRaw
+
+
+{-|
+
+    : TEST STRING? WITH type COLON lambda
+    = test with List[Int]: \xs -> !List.isEmpty(xs)
+    = test "Example" with (Int,String): \i,s -> i != String.length(s)
+
+-}
+propertyTypeTestDecl : Parser Decl
+propertyTypeTestDecl =
+    Parser.succeed (\name types ( args, expr_ ) -> DPropertyTypeTest { name = name, types = types, args = args, expr = expr_ })
+        |> Parser.skip (Parser.token Test)
+        |> Parser.keep (Parser.maybe (Parser.tokenData Token.getString))
+        |> Parser.skip (Parser.token With)
+        |> Parser.keep type_
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep lambdaExprRaw
+
+
+{-|
+
+    : TEST STRING? WITH expr COLON lambda
+    = test with Gen.list(Gen.int): \xs -> !List.isEmpty(xs)
+    = test "Example" with (Gen.int,Gen.int): \a,b -> a != b
+
+-}
+propertyGenTestDecl : Parser Decl
+propertyGenTestDecl =
+    Parser.succeed (\name gens ( args, expr_ ) -> DPropertyGenTest { name = name, gens = gens, args = args, expr = expr_ })
+        |> Parser.skip (Parser.token Test)
+        |> Parser.keep (Parser.maybe (Parser.tokenData Token.getString))
+        |> Parser.skip (Parser.token With)
+        |> Parser.keep expr
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep lambdaExprRaw
+
+
 statement : Parser Stmt
 statement =
     Parser.oneOf
@@ -371,14 +457,18 @@ since exprs can never have effects.
 -}
 letStatement : Parser Stmt
 letStatement =
+    Parser.map SLet letStatementRaw
+
+
+letStatementRaw : Parser LetStmt
+letStatementRaw =
     Parser.succeed
         (\mod lhs t expr_ ->
-            SLet
-                { mod = mod
-                , lhs = lhs
-                , type_ = t
-                , expr = expr_
-                }
+            { mod = mod
+            , lhs = lhs
+            , type_ = t
+            , expr = expr_
+            }
         )
         |> Parser.keep
             -- PRIVATE?
@@ -734,12 +824,73 @@ prefixExpr =
             -}
             ]
         , noncommited =
-            [ -- blockExpr
-              constructorExpr
+            [ constructorExpr
             , identifierExpr
             , recordExpr
+            , blockExpr
+            , effectBlockExpr
             ]
         }
+
+
+{-|
+
+    : LBRACE EOL+ (letStatement EOL+)* expr EOL+ RBRACE
+    = {
+        x = 1
+        y = 1 + x
+        (x,y)
+      }
+
+-}
+blockExpr : Parser Expr
+blockExpr =
+    Parser.succeed (\letStmts ret -> Block { letStmts = letStmts, ret = ret })
+        |> Parser.skip (Parser.token LBrace)
+        |> Parser.skip Parser.skipEol
+        |> Parser.keep
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.keep (Parser.lazy (\() -> letStatementRaw))
+                    |> Parser.skip Parser.skipEol
+                )
+            )
+        |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.skip Parser.skipEol
+        |> Parser.skip (Parser.token RBrace)
+
+
+{-| TODO what about foo!(1,2,3) as the last item? instead of just an expr
+
+    : upperIdentifier LBRACE EOL+ (statement EOL+)* (expr EOL+)? RBRACE
+    = Maybe {
+        head = doc.head!
+        title = head.title!
+        title != ""
+      }
+
+-}
+effectBlockExpr : Parser Expr
+effectBlockExpr =
+    Parser.succeed (\module_ stmts ret -> EffectBlock { monadModule = module_, stmts = stmts, ret = ret })
+        |> Parser.keep upperIdentifier
+        |> Parser.skip (Parser.token LBrace)
+        |> Parser.skip Parser.skipEol
+        |> Parser.keep
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.keep (Parser.lazy (\() -> statement))
+                    |> Parser.skip Parser.skipEol
+                )
+            )
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.succeed identity
+                    |> Parser.keep (Parser.lazy (\() -> expr))
+                    |> Parser.skip Parser.skipEol
+                )
+            )
+        |> Parser.skip (Parser.token RBrace)
 
 
 {-|
@@ -845,7 +996,13 @@ ifExpr =
 -}
 lambdaExpr : Parser Expr
 lambdaExpr =
-    Parser.succeed (\( arg, args ) body -> Lambda { args = arg :: args, body = body })
+    lambdaExprRaw
+        |> Parser.map (\( args, body ) -> Lambda { args = args, body = body })
+
+
+lambdaExprRaw : Parser ( List Pattern, Expr )
+lambdaExprRaw =
+    Parser.succeed (\( arg, args ) body -> ( arg :: args, body ))
         |> Parser.keep
             (Parser.separatedNonemptyList
                 { left = Backslash
@@ -966,6 +1123,11 @@ stringExpr =
 -}
 listExpr : Parser Expr
 listExpr =
+    Parser.map List listExprRaw
+
+
+listExprRaw : Parser (List Expr)
+listExprRaw =
     -- TODO should we allow trailing sep?
     Parser.separatedList
         { left = LBracket
@@ -975,7 +1137,6 @@ listExpr =
         , skipEol = True
         , allowTrailingSep = False
         }
-        |> Parser.map List
 
 
 {-|

@@ -130,6 +130,28 @@ type Decl
     | DStatement Stmt
     | DValueAnnotation { name : String, type_ : Type }
     | DFunctionAnnotation { name : String, resultType : Type } -- TODO mod, args
+    | DUnitTest { name : Maybe String, expr : Expr }
+    | DParameterizedTest
+        { name : Maybe String
+        , table : List Expr
+        , -- implicit lambda
+          args : List Pattern
+        , expr : Expr
+        }
+    | DPropertyTypeTest
+        { name : Maybe String
+        , types : Type
+        , -- implicit lambda
+          args : List Pattern
+        , expr : Expr
+        }
+    | DPropertyGenTest
+        { name : Maybe String
+        , gens : Expr
+        , -- implicit lambda
+          args : List Pattern
+        , expr : Expr
+        }
 
 
 type ModuleModifier
