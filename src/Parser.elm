@@ -379,7 +379,7 @@ unitTestDecl =
 
 {-|
 
-    : TEST STRING? WITH list COLON lambda
+    : TEST STRING? WITH list COLON EOL* lambda
     = test with [(1,2), (2,3)]: \a,b -> a+1 == b
     = test "Example" with [(1,2)]: \a,b -> a+1 == b
 
@@ -392,6 +392,7 @@ parameterizedTestDecl =
         |> Parser.skip (Parser.token With)
         |> Parser.keep listExprRaw
         |> Parser.skip (Parser.token Colon)
+        |> Parser.skip Parser.skipEol
         |> Parser.keep lambdaExprRaw
 
 
