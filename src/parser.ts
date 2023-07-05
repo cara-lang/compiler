@@ -807,26 +807,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
 
 
 
-//: expr PIPELINE expr
-//  ^^^^^^^^^^^^^ already parsed
-//= a |> b
-function pipelineExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-    const rightResult = exprAux(precedence, isRight, state);
-    const right = rightResult.match;
-    const match: Expr = pipeline({left,right});
-    return { i: rightResult.i, match };
-}
-
-type PipelineOptions = {
-    left: Expr,
-    right: Expr,
-}
-
-function pipeline({left,right}:PipelineOptions): Expr {
-    return right.expr == 'call'
-            ? { ...right, args: right.args.concat(left) } // 3 |> f(1,2) ==> f(1,2,3) (special case, we inline!)
-            : { expr: 'call', fn: right,args: [left] };   // 3 |> f      ==> f(3)
-}
 
 //: expr DOTDOT expr?
 //  ^^^^^^^^^^^ already parsed
@@ -940,71 +920,6 @@ function tupleOrParenthesizedExpr(state: State): {i: number, match: Expr} {
     return {i: listResult.i, match};
 }
 
-//: LBRACKET (expr (COMMA expr)*)? RBRACKET
-//= []
-//= [1]
-//= [1,2]
-function listExpr(state: State): {i: number, match: Expr} {
-    const listResult = list({
-        left:  'LBRACKET',
-        right: 'RBRACKET',
-        sep:   'COMMA',
-        item:  expr,
-        state: state,
-        parsedItem: 'list expr',
-        skipEol: true,
-        allowTrailingSep: false,
-    });
-    return {i: listResult.i, match: {expr:'list', elements: listResult.match}};
-}
-
-
-//: moduleName? block
-//= { 
-//    x = 1
-//    y = 1 + x
-//    (x,y)
-//  }
-//= Maybe { 
-//    head = doc.head!
-//    title = head.title!
-//    title != ""
-//  }
-function blockExpr(state: State): {i: number, match: Expr} {
-    let {i} = state;
-    //: moduleName?
-    let monadModule: UpperIdentifier|null = null;
-    const iBeforeMonadModule = i;
-    try {
-        const moduleResult = moduleName({...state, i});
-        i = moduleResult.i;
-        monadModule = moduleResult.match;
-    } catch (_) {
-        i = iBeforeMonadModule;
-    }
-    //: block
-    const blockResult = block({...state,i});
-    i = blockResult.i;
-    // Done!
-    if (monadModule == null) {
-        return {
-            i,
-            match: {
-                expr: 'block',
-                block: blockResult.match,
-            },
-        };
-    } else {
-        return {
-            i,
-            match: {
-                expr: 'effect-block',
-                monadModule,
-                block: blockResult.match,
-            },
-        };
-    }
-}
 
 // TODO enforce having expr
 // TODO allow 0 statements before to the expression

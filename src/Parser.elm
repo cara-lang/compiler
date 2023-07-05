@@ -1178,10 +1178,10 @@ infixExpr =
             PlusPlus ->
                 Just { precedence = 3, isRight = False, parser = binaryOpExpr Append }
 
-            {-
-               Pipeline ->
-                   Just { precedence = 4, isRight = False, parser = pipelineExpr }
+            Pipeline ->
+                Just { precedence = 4, isRight = False, parser = pipelineExpr }
 
+            {-
                DotDot ->
                    Just { precedence = 5, isRight = False, parser = rangeInclusiveExpr }
             -}
@@ -1284,6 +1284,29 @@ prefixUnaryOpExpr tokenType op =
 binaryOpExpr : BinaryOp -> InfixParser Expr
 binaryOpExpr op { left, precedence, isRight } =
     Parser.succeed (\right -> BinaryOp left op right)
+        |> Parser.keep (exprAux precedence isRight)
+
+
+{-|
+
+    : expr PIPELINE expr
+      ^^^^^^^^^^^^^ already parsed
+    = a |> b
+
+-}
+pipelineExpr : InfixParser Expr
+pipelineExpr { left, isRight, precedence } =
+    Parser.succeed
+        (\right ->
+            case right of
+                Call { fn, args } ->
+                    -- 3 |> f(1,2) --> f(1,2,3)
+                    Call { fn = fn, args = args ++ [ left ] }
+
+                _ ->
+                    -- 3 |> f --> f(3)
+                    Call { fn = right, args = [ left ] }
+        )
         |> Parser.keep (exprAux precedence isRight)
 
 
