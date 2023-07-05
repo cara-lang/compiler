@@ -125,66 +125,6 @@ function declaration(state: State): {i: number, match: Decl} {
     );
 }
 
-//: PRIVATE? LOWER_NAME LPAREN (fnArg (COMMA fnArg)*)? RPAREN (COLON type)? EQ EOL* expr
-//= f(a,b) = a + b
-//= f(a,b): Int = a + b
-//= f(a: Int, b: Int) = a + b
-//= f(a: Int, b: Int): Int = a + b
-//= private f(a,b) = a + b
-function functionDecl(state: State): {i: number, match: Decl} {
-    let {i} = state;
-    const desc = 'function decl';
-    //: PRIVATE?
-    let mod: LetModifier = 'NoModifier';
-    if (tagIs('PRIVATE',i,state.tokens)) {
-        mod = 'Private';
-        i++;
-    }
-    //: LOWER_NAME
-    const nameResult = getLowerName(desc,i,state.tokens);
-    i = nameResult.i;
-    //: LPAREN (fnArg (COMMA fnArg)*)? RPAREN
-    const argsResult = list({
-        left:  'LPAREN',
-        right: 'RPAREN',
-        sep:   'COMMA',
-        item:  fnArg,
-        state: {...state, i},
-        parsedItem: `${desc} argument list`,
-        skipEol: false,
-        allowTrailingSep: false,
-    });
-    i = argsResult.i;
-    //: (COLON type)?
-    let typeVal: Type|null = null;
-    if (tagIs('COLON',i,state.tokens)) {
-        //: COLON
-        i = expect('COLON',desc,i,state.tokens);
-        //: type
-        const typeResult = type({...state, i});
-        i = typeResult.i;
-        typeVal = typeResult.match;
-    }
-    //: EQ
-    i = expect('EQ',desc,i,state.tokens);
-    //: EOL*
-    i = skipEol({...state, i});
-    //: expr
-    const bodyResult = expr({...state, i});
-    i = bodyResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            decl: 'function',
-            mod,
-            name: nameResult.match,
-            args: argsResult.match,
-            resultType: typeVal,
-            body: bodyResult.match,
-        },
-    };
-}
 
 const unaryOps: Map<string,UnaryOp> = new Map([
     ["-","NegateNum"],

@@ -62,7 +62,7 @@ interpretUnitTest =
         Outcome.succeed env ()
 
 
-interpretParameterizedTest : Interpreter { name : Maybe String, table : List Expr, args : List Pattern, expr : Expr } ()
+interpretParameterizedTest : Interpreter { name : Maybe String, table : List Expr, args : List Argument, expr : Expr } ()
 interpretParameterizedTest =
     \env { name, table, args, expr } ->
         let
@@ -126,7 +126,7 @@ interpretTypeDecl =
                             in
                             ( Id.local c.name
                             , VClosure
-                                { args = List.map PVar names
+                                { args = List.map (\name -> { pattern = PVar name, type_ = Nothing }) names
                                 , body =
                                     Constructor_
                                         { id =
@@ -329,7 +329,10 @@ interpretCall =
                                         let
                                             pairs : List ( Pattern, Value )
                                             pairs =
-                                                List.map2 Tuple.pair r.args argVals
+                                                -- TODO Dropping the argument `type_` - is that correct?
+                                                List.map2 (\arg val -> ( arg.pattern, val ))
+                                                    r.args
+                                                    argVals
                                         in
                                         Interpreter.do (Interpreter.traverse interpretPattern env2 pairs) <|
                                             \env3 maybeDicts ->
@@ -346,7 +349,7 @@ interpretCall =
                                 Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
 
 
-interpretLambda : Interpreter { args : List Pattern, body : Expr } Value
+interpretLambda : Interpreter { args : List Argument, body : Expr } Value
 interpretLambda =
     \env { args, body } ->
         Outcome.succeed env <| VClosure { args = args, body = body, env = env }

@@ -52,24 +52,18 @@ declaration =
             , ( [ T Test ], testDecl )
             ]
         , noncommited =
-            [ -- x = 123
-              -- x = foo!(123)
-              -- foo!(123)
-              -- private x = 123
-              -- x: Int = 123
-              -- This needs to be before the valueAnnotationDecl to parse `x: Int = 123`
+            [ -- This needs to be before the valueAnnotationDecl to parse `x: Int = 123`
               statementDecl
-            , -- x : Int
-              {- can't prefix it because `x:Int = 123` is also possible and needs
+            , {- can't prefix it because `x:Int = 123` is also possible and needs
                  to be handled inside statementDecl (because of `private`!)
               -}
               valueAnnotationDecl
+            , functionDecl
 
             {- , -- f(a,b) = expr
                  -- private f(a,b) = expr
                  -- `-`(a,b) = expr
                  -- `-`(a) = expr
-                 functionDecl
                , binaryOperatorDecl
                , unaryOperatorDecl
                , -- f(a:Int, b:Int): Bool
@@ -78,6 +72,74 @@ declaration =
             -}
             ]
         }
+
+
+{-|
+
+    : PRIVATE? LOWER_NAME LPAREN (argument (COMMA argument)*)? RPAREN (COLON type)? EQ EOL* expr
+    = f(a,b) = a + b
+    = f(a,b): Int = a + b
+    = f(a: Int, b: Int) = a + b
+    = f(a: Int, b: Int): Int = a + b
+    = private f(a,b) = a + b
+
+-}
+functionDecl : Parser Decl
+functionDecl =
+    Parser.succeed (\mod name args retType body -> DFunction { mod = mod, name = name, args = args, retType = retType, body = body })
+        |> Parser.keep
+            (Parser.maybe (Parser.token Private)
+                |> Parser.map
+                    (\maybePrivate ->
+                        case maybePrivate of
+                            Nothing ->
+                                FunctionNoModifier
+
+                            Just () ->
+                                FunctionPrivate
+                    )
+            )
+        |> Parser.keep lowerName
+        |> Parser.keep
+            (Parser.separatedList
+                { left = LParen
+                , right = RParen
+                , sep = Comma
+                , item = argument
+                , skipEol = True
+                , allowTrailingSep = False
+                }
+            )
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token Colon)
+                    |> Parser.keep type_
+                )
+            )
+        |> Parser.skip (Parser.token Token.Eq)
+        |> Parser.skip Parser.skipEol
+        |> Parser.keep expr
+
+
+{-|
+
+    : pattern (COLON type)?
+    = foo
+    = foo: Int
+
+-}
+argument : Parser Argument
+argument =
+    Parser.succeed (\pattern_ type__ -> { pattern = pattern_, type_ = type__ })
+        |> Parser.keep pattern
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token Colon)
+                    |> Parser.keep type_
+                )
+            )
 
 
 {-|
@@ -991,7 +1053,7 @@ ifExpr =
 
 {-|
 
-    : BACKSLASH pattern (COMMA pattern)* ARROW expr
+    : BACKSLASH argument (COMMA argument)* ARROW expr
     = \x -> 1
     = \x,y -> x+y
 
@@ -1002,7 +1064,7 @@ lambdaExpr =
         |> Parser.map (\( args, body ) -> Lambda { args = args, body = body })
 
 
-lambdaExprRaw : Parser ( List Pattern, Expr )
+lambdaExprRaw : Parser ( List Argument, Expr )
 lambdaExprRaw =
     Parser.succeed (\( arg, args ) body -> ( arg :: args, body ))
         |> Parser.keep
@@ -1010,7 +1072,7 @@ lambdaExprRaw =
                 { left = Backslash
                 , right = Arrow
                 , sep = Comma
-                , item = pattern
+                , item = argument
                 , skipEol = False
                 , allowTrailingSep = False
                 }

@@ -1,11 +1,13 @@
 module AST exposing
-    ( Bang(..)
+    ( Argument
+    , Bang(..)
     , BinaryOp(..)
     , CaseBranch
     , Constructor
     , ConstructorArg
     , Decl(..)
     , Expr(..)
+    , FunctionModifier(..)
     , LetModifier(..)
     , LetStmt
     , ModuleModifier(..)
@@ -53,7 +55,7 @@ type Expr
     | Constructor_ { id : Id, args : List Expr } -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
     | Identifier Id -- foo, Bar.foo
     | RootIdentifier Id -- ::foo, ::Bar.foo
-    | Lambda { args : List Pattern, body : Expr }
+    | Lambda { args : List Argument, body : Expr }
     | RecordGetter String -- .field
     | If { cond : Expr, then_ : Expr, else_ : Expr }
     | Case { subject : Expr, branches : List CaseBranch }
@@ -84,6 +86,12 @@ type Pattern
     | PRecordFields (List String) -- {a}, {a,b}
 
 
+type alias Argument =
+    { pattern : Pattern
+    , type_ : Maybe Type
+    }
+
+
 type Bang
     = BValue Expr -- foo!, Bar.foo!, x |> foo!, foo.bar!
     | BCall { fn : Expr, args : List Expr } -- foo!(1,2), Bar.foo!(1,2), x |> foo!(1,2), foo.bar!(1,2)
@@ -101,6 +109,11 @@ type Stmt
     = SLet LetStmt
     | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
+
+
+type FunctionModifier
+    = FunctionNoModifier
+    | FunctionPrivate
 
 
 type TypeModifier
@@ -124,7 +137,7 @@ type Decl
     | DType { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }
-    | DFunction { name : String, body : Expr } -- TODO mod, args, resultType
+    | DFunction { mod : FunctionModifier, name : String, args : List Argument, retType : Maybe Type, body : Expr }
     | DBinaryOperator { op : BinaryOp, body : Expr } -- TODO mod, left, right, resultType
     | DUnaryOperator { op : UnaryOp, body : Expr } -- TODO mod, arg, resultType
     | DStatement Stmt
@@ -135,21 +148,21 @@ type Decl
         { name : Maybe String
         , table : List Expr
         , -- implicit lambda
-          args : List Pattern
+          args : List Argument
         , expr : Expr
         }
     | DPropertyTypeTest
         { name : Maybe String
         , types : Type
         , -- implicit lambda
-          args : List Pattern
+          args : List Argument
         , expr : Expr
         }
     | DPropertyGenTest
         { name : Maybe String
         , gens : Expr
         , -- implicit lambda
-          args : List Pattern
+          args : List Argument
         , expr : Expr
         }
 
