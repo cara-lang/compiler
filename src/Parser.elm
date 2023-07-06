@@ -635,10 +635,7 @@ pattern =
             , ( [ P Token.isUpperName ], constructorPattern )
             , ( [ P Token.isQualifier ], constructorPattern )
             , ( [ P Token.isInt ], intPattern )
-
-            {-
-               , ( [ T Float_ ], floatPattern )
-            -}
+            , ( [ P Token.isFloat ], floatPattern )
             , ( [ T LParen ], tuplePattern )
 
             {-
@@ -703,6 +700,18 @@ intPattern : Parser Pattern
 intPattern =
     Parser.tokenData Token.getInt
         |> Parser.map PInt
+
+
+{-|
+
+    : FLOAT
+    = 123.45
+
+-}
+floatPattern : Parser Pattern
+floatPattern =
+    Parser.tokenData Token.getFloat
+        |> Parser.map PFloat
 
 
 {-|
