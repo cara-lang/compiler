@@ -613,8 +613,7 @@ type_ =
 typeAux : Int -> Bool -> Parser AST.Type
 typeAux precedence isRight =
     Parser.pratt
-        { skipEolBeforeIndented = False
-        , isRight = isRight
+        { isRight = isRight
         , precedence = precedence
         , prefix = prefixType
         , infix = infixType
@@ -638,7 +637,7 @@ prefixType =
 
 infixType : InfixParserTable AST.Type
 infixType =
-    \token ->
+    \token { skippedEol } ->
         case token of
             Arrow ->
                 Just { precedence = 1, isRight = True, parser = fnType }
@@ -841,8 +840,7 @@ expr =
 exprAux : Int -> Bool -> Parser Expr
 exprAux precedence isRight =
     Parser.pratt
-        { skipEolBeforeIndented = True
-        , isRight = isRight
+        { isRight = isRight
         , precedence = precedence
         , prefix = prefixExpr
         , infix = infixExpr
@@ -911,6 +909,7 @@ blockExpr : Parser Expr
 blockExpr =
     Parser.succeed (\letStmts ret -> Block { letStmts = letStmts, ret = ret })
         |> Parser.skip (Parser.token LBrace)
+        |> Parser.skip (Parser.token EOL)
         |> Parser.skip Parser.skipEol
         |> Parser.keep
             (Parser.many
@@ -920,6 +919,7 @@ blockExpr =
                 )
             )
         |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.skip (Parser.token EOL)
         |> Parser.skip Parser.skipEol
         |> Parser.skip (Parser.token RBrace)
 
@@ -1229,7 +1229,7 @@ floatExpr =
 
 infixExpr : InfixParserTable Expr
 infixExpr =
-    \token ->
+    \token { skippedEol } ->
         case token of
             AndAnd ->
                 Just { precedence = 1, isRight = False, parser = binaryOpExpr AndBool }
@@ -1304,9 +1304,13 @@ infixExpr =
             Token.Power ->
                 Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
 
-            -- Keeping a space (precedence = 15) for prefix unary ops
+            -- Keeping a gap (precedence = 15) for prefix unary ops
             LParen ->
-                Just { precedence = 16, isRight = True, parser = callExpr }
+                if skippedEol then
+                    Nothing
+
+                else
+                    Just { precedence = 16, isRight = True, parser = callExpr }
 
             Token.Getter _ ->
                 Just { precedence = 17, isRight = False, parser = recordGetExpr }

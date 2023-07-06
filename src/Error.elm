@@ -57,7 +57,6 @@ type ParserError
     | CouldntGetTokenData
     | ExpectedToken Token.Type
     | AssignmentOfExprToUnderscore
-    | DidntGetInfixParser
     | EmptyOneOf
     | OneOfDidntMatchAnyCommited -- in case where there are no noncommited
 
@@ -228,10 +227,6 @@ title error =
 
                         AssignmentOfExprToUnderscore ->
                             "E0013: Assignment of expression to underscore"
-
-                        DidntGetInfixParser ->
-                            -- TODO error code
-                            "Shouldn't be surfaced to the user: we didn't get an infix parser, stop trying to chomp in pratt"
 
                         EmptyOneOf ->
                             -- TODO error code

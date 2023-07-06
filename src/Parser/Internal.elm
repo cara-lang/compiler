@@ -7,7 +7,7 @@ module Parser.Internal exposing
     , maybe, butNot
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
-    , token, tokenData, peekToken, ifNextIs
+    , token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
     , moveLeft, moveRight
     , logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
     , TokenPred(..), oneOf
@@ -24,7 +24,7 @@ module Parser.Internal exposing
 @docs maybe, butNot
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
-@docs token, tokenData, peekToken, ifNextIs
+@docs token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
 @docs moveLeft, moveRight
 @docs logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
 @docs TokenPred, oneOf
@@ -52,6 +52,7 @@ type alias InfixParser a =
 
 type alias InfixParserTable a =
     Token.Type
+    -> { skippedEol : Bool }
     ->
         Maybe
             { precedence : Int
@@ -452,8 +453,7 @@ loop state callback tokens =
 
 
 pratt :
-    { skipEolBeforeIndented : Bool
-    , isRight : Bool
+    { isRight : Bool
     , precedence : Int
     , prefix : Parser a
     , infix : InfixParserTable a
@@ -468,14 +468,6 @@ pratt config =
 
             else
                 config.precedence
-
-        skipEol_ : Parser ()
-        skipEol_ =
-            if config.skipEolBeforeIndented then
-                skipEolBeforeIndented
-
-            else
-                succeed ()
     in
     config.prefix
         |> andThen
@@ -506,18 +498,17 @@ pratt config =
                                                 oneOf
                                                     { commited = []
                                                     , noncommited =
-                                                        [ succeed identity
-                                                            |> skip skipEol_
+                                                        [ succeed
+                                                            (\nextToken nextNonEolToken ->
+                                                                go newLeft
+                                                                    (config.infix
+                                                                        nextNonEolToken
+                                                                        { skippedEol = nextToken == EOL }
+                                                                    )
+                                                            )
                                                             |> keep peekToken
-                                                            |> andThen
-                                                                (\token_ ->
-                                                                    case config.infix token_ of
-                                                                        Nothing ->
-                                                                            fail DidntGetInfixParser
-
-                                                                        justInfix ->
-                                                                            go newLeft justInfix
-                                                                )
+                                                            |> keep peekTokenAfterEol
+                                                            |> andThen identity
                                                         , succeed newLeft
                                                         ]
                                                     }
@@ -526,10 +517,17 @@ pratt config =
                                 else
                                     succeed left
                 in
-                succeed identity
-                    |> skip skipEol_
+                succeed
+                    (\nextToken nextNonEolToken ->
+                        go prefix
+                            (config.infix
+                                nextNonEolToken
+                                { skippedEol = nextToken == EOL }
+                            )
+                    )
                     |> keep peekToken
-                    |> andThen (\token_ -> go prefix (config.infix token_))
+                    |> keep peekTokenAfterEol
+                    |> andThen identity
             )
 
 
@@ -625,6 +623,21 @@ peekToken : Parser Token.Type
 peekToken =
     \tokens ->
         Ok ( (Zipper.current tokens).type_, tokens )
+
+
+peekTokenAfterEol : Parser Token.Type
+peekTokenAfterEol =
+    \tokens ->
+        case Zipper.find (\t -> t.type_ /= EOL) tokens of
+            Nothing ->
+                fail RanPastEndOfTokens tokens
+
+            Just newTokens ->
+                Ok
+                    ( (Zipper.current newTokens).type_
+                    , -- intentionally the old ones:
+                      tokens
+                    )
 
 
 logCurrent : String -> Parser ()
