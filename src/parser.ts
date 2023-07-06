@@ -598,42 +598,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
 
 
 
-//: BACKTICK_STRING
-//= `abc`
-function backtickStringExpr(state: State): {i: number, match: Expr} {
-    const stringResult = getBacktickString('backtick string expr',state.i,state.tokens);
-    return {i: stringResult.i, match: {expr: 'string', string: stringResult.match}};
-}
-
-function lambdaWithHoles(body: Expr): Expr {
-    const analyzed = analyzeHoles(body);
-    switch (analyzed.type) {
-        case 'no-holes':
-            return {
-                expr: 'lambda',
-                args: [],
-                body,
-            };
-        case 'only-underscore':
-            return {
-                expr: 'lambda',
-                args: [{pattern: 'var', var: '_'}],
-                body,
-            };
-        case 'only-numbered': {
-            const args: Pattern[] = 
-                [...Array(analyzed.maxHole).keys()]
-                    .map(n => ({pattern: 'var', var: `_${n+1}`}));
-            return {
-                expr: 'lambda',
-                args,
-                body,
-            };
-        }
-        case 'mixed':
-            throw stopTheWorldError('E0020: Anonymous function shorthand with mixed holes');
-    }
-}
 
 function pattern(state: State): {i: number, match: Pattern} {
     return oneOf(

@@ -1,6 +1,7 @@
 module Token exposing
     ( Token
     , Type(..)
+    , getBacktickString
     , getChar
     , getFloat
     , getGetter
@@ -10,6 +11,7 @@ module Token exposing
     , getQualifier
     , getString
     , getUpperName
+    , isBacktickString
     , isChar
     , isFloat
     , isGetter
@@ -140,6 +142,16 @@ isString type_ =
             False
 
 
+isBacktickString : Type -> Bool
+isBacktickString type_ =
+    case type_ of
+        BacktickString _ ->
+            True
+
+        _ ->
+            False
+
+
 isGetter : Type -> Bool
 isGetter type_ =
     case type_ of
@@ -224,6 +236,16 @@ getString : Type -> Maybe String
 getString type_ =
     case type_ of
         String s ->
+            Just s
+
+        _ ->
+            Nothing
+
+
+getBacktickString : Type -> Maybe String
+getBacktickString type_ =
+    case type_ of
+        BacktickString s ->
             Just s
 
         _ ->
