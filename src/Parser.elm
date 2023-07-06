@@ -1265,10 +1265,15 @@ ifExpr : Parser Expr
 ifExpr =
     Parser.succeed (\cond then_ else_ -> AST.If { cond = cond, then_ = then_, else_ = else_ })
         |> Parser.skip (Parser.token Token.If)
+        |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.skip (Parser.token Token.Then)
+        |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.skip (Parser.token Token.Else)
+        |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep (Parser.lazy (\() -> expr))
 
 
