@@ -46,9 +46,8 @@ declaration =
 
             {-
                , ( [ T Extend,T Module ], extendModuleDecl )
-               , ( [ T Private,T Module ], moduleDecl )
-               ,
             -}
+            , ( [ T Private, T Module ], moduleDecl )
             , ( [ T Module ], moduleDecl )
             , ( [ T Test ], testDecl )
             ]
