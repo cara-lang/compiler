@@ -1082,72 +1082,6 @@ function pattern(state: State): {i: number, match: Pattern} {
     )
 }
 
-//: LOWER_NAME
-//= abc
-function varPattern(state: State): {i: number, match: Pattern} {
-    const desc = 'var pattern';
-    const varResult = getLowerName(desc,state.i,state.tokens);
-    return {
-        i: varResult.i,
-        match: {
-            pattern: 'var',
-            var: varResult.match,
-        },
-    };
-}
-
-//: QUALIFIER* UPPER_NAME (LPAREN pattern (COMMA pattern)* RPAREN)?
-//= Foo
-//= Base.Foo
-//= Foo(1)
-//= Foo(_)
-function constructorPattern(state: State): {i: number, match: Pattern} {
-    let {i} = state;
-    const desc = 'constructor pattern';
-    //: QUALIFIER* UPPER_NAME
-    const idResult = upperIdentifier({...state,i});
-    i = idResult.i;
-    //: (LPAREN pattern (COMMA pattern)* RPAREN)?
-    let args: Pattern[] = [];
-    try {
-        const argsResult = nonemptyList({
-            left:  'LPAREN',
-            right: 'RPAREN',
-            sep:   'COMMA',
-            item:  pattern,
-            state: {...state, i},
-            parsedItem: `${desc} arguments`,
-            skipEol: false,
-            allowTrailingSep: false,
-        });
-        i = argsResult.i;
-        args = argsResult.match;
-    } catch (_) {/**/}
-    // Done!
-    return {
-        i,
-        match: {
-            pattern: 'constructor',
-            id: idResult.match,
-            args,
-        },
-    };
-}
-
-//: INT
-//= 123
-function intPattern(state: State): {i: number, match: Pattern} {
-    const desc = 'int pattern';
-    const intResult = getInt(desc,state.i,state.tokens);
-    return {
-        i: intResult.i,
-        match: {
-            pattern: 'int',
-            int: intResult.match,
-        },
-    };
-}
-
 //: FLOAT
 //= 123.45
 function floatPattern(state: State): {i: number, match: Pattern} {
@@ -1187,15 +1121,6 @@ function listPattern(state: State): {i: number, match: Pattern} {
     };
 }
 
-//: LPAREN RPAREN
-//= ()
-function unitPattern(state: State): {i: number, match: Pattern} {
-    const desc = 'unit pattern';
-    let {i} = state;
-    i = expect('LPAREN',desc,i,state.tokens);
-    i = expect('RPAREN',desc,i,state.tokens);
-    return { i, match: { pattern: 'unit' } };
-}
 
 //: LPAREN (pattern (COMMA pattern)*)? RPAREN
 //= (a)
@@ -1242,14 +1167,6 @@ function negatedPattern(state: State): {i: number, match: Pattern} {
         case 'float': numResult.match.float = -numResult.match.float; break;
     }
     return {i, match: numResult.match};
-}
-
-//: UNDERSCORE
-//= _
-function wildcardPattern(state: State): {i: number, match: Pattern} {
-    const desc = 'wildcard pattern';
-    const i = expect('UNDERSCORE',desc,state.i,state.tokens);
-    return {i, match: {pattern:'wildcard'}};
 }
 
 //: DOTDOTDOT (varPattern | wildcardPattern)

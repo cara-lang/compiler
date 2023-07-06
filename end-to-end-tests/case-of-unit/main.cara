@@ -1,0 +1,4 @@
+x = case () of
+  () -> "Unit works"
+
+IO.println!(x)

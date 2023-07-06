@@ -75,7 +75,7 @@ type Pattern
     = -- TODO other patterns
       PUnit -- ()
     | PVar String -- a
-    | PConstructor { id : Id, children : List Pattern } -- Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
+    | PConstructor { id : Id, args : List Pattern } -- Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
     | PInt Int -- 1
     | PFloat Float -- 1.2345
     | PList (List Pattern) -- [1,a]

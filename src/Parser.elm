@@ -611,15 +611,10 @@ pattern : Parser Pattern
 pattern =
     Parser.oneOf
         { commited =
-            [ {- ( [ T LParen, T RParen ], unitPattern )
-                 ,
-              -}
-              ( [ P Token.isLowerName ], varPattern )
-
-            {-
-               , ( [ P Token.isUpperName ], constructorPattern )
-               , ( [ P Token.isQualifier ], constructorPattern )
-            -}
+            [ ( [ T LParen, T RParen ], unitPattern )
+            , ( [ P Token.isLowerName ], varPattern )
+            , ( [ P Token.isUpperName ], constructorPattern )
+            , ( [ P Token.isQualifier ], constructorPattern )
             , ( [ P Token.isInt ], intPattern )
 
             {-
@@ -646,6 +641,42 @@ pattern =
 
 {-|
 
+    : upperIdentifier (LPAREN pattern (COMMA pattern)* RPAREN)?
+    = Foo
+    = Base.Foo
+    = Foo(1)
+    = Foo(_)
+
+-}
+constructorPattern : Parser Pattern
+constructorPattern =
+    Parser.succeed (\id args -> PConstructor { id = id, args = args })
+        |> Parser.keep upperIdentifier
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.separatedNonemptyList
+                    { left = Token.LParen
+                    , right = Token.RParen
+                    , sep = Token.Comma
+                    , item = Parser.lazy (\() -> pattern)
+                    , skipEol = False
+                    , allowTrailingSep = False
+                    }
+                )
+                |> Parser.map
+                    (\maybeArgs ->
+                        case maybeArgs of
+                            Nothing ->
+                                []
+
+                            Just ( arg, args ) ->
+                                arg :: args
+                    )
+            )
+
+
+{-|
+
     : INT
     = 123
 
@@ -666,6 +697,19 @@ wildcardPattern : Parser Pattern
 wildcardPattern =
     Parser.token Underscore
         |> Parser.map (\() -> PWildcard)
+
+
+{-|
+
+    : LPAREN RPAREN
+    = ()
+
+-}
+unitPattern : Parser Pattern
+unitPattern =
+    Parser.succeed PUnit
+        |> Parser.skip (Parser.token LParen)
+        |> Parser.skip (Parser.token RParen)
 
 
 {-|
