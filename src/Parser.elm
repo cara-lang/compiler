@@ -641,15 +641,38 @@ pattern =
             , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
             , ( [ T Token.Minus, P Token.isFloat ], negatedFloatPattern )
             , ( [ T Underscore ], wildcardPattern )
-
-            {-
-               , ( [ T DotDotDot ], spreadPattern )
-            -}
+            , ( [ T DotDotDot ], listSpreadPattern )
             , ( [ T LBrace, T DotDot ], recordSpreadPattern )
             , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
             ]
         , noncommited = []
         }
+
+
+{-|
+
+    : DOTDOTDOT (lowerName | UNDERSCORE)
+    = ...a
+    = ..._
+
+    Only allowed inside PList.
+    TODO what about PTuple?
+    TODO do we want to shuffle types around to make impossible states impossible?
+
+-}
+listSpreadPattern : Parser Pattern
+listSpreadPattern =
+    Parser.succeed PSpread
+        |> Parser.skip (Parser.token DotDotDot)
+        |> Parser.keep
+            (Parser.oneOf
+                { commited = []
+                , noncommited =
+                    [ Parser.map Just lowerName
+                    , Parser.map (\_ -> Nothing) (Parser.token Underscore)
+                    ]
+                }
+            )
 
 
 {-|
