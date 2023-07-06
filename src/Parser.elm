@@ -619,12 +619,18 @@ pattern =
             {-
                , ( [ P Token.isUpperName ], constructorPattern )
                , ( [ P Token.isQualifier ], constructorPattern )
-               , ( [ T Int_ ], intPattern )
+            -}
+            , ( [ P Token.isInt ], intPattern )
+
+            {-
                , ( [ T Float_ ], floatPattern )
                , ( [ T LParen ], tuplePattern )
                , ( [ T LBracket ], listPattern )
                , ( [ T Minus ], negatedPattern )
-               , ( [ T Underscore ], wildcardPattern )
+            -}
+            , ( [ T Underscore ], wildcardPattern )
+
+            {-
                , ( [ T DotDotDot ], spreadPattern )
             -}
             , ( [ T LBrace, T DotDot ], recordSpreadPattern )
@@ -636,6 +642,30 @@ pattern =
             ]
         , noncommited = []
         }
+
+
+{-|
+
+    : INT
+    = 123
+
+-}
+intPattern : Parser Pattern
+intPattern =
+    Parser.tokenData Token.getInt
+        |> Parser.map PInt
+
+
+{-|
+
+    : UNDERSCORE
+    = _
+
+-}
+wildcardPattern : Parser Pattern
+wildcardPattern =
+    Parser.token Underscore
+        |> Parser.map (\() -> PWildcard)
 
 
 {-|
@@ -925,10 +955,7 @@ prefixExpr =
             , ( [ T LParen ], tupleOrParenthesizedExpr )
             , ( [ T LBracket ], listExpr )
             , ( [ T Token.If ], ifExpr )
-
-            {-
-               , ( [ T Case ], caseExpr )
-            -}
+            , ( [ T Token.Case ], caseExpr )
             , ( [ T Backslash ], lambdaExpr )
 
             {-
@@ -1088,6 +1115,60 @@ recordExprSpreadContent =
     Parser.succeed Spread
         |> Parser.skip (Parser.token DotDotDot)
         |> Parser.keep lowerIdentifier
+
+
+{-|
+
+    : CASE expr OF EOL+ caseBranch (EOL+ caseBranch)*
+    = case foo of
+        1 -> "Hello"
+        2 -> "World"
+        _ -> "!"
+    = case foo of
+        1 | 2 -> "Hello"
+        _ -> "!"
+
+-}
+caseExpr : Parser Expr
+caseExpr =
+    Parser.succeed (\subject b bs -> AST.Case { subject = subject, branches = b :: bs })
+        |> Parser.skip (Parser.token Token.Case)
+        |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.skip (Parser.token Of)
+        |> Parser.skip (Parser.token EOL)
+        |> Parser.skip Parser.skipEolBeforeIndented
+        |> Parser.keep caseBranch
+        |> Parser.keep
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token EOL)
+                    |> Parser.skip Parser.skipEolBeforeIndented
+                    |> Parser.keep caseBranch
+                )
+            )
+
+
+{-|
+
+    : pattern (PIPE pattern)* ARROW expr
+    = 1 -> "Hello"
+    = 1 | 2 -> "Hello"
+
+-}
+caseBranch : Parser CaseBranch
+caseBranch =
+    Parser.succeed (\p ps body -> { orPatterns = p :: ps, body = body })
+        |> Parser.keep pattern
+        |> Parser.keep
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token Pipe)
+                    |> Parser.keep pattern
+                )
+            )
+        |> Parser.skip (Parser.token Arrow)
+        |> Parser.skip Parser.skipEolBeforeIndented
+        |> Parser.keep (Parser.lazy (\() -> expr))
 
 
 {-|

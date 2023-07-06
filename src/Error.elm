@@ -74,6 +74,7 @@ type InterpreterError
     | TupleUnknownField String
     | IfConditionNotBool
     | PatternMismatch
+    | NoCaseBranchMatched
 
 
 title : Error -> String
@@ -278,6 +279,10 @@ title error =
                         PatternMismatch ->
                             -- TODO error code
                             "Pattern mismatch"
+
+                        NoCaseBranchMatched ->
+                            -- TODO error code
+                            "No case..of branch matched"
                    )
 
 
