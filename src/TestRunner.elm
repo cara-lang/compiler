@@ -84,10 +84,20 @@ runTest name fileContents k =
                 effect0 (Effect.Println <| name ++ " | Lexer | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
 
         Err (ParserError ( loc, err )) ->
-            effect0 (Effect.Println <| name ++ " | Parser | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
+            if String.endsWith "-err" name then
+                -- TODO and if the err is actually the one we want!
+                k ()
+
+            else
+                effect0 (Effect.Println <| name ++ " | Parser | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
 
         Err (InterpreterError err) ->
-            effect0 (Effect.Println <| name ++ " | Interpreter | " ++ Debug.toString err) k
+            if String.endsWith "-err" name then
+                -- TODO and if the err is actually the one we want!
+                k ()
+
+            else
+                effect0 (Effect.Println <| name ++ " | Interpreter | " ++ Debug.toString err) k
 
         Ok _ ->
             k ()
