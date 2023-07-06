@@ -683,25 +683,6 @@ function prefixExpr(state: State): {i: number, match: Expr} {
 
 
 
-//: expr DOTDOT expr?
-//  ^^^^^^^^^^^ already parsed
-//= a..b
-//= a..
-function rangeInclusiveExpr(left: Expr, precedence: number, isRight: boolean, state: State): {i: number, match: Expr} {
-    let {i} = state;
-    // expr?
-    let right: Expr|null = null;
-    try {
-        const rightResult = exprAux(precedence, isRight, state);
-        i = rightResult.i;
-        right = rightResult.match;
-    } catch (_) {/**/}
-    // Done!
-    const match: Expr = (right == null)
-                            ? {expr: 'unary-op', op: 'InfiniteRangeInclusive', arg: left}
-                            : {expr: 'binary-op', op: 'RangeInclusive', left, right};
-    return { i, match };
-}
 
 
 //: BACKTICK_STRING

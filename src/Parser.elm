@@ -938,11 +938,8 @@ prefixExpr =
             -}
             , ( [ T ColonColon ], rootIdentifierExpr )
             , ( [ T Token.Minus ], prefixUnaryOpExpr Token.Minus NegateNum )
-
-            {-
-               , ( [ T Bang ], prefixUnaryOpExpr Bang NegateBool )
-               , ( [ T Tilde ], prefixUnaryOpExpr Tilde NegateBin )
-            -}
+            , ( [ T Bang ], prefixUnaryOpExpr Bang NegateBool )
+            , ( [ T Tilde ], prefixUnaryOpExpr Tilde NegateBin )
             ]
         , noncommited =
             [ blockExpr
@@ -1302,10 +1299,9 @@ infixExpr =
             Pipeline ->
                 Just { precedence = 4, isRight = False, parser = pipelineExpr }
 
-            {-
-               DotDot ->
-                   Just { precedence = 5, isRight = False, parser = rangeInclusiveExpr }
-            -}
+            DotDot ->
+                Just { precedence = 5, isRight = False, parser = rangeInclusiveExpr }
+
             DotDotDot ->
                 Just { precedence = 5, isRight = False, parser = binaryOpExpr RangeExclusive }
 
@@ -1437,6 +1433,26 @@ pipelineExpr { left, isRight, precedence } =
 
 {-|
 
+    : expr DOTDOT expr?
+      ^^^^^^^^^^^ already parsed
+    = a..b
+    = a..
+
+-}
+rangeInclusiveExpr : InfixParser Expr
+rangeInclusiveExpr { isRight, precedence, left } =
+    Parser.oneOf
+        { commited = []
+        , noncommited =
+            [ Parser.succeed (\right -> BinaryOp left RangeInclusive right)
+                |> Parser.keep (Parser.lazy (\() -> exprAux precedence isRight))
+            , Parser.succeed (UnaryOp InfiniteRange left)
+            ]
+        }
+
+
+{-|
+
     : expr LPAREN (expr (COMMA expr)*)? RPAREN
       ^^^^^^^^^^^ already parsed
     = x()
@@ -1444,7 +1460,7 @@ pipelineExpr { left, isRight, precedence } =
     = x(1,2)
 
 -}
-callExpr : { a | left : Expr } -> Parser Expr
+callExpr : InfixParser Expr
 callExpr { left } =
     Parser.succeed (\args -> Call { fn = left, args = args })
         |> Parser.skip
@@ -1470,7 +1486,7 @@ callExpr { left } =
     = getRecord(123).abc
 
 -}
-recordGetExpr : { a | left : Expr } -> Parser Expr
+recordGetExpr : InfixParser Expr
 recordGetExpr { left } =
     Parser.succeed (\field -> RecordGet { record = left, field = field })
         |> Parser.skip Parser.moveLeft
