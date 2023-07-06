@@ -51,6 +51,12 @@ interpretDecl =
             DParameterizedTest r ->
                 interpretParameterizedTest env r
 
+            DPropertyTypeTest r ->
+                interpretPropertyTypeTest env r
+
+            DPropertyGenTest r ->
+                interpretPropertyGenTest env r
+
             _ ->
                 Debug.todo <| "Unimplemented interpretDecl: " ++ Debug.toString decl
 
@@ -72,6 +78,28 @@ interpretParameterizedTest =
         let
             _ =
                 Debug.log "TODO do something in interpretParameterizedTest" ( name, table, ( args, expr ) )
+        in
+        -- TODO actually do something
+        Outcome.succeed env ()
+
+
+interpretPropertyTypeTest : Interpreter { name : Maybe String, types : Type, args : List Argument, expr : Expr } ()
+interpretPropertyTypeTest =
+    \env { name, types, args, expr } ->
+        let
+            _ =
+                Debug.log "TODO do something in interpretPropertyTypeTest" ( name, types, ( args, expr ) )
+        in
+        -- TODO actually do something
+        Outcome.succeed env ()
+
+
+interpretPropertyGenTest : Interpreter { name : Maybe String, gens : Expr, args : List Argument, expr : Expr } ()
+interpretPropertyGenTest =
+    \env { name, gens, args, expr } ->
+        let
+            _ =
+                Debug.log "TODO do something in interpretPropertyGenTest" ( name, gens, ( args, expr ) )
         in
         -- TODO actually do something
         Outcome.succeed env ()
