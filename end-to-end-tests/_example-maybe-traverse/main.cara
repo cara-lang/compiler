@@ -2,7 +2,7 @@ type Maybe[a] =
   | Nothing
   | Just(a)
 
-traverse(fn: a -> Maybe[b], list: List[a]): Maybe[List[b]]
+traverse : (a -> Maybe[b]) -> List[a] -> Maybe[List[b]]
 traverse(fn,list) = go(list,[])
   where
     go([],bs) = Just(List.reverse(bs))
