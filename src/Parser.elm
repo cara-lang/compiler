@@ -473,6 +473,7 @@ propertyTypeTestDecl =
         |> Parser.skip (Parser.token With)
         |> Parser.keep type_
         |> Parser.skip (Parser.token Colon)
+        |> Parser.skip Parser.skipEol
         |> Parser.keep lambdaExprRaw
 
 
@@ -491,6 +492,7 @@ propertyGenTestDecl =
         |> Parser.skip (Parser.token With)
         |> Parser.keep expr
         |> Parser.skip (Parser.token Colon)
+        |> Parser.skip Parser.skipEol
         |> Parser.keep lambdaExprRaw
 
 
