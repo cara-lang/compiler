@@ -43,10 +43,7 @@ declaration =
             , ( [ T Private, T Type ], typeDecl )
             , ( [ T Opaque, T Type ], typeDecl )
             , ( [ T Type ], typeDecl )
-
-            {-
-               , ( [ T Extend,T Module ], extendModuleDecl )
-            -}
+            , ( [ T Extend, T Module ], extendModuleDecl )
             , ( [ T Private, T Module ], moduleDecl )
             , ( [ T Module ], moduleDecl )
             , ( [ T Test ], testDecl )
@@ -394,6 +391,31 @@ moduleDecl =
             )
         |> Parser.skip (Parser.token Module)
         |> Parser.keep upperName
+        |> Parser.skip (Parser.token LBrace)
+        |> Parser.keep
+            -- (EOL+ declaration)+
+            (Parser.many
+                (Parser.succeed identity
+                    |> Parser.skip Parser.skipEol
+                    |> Parser.keep (Parser.lazy (\() -> declaration))
+                )
+            )
+        |> Parser.skip Parser.skipEol
+        |> Parser.skip (Parser.token RBrace)
+
+
+{-|
+
+    : EXTEND MODULE moduleName LBRACE (EOL+ declaration)* EOL+ RBRACE
+    = extend module Foo.Bar { x = 1 }
+
+-}
+extendModuleDecl : Parser Decl
+extendModuleDecl =
+    Parser.succeed (\id decls -> DExtendModule { id = id, decls = decls })
+        |> Parser.skip (Parser.token Extend)
+        |> Parser.skip (Parser.token Module)
+        |> Parser.keep upperIdentifier
         |> Parser.skip (Parser.token LBrace)
         |> Parser.keep
             -- (EOL+ declaration)+
