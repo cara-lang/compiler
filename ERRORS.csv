@@ -30,3 +30,4 @@ E0028,Unexpected escaped character in a character
 E0029,Unexpected escaped character in a multi-line string
 E0030,Unexpected leading pipe in single-line type declaration
 E0031,Function has multiple arguments of the same name
+E0032,Block expression with no return expression

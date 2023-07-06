@@ -1,0 +1,14 @@
+E0032: Block expression with no return expression
+
+Each (non-effect) block expression needs a return expression at the end:
+
+    {
+      x = 1
+      y = 1 + x
+      x + y
+    }
+
+main.cara:1:10
+━━┓
+1 ┃ foo(a) = {
+  ┃          ^
