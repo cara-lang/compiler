@@ -632,11 +632,7 @@ pattern =
                , ( [ T DotDotDot ], spreadPattern )
             -}
             , ( [ T LBrace, T DotDot ], recordSpreadPattern )
-
-            {-
-               , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
-            -}
-            -- TODO other patterns
+            , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
             ]
         , noncommited = []
         }
@@ -739,6 +735,29 @@ recordSpreadPattern =
         |> Parser.skip (Parser.token LBrace)
         |> Parser.skip (Parser.token DotDot)
         |> Parser.skip (Parser.token RBrace)
+
+
+{-|
+
+    : LBRACE (lowerName (COMMA lowerName)*)? RBRACE
+    = {}
+    = {a}
+    = {a,b}
+
+-}
+recordFieldsPattern : Parser Pattern
+recordFieldsPattern =
+    Parser.succeed PRecordFields
+        |> Parser.keep
+            (Parser.separatedList
+                { left = LBrace
+                , right = RBrace
+                , sep = Comma
+                , item = lowerName
+                , skipEol = False
+                , allowTrailingSep = False
+                }
+            )
 
 
 type_ : Parser AST.Type
