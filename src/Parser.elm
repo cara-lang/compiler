@@ -637,9 +637,9 @@ pattern =
             , ( [ P Token.isInt ], intPattern )
             , ( [ P Token.isFloat ], floatPattern )
             , ( [ T LParen ], tuplePattern )
+            , ( [ T LBracket ], listPattern )
 
             {-
-               , ( [ T LBracket ], listPattern )
                , ( [ T Minus ], negatedPattern )
             -}
             , ( [ T Underscore ], wildcardPattern )
@@ -732,6 +732,27 @@ tuplePattern =
         , allowTrailingSep = False
         }
         |> Parser.map (\( p, ps ) -> PTuple (p :: ps))
+
+
+{-|
+
+    : LBRACKET (pattern (COMMA pattern)*)? RBRACKET
+    = []
+    = [a]
+    = [1,a]
+
+-}
+listPattern : Parser Pattern
+listPattern =
+    Parser.separatedList
+        { left = Token.LBracket
+        , right = Token.RBracket
+        , sep = Token.Comma
+        , item = Parser.lazy (\() -> pattern)
+        , skipEol = False
+        , allowTrailingSep = False
+        }
+        |> Parser.map PList
 
 
 {-|
