@@ -701,26 +701,6 @@ function listPattern(state: State): {i: number, match: Pattern} {
 //: LPAREN (pattern (COMMA pattern)*)? RPAREN
 //= (a)
 //= (1,a)
-function tuplePattern(state: State): {i: number, match: Pattern} {
-    const desc = 'tuple pattern';
-    const listResult = nonemptyList({
-        left:  'LPAREN',
-        right: 'RPAREN',
-        sep:   'COMMA',
-        item:  pattern,
-        state,
-        parsedItem: `${desc} elements`,
-        skipEol: false,
-        allowTrailingSep: false,
-    });
-    return {
-        i: listResult.i,
-        match: {
-            pattern: 'tuple',
-            elements: listResult.match,
-        },
-    };
-}
 
 //: MINUS (intPattern | floatPattern)
 //= -123

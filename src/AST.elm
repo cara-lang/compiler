@@ -142,7 +142,6 @@ type Decl
     | DUnaryOperator { op : UnaryOp, body : Expr } -- TODO mod, arg, resultType
     | DStatement Stmt
     | DValueAnnotation { name : String, type_ : Type }
-    | DFunctionAnnotation { name : String, resultType : Type } -- TODO mod, args
     | DUnitTest { name : Maybe String, expr : Expr }
     | DParameterizedTest
         { name : Maybe String

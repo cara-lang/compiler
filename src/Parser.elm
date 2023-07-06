@@ -57,15 +57,10 @@ declaration =
               valueAnnotationDecl
             , functionDecl
 
-            {- , -- f(a,b) = expr
-                 -- private f(a,b) = expr
-                 -- `-`(a,b) = expr
+            {- , -- `-`(a,b) = expr
                  -- `-`(a) = expr
                , binaryOperatorDecl
                , unaryOperatorDecl
-               , -- f(a:Int, b:Int): Bool
-                 -- private f(a:Int, b:Int): Bool
-                 functionAnnotationDecl
             -}
             ]
         }
@@ -643,7 +638,10 @@ pattern =
 
             {-
                , ( [ T Float_ ], floatPattern )
-               , ( [ T LParen ], tuplePattern )
+            -}
+            , ( [ T LParen ], tuplePattern )
+
+            {-
                , ( [ T LBracket ], listPattern )
                , ( [ T Minus ], negatedPattern )
             -}
@@ -705,6 +703,26 @@ intPattern : Parser Pattern
 intPattern =
     Parser.tokenData Token.getInt
         |> Parser.map PInt
+
+
+{-|
+
+    : LPAREN (pattern (COMMA pattern)*)? RPAREN
+    = (a)
+    = (1,a)
+
+-}
+tuplePattern : Parser Pattern
+tuplePattern =
+    Parser.separatedNonemptyList
+        { left = Token.LParen
+        , right = Token.RParen
+        , sep = Token.Comma
+        , item = Parser.lazy (\() -> pattern)
+        , skipEol = False
+        , allowTrailingSep = False
+        }
+        |> Parser.map (\( p, ps ) -> PTuple (p :: ps))
 
 
 {-|

@@ -5,20 +5,20 @@ module Logger {
 
   opaque type Logger[log,a] = Logger(List[log],a)
 
-  pure(a) : Logger[log,a]
+  pure : a -> Logger[log,a]
   pure(a) = Logger([],a)
 
-  bind((a -> Logger[log,b]), Logger[log,a]): Logger[log,b]
+  bind : (a -> Logger[log,b]) -> Logger[log,a] -> Logger[log,b]
   bind(fn,Logger(aLog,a)) = {
     (bLog,b) = fn(a)
     log = aLog ++ bLog
     Logger(aLog,b)
   }
 
-  log(x: log): Logger[log,()]
+  log : log -> Logger[log,()]
   log(x) = Logger([x],())
 
-  run(m: Logger[log,a]): (log,a)
+  run : Logger[log,a] -> (log,a)
   run(Logger(log,a)) = (log,a)
 
 }
