@@ -1526,14 +1526,13 @@ listExpr =
 
 listExprRaw : Parser (List Expr)
 listExprRaw =
-    -- TODO should we allow trailing sep?
     Parser.separatedList
         { left = LBracket
         , right = RBracket
         , sep = Comma
         , item = Parser.lazy (\() -> expr)
         , skipEol = True
-        , allowTrailingSep = False
+        , allowTrailingSep = True
         }
 
 
