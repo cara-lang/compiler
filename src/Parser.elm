@@ -1234,7 +1234,8 @@ ifExpr =
 
 {-|
 
-    : BACKSLASH argument (COMMA argument)* ARROW expr
+    : BACKSLASH (argument (COMMA argument)*)? ARROW expr
+    = \ -> 1
     = \x -> 1
     = \x,y -> x+y
 
@@ -1247,9 +1248,9 @@ lambdaExpr =
 
 lambdaExprRaw : Parser ( List Argument, Expr )
 lambdaExprRaw =
-    Parser.succeed (\( arg, args ) body -> ( arg :: args, body ))
+    Parser.succeed Tuple.pair
         |> Parser.keep
-            (Parser.separatedNonemptyList
+            (Parser.separatedList
                 { left = Backslash
                 , right = Arrow
                 , sep = Comma
