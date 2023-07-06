@@ -1,0 +1,13 @@
+// you can do this but there's no reason
+f = \a -> \b -> \c -> a + b + c
+IO.println!(f(1)(2)(3))
+IO.println!(f(1,2,3))
+IO.println!(f(1,2)(3))
+IO.println!(f(1)(2,3))
+
+// idiomatically you should do this instead
+g = \a,b,c -> a + b + c
+IO.println!(g(1)(2)(3)) // this is important for applicatives
+IO.println!(g(1,2,3))
+IO.println!(g(1,2)(3))
+IO.println!(g(1)(2,3))
