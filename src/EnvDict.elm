@@ -4,6 +4,8 @@ module EnvDict exposing
     , fromList
     , singleton
     , toList
+    , union
+    , unionAll
     )
 
 {-| The typevar in `EnvDict value`is present to remove an import cycle.
@@ -41,3 +43,13 @@ fromList list =
 toList : EnvDict value -> List ( Id, value )
 toList dict =
     Dict.Any.toList dict
+
+
+union : EnvDict value -> EnvDict value -> EnvDict value
+union a b =
+    Dict.Any.union a b
+
+
+unionAll : List (EnvDict value) -> EnvDict value
+unionAll dicts =
+    List.foldl union empty dicts
