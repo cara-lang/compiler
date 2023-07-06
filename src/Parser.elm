@@ -638,10 +638,8 @@ pattern =
             , ( [ P Token.isFloat ], floatPattern )
             , ( [ T LParen ], tuplePattern )
             , ( [ T LBracket ], listPattern )
-
-            {-
-               , ( [ T Minus ], negatedPattern )
-            -}
+            , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
+            , ( [ T Token.Minus, P Token.isFloat ], negatedFloatPattern )
             , ( [ T Underscore ], wildcardPattern )
 
             {-
@@ -712,6 +710,32 @@ floatPattern : Parser Pattern
 floatPattern =
     Parser.tokenData Token.getFloat
         |> Parser.map PFloat
+
+
+{-|
+
+    : MINUS INT
+    = -123
+
+-}
+negatedIntPattern : Parser Pattern
+negatedIntPattern =
+    Parser.succeed (negate >> PInt)
+        |> Parser.skip (Parser.token Token.Minus)
+        |> Parser.keep (Parser.tokenData Token.getInt)
+
+
+{-|
+
+    : MINUS FLOAT
+    = -123.45
+
+-}
+negatedFloatPattern : Parser Pattern
+negatedFloatPattern =
+    Parser.succeed (negate >> PFloat)
+        |> Parser.skip (Parser.token Token.Minus)
+        |> Parser.keep (Parser.tokenData Token.getFloat)
 
 
 {-|
