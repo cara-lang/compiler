@@ -499,13 +499,55 @@ statement =
     Parser.oneOf
         { commited = []
         , noncommited =
-            [ {- letBangStatement
-                 ,
-              -}
-              letStatement
+            [ letBangStatement
+            , letStatement
             , bangStatement
             ]
         }
+
+
+{-|
+
+    : PRIVATE? pattern (COLON type)? EQ bang
+    = x = Foo.bar!(1,False)
+
+-}
+letBangStatement : Parser Stmt
+letBangStatement =
+    Parser.succeed
+        (\mod lhs t bang_ ->
+            SLetBang
+                { mod = mod
+                , lhs = lhs
+                , type_ = t
+                , bang = bang_
+                }
+        )
+        |> Parser.keep
+            -- PRIVATE?
+            (Parser.maybe (Parser.token Private)
+                |> Parser.map
+                    (\maybePrivate ->
+                        case maybePrivate of
+                            Nothing ->
+                                LetNoModifier
+
+                            Just () ->
+                                LetPrivate
+                    )
+            )
+        |> Parser.keep pattern
+        |> Parser.keep
+            -- (COLON type)?
+            (Parser.ifNextIs Colon
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token Colon)
+                    |> Parser.keep type_
+                )
+            )
+        |> Parser.skip (Parser.token Token.Eq)
+        |> Parser.skip Parser.skipEolBeforeIndented
+        |> Parser.keep bang
 
 
 {-|
