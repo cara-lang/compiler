@@ -133,66 +133,6 @@ const unaryOps: Map<string,UnaryOp> = new Map([
     ["..","InfiniteRangeInclusive"],
 ]);
 
-//: PRIVATE? BACKTICK_STRING LPAREN fnArg RPAREN (COLON type)? EQ EOL* expr
-//           ^^^^^^^^^^^^^^^ needs to be UnaryOp
-//= `-`(a) = a + 5
-//= `-`(a): Int = a + 5
-//= `-`(a: Int) = a + 5
-//= private `-`(a: Int) = a + 5
-function unaryOperatorDecl(state: State): {i: number, match: Decl} {
-    let {i} = state;
-    const desc = 'unary operator decl';
-    //: PRIVATE?
-    let mod: LetModifier = 'NoModifier';
-    if (tagIs('PRIVATE',i,state.tokens)) {
-        mod = 'Private';
-        i++;
-    }
-    //: BACKTICK_STRING
-    const nameResult = getBacktickString(desc,i,state.tokens);
-    i = nameResult.i;
-    const op = unaryOps.get(nameResult.match);
-    if (op == null) {
-        throw error('Unsupported unary operator',i,state.tokens);
-    }
-    //: LPAREN
-    i = expect('LPAREN',desc,i,state.tokens);
-    //: fnArg
-    const argResult = fnArg({...state,i});
-    i = argResult.i;
-    //: RPAREN
-    i = expect('RPAREN',desc,i,state.tokens);
-    //: (COLON type)?
-    let typeVal: Type|null = null;
-    if (tagIs('COLON',i,state.tokens)) {
-        //: COLON
-        i = expect('COLON',desc,i,state.tokens);
-        //: type
-        const typeResult = type({...state, i});
-        i = typeResult.i;
-        typeVal = typeResult.match;
-    }
-    //: EQ
-    i = expect('EQ',desc,i,state.tokens);
-    //: EOL*
-    i = skipEol({...state, i});
-    //: expr
-    const bodyResult = expr({...state, i});
-    i = bodyResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            decl: 'unary-operator',
-            mod,
-            op,
-            arg: argResult.match,
-            resultType: typeVal,
-            body: bodyResult.match,
-        },
-    };
-}
-
 const binaryOps: Map<string,BinaryOp> = new Map([
     ['+','Plus'],
     ['-','Minus'],
@@ -218,72 +158,6 @@ const binaryOps: Map<string,BinaryOp> = new Map([
     ['..','RangeInclusive'],
     ['...','RangeExclusive'],
 ]);
-
-//: PRIVATE? BACKTICK_STRING LPAREN fnArg COMMA fnArg RPAREN (COLON type)? EQ EOL* expr
-//           ^^^^^^^^^^^^^^^ needs to be BinaryOp
-//= `-`(a,b) = a * 2 + b
-//= `-`(a,b): Int = a * 2 + b
-//= `-`(a: Int, b: Int) = a * 2 + b
-//= private `-`(a: Int, b: Int) = a * 2 + b
-function binaryOperatorDecl(state: State): {i: number, match: Decl} {
-    let {i} = state;
-    const desc = 'binary operator decl';
-    //: PRIVATE?
-    let mod: LetModifier = 'NoModifier';
-    if (tagIs('PRIVATE',i,state.tokens)) {
-        mod = 'Private';
-        i++;
-    }
-    //: BACKTICK_STRING
-    const nameResult = getBacktickString(desc,i,state.tokens);
-    i = nameResult.i;
-    const op = binaryOps.get(nameResult.match);
-    if (op == null) {
-        throw error('Unsupported binary operator',i,state.tokens);
-    }
-    //: LPAREN
-    i = expect('LPAREN',desc,i,state.tokens);
-    //: fnArg
-    const leftResult = fnArg({...state,i});
-    i = leftResult.i;
-    //: COMMA
-    i = expect('COMMA',desc,i,state.tokens);
-    //: fnArg
-    const rightResult = fnArg({...state,i});
-    i = rightResult.i;
-    //: RPAREN
-    i = expect('RPAREN',desc,i,state.tokens);
-    //: (COLON type)?
-    let typeVal: Type|null = null;
-    if (tagIs('COLON',i,state.tokens)) {
-        //: COLON
-        i = expect('COLON',desc,i,state.tokens);
-        //: type
-        const typeResult = type({...state, i});
-        i = typeResult.i;
-        typeVal = typeResult.match;
-    }
-    //: EQ
-    i = expect('EQ',desc,i,state.tokens);
-    //: EOL*
-    i = skipEol({...state, i});
-    //: expr
-    const bodyResult = expr({...state, i});
-    i = bodyResult.i;
-    // Done!
-    return {
-        i,
-        match: {
-            decl: 'binary-operator',
-            mod,
-            op,
-            left: leftResult.match,
-            right: rightResult.match,
-            resultType: typeVal,
-            body: bodyResult.match,
-        },
-    };
-}
 
 //: pattern (COLON type)?
 //= a

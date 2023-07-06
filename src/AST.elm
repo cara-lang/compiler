@@ -1,13 +1,11 @@
 module AST exposing
-    ( Argument
-    , Bang(..)
+    ( Bang(..)
     , BinaryOp(..)
     , CaseBranch
     , Constructor
     , ConstructorArg
     , Decl(..)
     , Expr(..)
-    , FunctionModifier(..)
     , LetModifier(..)
     , LetStmt
     , ModuleModifier(..)
@@ -55,7 +53,7 @@ type Expr
     | Constructor_ { id : Id, args : List Expr } -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
     | Identifier Id -- foo, Bar.foo
     | RootIdentifier Id -- ::foo, ::Bar.foo
-    | Lambda { args : List Argument, body : Expr }
+    | Lambda { args : List Pattern, body : Expr }
     | RecordGetter String -- .field
     | If { cond : Expr, then_ : Expr, else_ : Expr }
     | Case { subject : Expr, branches : List CaseBranch }
@@ -72,8 +70,7 @@ type Type
 
 
 type Pattern
-    = -- TODO other patterns
-      PUnit -- ()
+    = PUnit -- ()
     | PVar String -- a
     | PConstructor { id : Id, args : List Pattern } -- Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
     | PInt Int -- 1
@@ -84,12 +81,6 @@ type Pattern
     | PSpread (Maybe String) -- ...a, ..._
     | PRecordSpread -- {..}
     | PRecordFields (List String) -- {a}, {a,b}
-
-
-type alias Argument =
-    { pattern : Pattern
-    , type_ : Maybe Type
-    }
 
 
 type Bang
@@ -109,11 +100,6 @@ type Stmt
     = SLet LetStmt
     | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
-
-
-type FunctionModifier
-    = FunctionNoModifier
-    | FunctionPrivate
 
 
 type TypeModifier
@@ -137,31 +123,33 @@ type Decl
     | DType { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }
-    | DFunction { mod : FunctionModifier, name : String, args : List Argument, retType : Maybe Type, body : Expr }
-    | DBinaryOperator { op : BinaryOp, body : Expr } -- TODO mod, left, right, resultType
-    | DUnaryOperator { op : UnaryOp, body : Expr } -- TODO mod, arg, resultType
+    | DFunction { name : String, args : List Pattern, body : Expr }
+    | DBinaryOperator { op : BinaryOp, left : Pattern, right : Pattern, body : Expr }
+    | DUnaryOperator { op : UnaryOp, arg : Pattern, body : Expr }
     | DStatement Stmt
-    | DValueAnnotation { name : String, type_ : Type }
+    | DValueAnnotation { mod : LetModifier, name : String, type_ : Type }
+    | DBinaryOperatorAnnotation { mod : LetModifier, name : String, left : Type, right : Type, ret : Type }
+    | DUnaryOperatorAnnotation { mod : LetModifier, name : String, arg : Type, ret : Type }
     | DUnitTest { name : Maybe String, expr : Expr }
     | DParameterizedTest
         { name : Maybe String
         , table : List Expr
         , -- implicit lambda
-          args : List Argument
+          args : List Pattern
         , expr : Expr
         }
     | DPropertyTypeTest
         { name : Maybe String
         , types : Type
         , -- implicit lambda
-          args : List Argument
+          args : List Pattern
         , expr : Expr
         }
     | DPropertyGenTest
         { name : Maybe String
         , gens : Expr
         , -- implicit lambda
-          args : List Argument
+          args : List Pattern
         , expr : Expr
         }
 

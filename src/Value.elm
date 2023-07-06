@@ -1,6 +1,6 @@
 module Value exposing (Value(..), toString)
 
-import AST exposing (Argument, Expr)
+import AST exposing (Expr, Pattern)
 import Dict exposing (Dict)
 import Env exposing (Env)
 import Id exposing (Id)
@@ -19,7 +19,7 @@ type Value
     | VRecord (Dict String Value)
     | VRecordGetter String
     | VConstructor { id : Id, args : List Value }
-    | VClosure { args : List Argument, body : Expr, env : Env Value }
+    | VClosure { args : List Pattern, body : Expr, env : Env Value }
 
 
 toString : Value -> String

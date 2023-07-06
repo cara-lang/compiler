@@ -56,58 +56,33 @@ declaration =
               -}
               valueAnnotationDecl
             , functionDecl
-
-            {- , -- `-`(a,b) = expr
-                 -- `-`(a) = expr
-               , binaryOperatorDecl
-               , unaryOperatorDecl
-            -}
+            , binaryOperatorDecl
+            , unaryOperatorDecl
+            , binaryOperatorAnnotationDecl
+            , unaryOperatorAnnotationDecl
             ]
         }
 
 
 {-|
 
-    : PRIVATE? LOWER_NAME LPAREN (argument (COMMA argument)*)? RPAREN (COLON type)? EQ EOL* expr
+    : LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
     = f(a,b) = a + b
-    = f(a,b): Int = a + b
-    = f(a: Int, b: Int) = a + b
-    = f(a: Int, b: Int): Int = a + b
-    = private f(a,b) = a + b
 
 -}
 functionDecl : Parser Decl
 functionDecl =
-    Parser.succeed (\mod name args retType body -> DFunction { mod = mod, name = name, args = args, retType = retType, body = body })
-        |> Parser.keep
-            (Parser.maybe (Parser.token Private)
-                |> Parser.map
-                    (\maybePrivate ->
-                        case maybePrivate of
-                            Nothing ->
-                                FunctionNoModifier
-
-                            Just () ->
-                                FunctionPrivate
-                    )
-            )
+    Parser.succeed (\name args body -> DFunction { name = name, args = args, body = body })
         |> Parser.keep lowerName
         |> Parser.keep
             (Parser.separatedList
                 { left = LParen
                 , right = RParen
                 , sep = Comma
-                , item = argument
+                , item = pattern
                 , skipEol = True
                 , allowTrailingSep = False
                 }
-            )
-        |> Parser.keep
-            (Parser.maybe
-                (Parser.succeed identity
-                    |> Parser.skip (Parser.token Colon)
-                    |> Parser.keep type_
-                )
             )
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEol
@@ -116,22 +91,51 @@ functionDecl =
 
 {-|
 
-    : pattern (COLON type)?
-    = foo
-    = foo: Int
+    : PRIVATE?
 
 -}
-argument : Parser Argument
-argument =
-    Parser.succeed (\pattern_ type__ -> { pattern = pattern_, type_ = type__ })
-        |> Parser.keep pattern
-        |> Parser.keep
-            (Parser.maybe
-                (Parser.succeed identity
-                    |> Parser.skip (Parser.token Colon)
-                    |> Parser.keep type_
-                )
+letModifier : Parser LetModifier
+letModifier =
+    Parser.maybe (Parser.token Private)
+        |> Parser.map
+            (\maybePrivate ->
+                case maybePrivate of
+                    Nothing ->
+                        LetNoModifier
+
+                    Just () ->
+                        LetPrivate
             )
+
+
+{-|
+
+    : BACKTICK_STRING LPAREN pattern COMMA pattern RPAREN EQ EOL* expr
+      ^^^^^^^^^^^^^^^ needs to be BinaryOp
+    = `-`(a,b) = a * 2 + b
+    = `-`(a,b): Int = a * 2 + b
+    = `-`(a: Int, b: Int) = a * 2 + b
+    = private `-`(a: Int, b: Int) = a * 2 + b
+
+-}
+binaryOperatorDecl : Parser Decl
+binaryOperatorDecl =
+    Parser.succeed (\op left right body -> DBinaryOperator { op = op, left = left, right = right, body = body })
+        |> Debug.todo "binary operator decl"
+
+
+{-|
+
+    : BACKTICK_STRING LPAREN pattern RPAREN EQ EOL* expr
+      ^^^^^^^^^^^^^^^ needs to be UnaryOp
+    = `-`(a) = a + 5
+    = private `-`(a) = a + 5
+
+-}
+unaryOperatorDecl : Parser Decl
+unaryOperatorDecl =
+    Parser.succeed (\op arg body -> DUnaryOperator { op = op, arg = arg, body = body })
+        |> Debug.todo "unary operator decl"
 
 
 {-|
@@ -338,16 +342,44 @@ typeModifier =
 
 {-|
 
-    : LOWER_NAME COLON type
+    : PRIVATE? LOWER_NAME COLON type
     = x : Int
 
 -}
 valueAnnotationDecl : Parser Decl
 valueAnnotationDecl =
-    Parser.succeed (\name type__ -> DValueAnnotation { name = name, type_ = type__ })
+    Parser.succeed (\mod name type__ -> DValueAnnotation { mod = mod, name = name, type_ = type__ })
+        |> Parser.keep letModifier
         |> Parser.keep (Parser.tokenData Token.getLowerName)
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep type_
+
+
+{-|
+
+    : PRIVATE? BACKTICK_STRING COLON type ARROW type ARROW type
+               ^^^^^^^^^^^^^^^ needs to be BinaryOp
+    = `-` : Int -> Int -> Int
+
+-}
+binaryOperatorAnnotationDecl : Parser Decl
+binaryOperatorAnnotationDecl =
+    Parser.succeed (\mod name left right ret -> DBinaryOperatorAnnotation { mod = mod, name = name, left = left, right = right, ret = ret })
+        |> Parser.keep letModifier
+        |> Debug.todo "binary operator annotation decl"
+
+
+{-|
+
+    : PRIVATE? BACKTICK_STRING COLON type ARROW type
+               ^^^^^^^^^^^^^^^ needs to be UnaryOp
+    = `-` : Int -> Int
+
+-}
+unaryOperatorAnnotationDecl : Parser Decl
+unaryOperatorAnnotationDecl =
+    Parser.succeed (\mod name arg ret -> DUnaryOperatorAnnotation { mod = mod, name = name, arg = arg, ret = ret })
+        |> Debug.todo "unary operator annotation decl"
 
 
 statementDecl : Parser Decl
@@ -542,19 +574,7 @@ letBangStatement =
                 , bang = bang_
                 }
         )
-        |> Parser.keep
-            -- PRIVATE?
-            (Parser.maybe (Parser.token Private)
-                |> Parser.map
-                    (\maybePrivate ->
-                        case maybePrivate of
-                            Nothing ->
-                                LetNoModifier
-
-                            Just () ->
-                                LetPrivate
-                    )
-            )
+        |> Parser.keep letModifier
         |> Parser.keep pattern
         |> Parser.keep
             -- (COLON type)?
@@ -595,19 +615,7 @@ letStatementRaw =
             , expr = expr_
             }
         )
-        |> Parser.keep
-            -- PRIVATE?
-            (Parser.maybe (Parser.token Private)
-                |> Parser.map
-                    (\maybePrivate ->
-                        case maybePrivate of
-                            Nothing ->
-                                LetNoModifier
-
-                            Just () ->
-                                LetPrivate
-                    )
-            )
+        |> Parser.keep letModifier
         |> Parser.keep
             (pattern
                 -- TODO do we need to support a "stop the world" type of error? This would be one of those
@@ -1371,7 +1379,7 @@ ifExpr =
 
 {-|
 
-    : BACKSLASH (argument (COMMA argument)*)? ARROW expr
+    : BACKSLASH (pattern (COMMA pattern)*)? ARROW expr
     = \ -> 1
     = \x -> 1
     = \x,y -> x+y
@@ -1383,7 +1391,7 @@ lambdaExpr =
         |> Parser.map (\( args, body ) -> Lambda { args = args, body = body })
 
 
-lambdaExprRaw : Parser ( List Argument, Expr )
+lambdaExprRaw : Parser ( List Pattern, Expr )
 lambdaExprRaw =
     Parser.succeed Tuple.pair
         |> Parser.keep
@@ -1391,7 +1399,7 @@ lambdaExprRaw =
                 { left = Backslash
                 , right = Arrow
                 , sep = Comma
-                , item = argument
+                , item = pattern
                 , skipEol = False
                 , allowTrailingSep = False
                 }
@@ -1434,7 +1442,7 @@ lambdaWithHoles expr_ =
             -- (where the _ arg is PVar, not PWildcard)
             Parser.succeed <|
                 Lambda
-                    { args = [ { pattern = PVar "_", type_ = Nothing } ]
+                    { args = [ PVar "_" ]
                     , body = expr_
                     }
 
@@ -1446,12 +1454,7 @@ lambdaWithHoles expr_ =
                 Lambda
                     { args =
                         List.range 1 max
-                            |> List.map
-                                (\i ->
-                                    { pattern = PVar ("_" ++ String.fromInt i)
-                                    , type_ = Nothing
-                                    }
-                                )
+                            |> List.map (\i -> PVar ("_" ++ String.fromInt i))
                     , body = expr_
                     }
 
