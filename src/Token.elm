@@ -4,6 +4,7 @@ module Token exposing
     , getChar
     , getFloat
     , getGetter
+    , getHole
     , getInt
     , getLowerName
     , getQualifier
@@ -12,6 +13,7 @@ module Token exposing
     , isChar
     , isFloat
     , isGetter
+    , isHole
     , isInt
     , isLowerName
     , isQualifier
@@ -178,6 +180,16 @@ isUpperName type_ =
             False
 
 
+isHole : Type -> Bool
+isHole type_ =
+    case type_ of
+        Hole _ ->
+            True
+
+        _ ->
+            False
+
+
 getInt : Type -> Maybe Int
 getInt type_ =
     case type_ of
@@ -252,6 +264,16 @@ getUpperName : Type -> Maybe String
 getUpperName type_ =
     case type_ of
         UpperName n ->
+            Just n
+
+        _ ->
+            Nothing
+
+
+getHole : Type -> Maybe Int
+getHole type_ =
+    case type_ of
+        Hole n ->
             Just n
 
         _ ->

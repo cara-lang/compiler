@@ -5,6 +5,7 @@ import Error exposing (ParserError(..))
 import Id exposing (Id)
 import List.Zipper as Zipper
 import Loc exposing (Loc)
+import Parser.HoleAnalysis as HoleAnalysis
 import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
 
@@ -1003,12 +1004,9 @@ prefixExpr =
             , ( [ T Token.If ], ifExpr )
             , ( [ T Token.Case ], caseExpr )
             , ( [ T Backslash ], lambdaExpr )
-
-            {-
-               , ( [ T LHole ], holeLambdaExpr )
-               , ( [ T Underscore ], holeExpr )
-               , ( [ T Hole ], holeExpr )
-            -}
+            , ( [ T LHole ], holeLambdaExpr )
+            , ( [ T Underscore ], holeExpr )
+            , ( [ P Token.isHole ], holeExpr )
             , ( [ T ColonColon ], rootIdentifierExpr )
             , ( [ T Token.Minus ], prefixUnaryOpExpr Token.Minus NegateNum )
             , ( [ T Bang ], prefixUnaryOpExpr Bang NegateBool )
@@ -1261,6 +1259,86 @@ lambdaExprRaw =
                 }
             )
         |> Parser.keep (Parser.lazy (\() -> expr))
+
+
+{-|
+
+    : LHOLE expr RPAREN
+    = #(1 + _)
+    = #(1 + _1 - _2)
+
+-}
+holeLambdaExpr : Parser Expr
+holeLambdaExpr =
+    Parser.succeed identity
+        |> Parser.skip (Parser.token LHole)
+        |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.skip (Parser.token RParen)
+        |> Parser.andThen lambdaWithHoles
+
+
+lambdaWithHoles : Expr -> Parser Expr
+lambdaWithHoles expr_ =
+    case HoleAnalysis.analyzeHoles expr_ of
+        HoleAnalysis.NoHoles ->
+            -- #(123). Basically a thunk.
+            -- We desugar to:      \ -> 123
+            -- Note this is _not_: \() -> 123 or \_ -> 123
+            Parser.succeed <|
+                Lambda
+                    { args = []
+                    , body = expr_
+                    }
+
+        HoleAnalysis.OnlyUnderscore ->
+            -- #(_ + 1)
+            -- We desugar to: \_ -> _ + 1
+            -- (where the _ arg is PVar, not PWildcard)
+            Parser.succeed <|
+                Lambda
+                    { args = [ { pattern = PVar "_", type_ = Nothing } ]
+                    , body = expr_
+                    }
+
+        HoleAnalysis.OnlyNumbered { max } ->
+            -- #(_1 + _3)
+            -- We desugar to: \_1 _2 _3 -> _1 + _3
+            -- (where the _N args are PVars)
+            Parser.succeed <|
+                Lambda
+                    { args =
+                        List.range 1 max
+                            |> List.map
+                                (\i ->
+                                    { pattern = PVar ("_" ++ String.fromInt i)
+                                    , type_ = Nothing
+                                    }
+                                )
+                    , body = expr_
+                    }
+
+        HoleAnalysis.Error err ->
+            Parser.fail err
+
+
+{-|
+
+    : HOLE|UNDERSCORE
+    = _
+    = _1
+
+-}
+holeExpr : Parser Expr
+holeExpr =
+    Parser.oneOf
+        { commited = []
+        , noncommited =
+            [ Parser.succeed (Identifier (Id.local "_"))
+                |> Parser.skip (Parser.token Underscore)
+            , Parser.succeed (\hole -> Identifier (Id.local ("_" ++ String.fromInt hole)))
+                |> Parser.keep (Parser.tokenData Token.getHole)
+            ]
+        }
 
 
 {-|

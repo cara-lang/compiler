@@ -59,6 +59,8 @@ type ParserError
     | AssignmentOfExprToUnderscore
     | EmptyOneOf
     | OneOfDidntMatchAnyCommited -- in case where there are no noncommited
+    | MixedHoles
+    | NonNumberedHole String
 
 
 type InterpreterError
@@ -236,6 +238,14 @@ title error =
                         OneOfDidntMatchAnyCommited ->
                             -- TODO error code
                             "oneOf didn't match any commited path (and there were no noncommited paths)"
+
+                        MixedHoles ->
+                            -- TODO error code
+                            "Mixed holes"
+
+                        NonNumberedHole str ->
+                            -- TODO error code
+                            "(Should be impossible, we shouldn't allow _x names in user code) Non-numbered hole: " ++ str
                    )
 
         InterpreterError interpreterError ->
