@@ -1386,17 +1386,6 @@ function spreadPattern(state: State): {i: number, match: Pattern} {
     return {i, match: {pattern:'spread', var:varName}};
 }
 
-//: LBRACE DOTDOT RBRACE
-//= {..}
-function recordSpreadPattern(state: State): {i: number, match: Pattern} {
-    let {i} = state;
-    const desc = 'record spread pattern';
-    i = expect('LBRACE',desc,i,state.tokens);
-    i = expect('DOTDOT',desc,i,state.tokens);
-    i = expect('RBRACE',desc,i,state.tokens);
-    return {i, match: {pattern:'record-spread'}};
-}
-
 //: LBRACE LOWER_NAME (COMMA LOWER_NAME)* RBRACE
 //= {..}
 function recordFieldsPattern(state: State): {i: number, match: Pattern} {

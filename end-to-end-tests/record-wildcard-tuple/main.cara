@@ -1,0 +1,4 @@
+x = (1, "Hello")
+{..} = x
+IO.println!(el1)
+IO.println!(el2)

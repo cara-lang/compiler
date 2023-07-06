@@ -626,7 +626,10 @@ pattern =
                , ( [ T Minus ], negatedPattern )
                , ( [ T Underscore ], wildcardPattern )
                , ( [ T DotDotDot ], spreadPattern )
-               , ( [ T LBrace, DotDot ], recordSpreadPattern )
+            -}
+            , ( [ T LBrace, T DotDot ], recordSpreadPattern )
+
+            {-
                , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
             -}
             -- TODO other patterns
@@ -645,6 +648,20 @@ varPattern : Parser Pattern
 varPattern =
     lowerName
         |> Parser.map PVar
+
+
+{-|
+
+    : LBRACE DOTDOT RBRACE
+    = {..}
+
+-}
+recordSpreadPattern : Parser Pattern
+recordSpreadPattern =
+    Parser.succeed PRecordSpread
+        |> Parser.skip (Parser.token LBrace)
+        |> Parser.skip (Parser.token DotDot)
+        |> Parser.skip (Parser.token RBrace)
 
 
 type_ : Parser AST.Type
