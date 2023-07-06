@@ -1546,10 +1546,18 @@ infixExpr =
                 Just { precedence = 4, isRight = False, parser = pipelineExpr }
 
             DotDot ->
-                Just { precedence = 5, isRight = False, parser = rangeInclusiveExpr }
+                if skippedEol then
+                    Nothing
+
+                else
+                    Just { precedence = 5, isRight = False, parser = rangeInclusiveExpr }
 
             DotDotDot ->
-                Just { precedence = 5, isRight = False, parser = binaryOpExpr RangeExclusive }
+                if skippedEol then
+                    Nothing
+
+                else
+                    Just { precedence = 5, isRight = False, parser = binaryOpExpr RangeExclusive }
 
             Pipe ->
                 Just { precedence = 6, isRight = False, parser = binaryOpExpr OrBin }

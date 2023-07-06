@@ -8,8 +8,8 @@ module Parser.Internal exposing
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
-    , moveLeft, moveRight
-    , logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
+    , getTokens, moveLeft, moveRight, rewind
+    , log, logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
     , TokenPred(..), oneOf
     , InfixParserTable, InfixParser, pratt
     )
@@ -25,8 +25,8 @@ module Parser.Internal exposing
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
 @docs token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
-@docs moveLeft, moveRight
-@docs logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
+@docs getTokens, moveLeft, moveRight, rewind
+@docs log, logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
 @docs TokenPred, oneOf
 @docs InfixParserTable, InfixParser, pratt
 
@@ -53,12 +53,14 @@ type alias InfixParser a =
 type alias InfixParserTable a =
     Token.Type
     -> { skippedEol : Bool }
-    ->
-        Maybe
-            { precedence : Int
-            , isRight : Bool
-            , parser : InfixParser a
-            }
+    -> Maybe (InfixParserCase a)
+
+
+type alias InfixParserCase a =
+    { precedence : Int
+    , isRight : Bool
+    , parser : InfixParser a
+    }
 
 
 succeed : a -> Parser a
@@ -473,10 +475,7 @@ pratt config =
         |> andThen
             (\prefix ->
                 let
-                    go :
-                        a
-                        -> Maybe { precedence : Int, isRight : Bool, parser : InfixParser a }
-                        -> Parser a
+                    go : a -> Maybe (InfixParserCase a) -> Parser a
                     go left maybeInfix =
                         case maybeInfix of
                             Nothing ->
@@ -485,6 +484,7 @@ pratt config =
                             Just infix ->
                                 if initPrecedence < infix.precedence then
                                     succeed identity
+                                        |> skip skipEolBeforeIndented
                                         |> skip moveRight
                                         |> keep
                                             (infix.parser
@@ -640,6 +640,11 @@ peekTokenAfterEol =
                     )
 
 
+log : String -> Parser a -> Parser a
+log label parser =
+    map (Debug.log label) parser
+
+
 logCurrent : String -> Parser ()
 logCurrent label =
     succeed ()
@@ -672,3 +677,13 @@ lazy : (() -> Parser a) -> Parser a
 lazy fn =
     \tokens ->
         fn () tokens
+
+
+getTokens : Parser (Zipper Token)
+getTokens =
+    \tokens -> Ok ( tokens, tokens )
+
+
+rewind : Zipper Token -> Parser ()
+rewind tokens =
+    \_ -> Ok ( (), tokens )
