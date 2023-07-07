@@ -118,11 +118,20 @@ interpretStatement =
             SFunction r ->
                 interpretFunction env r
 
+            SBinaryOperator r ->
+                interpretBinaryOp env r
+
+            SUnaryOperator r ->
+                interpretUnaryOp env r
+
             SValueAnnotation r ->
                 interpretValueAnnotation env r
 
-            _ ->
-                Debug.todo <| "interpretStatement TODO: " ++ Debug.toString stmt
+            SBinaryOperatorAnnotation r ->
+                interpretBinaryOpAnnotation env r
+
+            SUnaryOperatorAnnotation r ->
+                interpretUnaryOpAnnotation env r
 
 
 interpretFunction : Interpreter { name : String, args : List Pattern, body : Expr } ()
@@ -144,12 +153,56 @@ interpretFunction =
         Outcome.succeed envWithFn ()
 
 
+interpretBinaryOp : Interpreter { op : BinaryOp, left : Pattern, right : Pattern, body : Expr } ()
+interpretBinaryOp =
+    \env { op, left, right, body } ->
+        let
+            _ =
+                Debug.log "TODO do something in interpretBinaryOp" ( op, ( left, right, body ) )
+        in
+        -- TODO make type annotations do something
+        Outcome.succeed env ()
+
+
+interpretUnaryOp : Interpreter { op : UnaryOp, arg : Pattern, body : Expr } ()
+interpretUnaryOp =
+    \env { op, arg, body } ->
+        let
+            _ =
+                Debug.log "TODO do something in interpretUnaryOp" ( op, arg, body )
+        in
+        -- TODO make type annotations do something
+        Outcome.succeed env ()
+
+
 interpretValueAnnotation : Interpreter { mod : LetModifier, name : String, type_ : Type } ()
 interpretValueAnnotation =
     \env { mod, name, type_ } ->
         let
             _ =
                 Debug.log "TODO do something in interpretValueAnnotation" ( mod, name, type_ )
+        in
+        -- TODO make type annotations do something
+        Outcome.succeed env ()
+
+
+interpretBinaryOpAnnotation : Interpreter { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type } ()
+interpretBinaryOpAnnotation =
+    \env { mod, op, left, right, ret } ->
+        let
+            _ =
+                Debug.log "TODO do something in interpretBinaryOpAnnotation" ( mod, op, ( left, right, ret ) )
+        in
+        -- TODO make type annotations do something
+        Outcome.succeed env ()
+
+
+interpretUnaryOpAnnotation : Interpreter { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type } ()
+interpretUnaryOpAnnotation =
+    \env { mod, op, arg, ret } ->
+        let
+            _ =
+                Debug.log "TODO do something in interpretUnaryOpAnnotation" ( mod, op, ( arg, ret ) )
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -449,10 +502,10 @@ interpretExpr =
                 interpretRecord env fields
 
             UnaryOp op e ->
-                interpretUnaryOp env ( op, e )
+                interpretUnaryOpCall env ( op, e )
 
             BinaryOp left op right ->
-                interpretBinaryOp env ( left, op, right )
+                interpretBinaryOpCall env ( left, op, right )
 
             RecordGet r ->
                 interpretRecordGet env r
@@ -468,6 +521,9 @@ interpretExpr =
 
             Block r ->
                 interpretBlock env r
+
+            EffectBlock r ->
+                interpretEffectBlock env r
 
             _ ->
                 Debug.todo <| "Unimplemented interpretExpr: " ++ Debug.toString expr
@@ -522,15 +578,34 @@ interpretBlock =
         interpretExpr env1 ret
 
 
-interpretUnaryOp : Interpreter ( UnaryOp, Expr ) Value
-interpretUnaryOp =
+interpretEffectBlock : Interpreter { monadModule : Id, stmts : List Stmt, ret : BangOrExpr } Value
+interpretEffectBlock =
+    \env { monadModule, stmts, ret } ->
+        -- TODO use the monad module
+        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <| \env1 _ ->
+        interpretBangOrExpr env1 ret
+
+
+interpretBangOrExpr : Interpreter BangOrExpr Value
+interpretBangOrExpr =
+    \env boe ->
+        case boe of
+            B bang ->
+                interpretBang env bang
+
+            E expr ->
+                interpretExpr env expr
+
+
+interpretUnaryOpCall : Interpreter ( UnaryOp, Expr ) Value
+interpretUnaryOpCall =
     \env ( op, expr ) ->
         Interpreter.do (interpretExpr env expr) <| \env1 val ->
-        interpretUnaryOpVal env1 ( op, val )
+        interpretUnaryOpCallVal env1 ( op, val )
 
 
-interpretUnaryOpVal : Interpreter ( UnaryOp, Value ) Value
-interpretUnaryOpVal =
+interpretUnaryOpCallVal : Interpreter ( UnaryOp, Value ) Value
+interpretUnaryOpCallVal =
     \env ( op, val ) ->
         case ( op, val ) of
             ( NegateNum, VInt n ) ->
@@ -549,16 +624,16 @@ interpretUnaryOpVal =
                 Debug.todo <| "Unimplemented interpretUnaryOpVal: " ++ Debug.toString ( op, val )
 
 
-interpretBinaryOp : Interpreter ( Expr, BinaryOp, Expr ) Value
-interpretBinaryOp =
+interpretBinaryOpCall : Interpreter ( Expr, BinaryOp, Expr ) Value
+interpretBinaryOpCall =
     \env ( left, op, right ) ->
         Interpreter.do (interpretExpr env left) <| \env1 leftVal ->
         Interpreter.do (interpretExpr env1 right) <| \env2 rightVal ->
-        interpretBinaryOpVal env2 ( leftVal, op, rightVal )
+        interpretBinaryOpCallVal env2 ( leftVal, op, rightVal )
 
 
-interpretBinaryOpVal : Interpreter ( Value, BinaryOp, Value ) Value
-interpretBinaryOpVal =
+interpretBinaryOpCallVal : Interpreter ( Value, BinaryOp, Value ) Value
+interpretBinaryOpCallVal =
     \env ( left, op, right ) ->
         case ( left, op, right ) of
             ( VInt a, Plus, VInt b ) ->

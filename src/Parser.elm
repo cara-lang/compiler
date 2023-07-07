@@ -361,22 +361,41 @@ valueAnnotationStmt =
 
 {-|
 
-    : PRIVATE? BACKTICK_STRING COLON type ARROW type ARROW type
+    : PRIVATE? BACKTICK_STRING COLON type
+                                     ^^^^ needs to be `x -> y -> z`
                ^^^^^^^^^^^^^^^ needs to be BinaryOp
     = `-` : Int -> Int -> Int
 
 -}
 binaryOperatorAnnotationStmt : Parser Stmt
 binaryOperatorAnnotationStmt =
-    Parser.succeed (\mod op left right ret -> SBinaryOperatorAnnotation { mod = mod, op = op, left = left, right = right, ret = ret })
+    Parser.succeed
+        (\mod op type__ ->
+            case type__ of
+                TFn a ->
+                    case a.to of
+                        TFn b ->
+                            Parser.succeed
+                                (SBinaryOperatorAnnotation
+                                    { mod = mod
+                                    , op = op
+                                    , left = a.from
+                                    , right = b.from
+                                    , ret = b.to
+                                    }
+                                )
+
+                        _ ->
+                            Parser.fail BinaryOpAnnotationNotFn2
+
+                _ ->
+                    Parser.fail BinaryOpAnnotationNotFn2
+        )
         |> Parser.keep letModifier
         |> Parser.keep binaryOperatorName
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep type_
-        |> Parser.skip (Parser.token Arrow)
-        |> Parser.keep type_
-        |> Parser.skip (Parser.token Arrow)
-        |> Parser.keep type_
+        |> Parser.andThen identity
 
 
 {-|
@@ -388,13 +407,27 @@ binaryOperatorAnnotationStmt =
 -}
 unaryOperatorAnnotationStmt : Parser Stmt
 unaryOperatorAnnotationStmt =
-    Parser.succeed (\mod op arg ret -> SUnaryOperatorAnnotation { mod = mod, op = op, arg = arg, ret = ret })
+    Parser.succeed
+        (\mod op type__ ->
+            case type__ of
+                TFn a ->
+                    Parser.succeed
+                        (SUnaryOperatorAnnotation
+                            { mod = mod
+                            , op = op
+                            , arg = a.from
+                            , ret = a.to
+                            }
+                        )
+
+                _ ->
+                    Parser.fail UnaryOpAnnotationNotFn1
+        )
         |> Parser.keep letModifier
         |> Parser.keep unaryOperatorName
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep type_
-        |> Parser.skip (Parser.token Arrow)
-        |> Parser.keep type_
+        |> Parser.andThen identity
 
 
 binaryOperatorName : Parser BinaryOp

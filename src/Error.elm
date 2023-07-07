@@ -64,6 +64,8 @@ type ParserError
     | UnknownBinaryOp String
     | UnknownUnaryOp String
     | EffectfulStmtInBlock
+    | BinaryOpAnnotationNotFn2
+    | UnaryOpAnnotationNotFn1
 
 
 type InterpreterError
@@ -261,6 +263,14 @@ title error =
                         EffectfulStmtInBlock ->
                             -- TODO error code
                             "Effectful statement in (non-effectful) block"
+
+                        BinaryOpAnnotationNotFn2 ->
+                            -- TODO error code
+                            "Binary operation annotation was not a 2-arg function"
+
+                        UnaryOpAnnotationNotFn1 ->
+                            -- TODO error code
+                            "Unary operation annotation was not a 1-arg function"
                    )
 
         InterpreterError interpreterError ->
