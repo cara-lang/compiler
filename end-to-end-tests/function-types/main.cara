@@ -24,7 +24,7 @@ twoArgs0 : Int -> Int -> Int
 twoArgs0(a,b) = a+b
 
 twoArgs1 : Int -> Int -> Int
-twoArgs1 = \a,b = a+b
+twoArgs1 = \a,b -> a+b
 
 twoArgs2 : Int -> Int -> Int
 twoArgs2 = #(_1+_2)
@@ -35,7 +35,7 @@ tuple0 : (Int,Int) -> Int
 tuple0((a,b)) = a+b
 
 tuple1 : (Int,Int) -> Int
-tuple1 = \(a,b) = a+b
+tuple1 = \(a,b) -> a+b
 
 ///////////
 
