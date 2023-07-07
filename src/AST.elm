@@ -8,7 +8,6 @@ module AST exposing
     , Decl(..)
     , Expr(..)
     , LetModifier(..)
-    , LetStmt
     , ModuleModifier(..)
     , Pattern(..)
     , Program
@@ -96,16 +95,8 @@ type BangOrExpr
     | E Expr
 
 
-type alias LetStmt =
-    { mod : LetModifier
-    , lhs : Pattern
-    , type_ : Maybe Type
-    , expr : Expr
-    }
-
-
 type Stmt
-    = SLet LetStmt
+    = SLet { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, expr : Expr }
     | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
     | SFunction { name : String, args : List Pattern, body : Expr }
