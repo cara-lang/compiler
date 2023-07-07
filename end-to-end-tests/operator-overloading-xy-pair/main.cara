@@ -1,8 +1,13 @@
 type alias XY = (Int, Int)
 
-`+`((ax,ay): XY, (bx,by): XY): XY = (ax+bx, ay+by)
-`*`((ax,ay): XY, (bx,by): XY): XY = (ax*bx, ay*by)
-`*`(k: Int,      (x,y): XY):   XY = (k*x,   k*y)
+`+` : XY -> XY -> XY
+`+`((ax,ay),(bx,by)) = (ax+bx, ay+by)
+
+`*` : XY -> XY -> XY
+`*`((ax,ay),(bx,by)) = (ax*bx, ay*by)
+
+`*` : Int -> XY -> XY
+`*`(k,(x,y)) = (k*x, k*y)
 
 IO.println!((1,2) + (3,4))
 IO.println!((1,2) * (3,4))
