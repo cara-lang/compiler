@@ -1,0 +1,9 @@
+const = IO {
+  1
+}
+
+foo = IO {
+  const!
+}
+
+IO.println!(foo)

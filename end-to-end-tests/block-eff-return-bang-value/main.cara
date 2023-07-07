@@ -1,0 +1,9 @@
+pure(x) = IO {
+  x
+}
+
+foo = IO {
+  pure!(1)
+}
+
+IO.println!(foo)

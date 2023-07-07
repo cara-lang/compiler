@@ -1,0 +1,30 @@
+foo = {
+
+  // SLet
+  x = 1
+
+  // SLet with type annotation
+  y: Int = 2
+
+  // SValueAnnotation
+  fn : Int -> Int
+
+  // SFunction
+  fn(a) = a + 1
+
+  // SBinaryOperatorAnnotation
+  `+` : Int -> Int -> Int
+
+  // SBinaryOperator
+  `+`(a,b) = a + b + b
+
+  // SUnaryOperatorAnnotation
+  `-` : Int -> Int
+
+  // SUnaryOperator
+  `-`(a) = a + a
+
+  fn(y)
+}
+
+IO.println!(foo)

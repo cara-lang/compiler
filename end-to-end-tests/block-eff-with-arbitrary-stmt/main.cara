@@ -1,0 +1,42 @@
+pure(x) = IO {
+  x
+}
+
+foo = IO {
+
+  // SLet
+  x = 1
+
+  // SLet with type annotation
+  y: Int = 2
+
+  // SValueAnnotation
+  fn : Int -> Int
+
+  // SFunction
+  fn(a) = a + 1
+
+  // SBinaryOperatorAnnotation
+  `+` : Bool -> Bool -> Bool
+
+  // SBinaryOperator
+  `+`(a,b) = a || b
+
+  // SUnaryOperatorAnnotation
+  `-` : Bool -> Bool
+
+  // SUnaryOperator
+  `-`(a) = !a
+
+  // SLetBang
+  z = pure!(x)
+  w = pure!(y)
+
+  // SBang
+  IO.println!(fn(1))
+  IO.println!(True + False)
+  IO.println!(-True)
+
+}
+
+IO.println!(foo)

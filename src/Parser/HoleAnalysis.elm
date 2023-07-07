@@ -6,6 +6,7 @@ module Parser.HoleAnalysis exposing
 import AST
     exposing
         ( Bang(..)
+        , BangOrExpr(..)
         , Expr(..)
         , RecordExprContent(..)
         , Stmt(..)
@@ -74,10 +75,10 @@ analyzeHoles expr =
             many (r.subject :: List.map .body r.branches)
 
         Block r ->
-            many (r.ret :: List.map .expr r.letStmts)
+            mergeMany (analyzeHoles r.ret :: List.map analyzeStmt r.stmts)
 
         EffectBlock r ->
-            mergeMany (maybe r.ret :: List.map analyzeStmt r.stmts)
+            mergeMany (analyzeBangOrExpr r.ret :: List.map analyzeStmt r.stmts)
 
         Int _ ->
             NoHoles
@@ -102,6 +103,16 @@ analyzeHoles expr =
 
         RecordGetter _ ->
             NoHoles
+
+
+analyzeBangOrExpr : BangOrExpr -> HoleAnalysis
+analyzeBangOrExpr boe =
+    case boe of
+        B bang ->
+            analyzeBang bang
+
+        E expr ->
+            analyzeHoles expr
 
 
 analyzeRecordExprContent : RecordExprContent -> HoleAnalysis
@@ -129,6 +140,24 @@ analyzeStmt stmt =
         SBang bang ->
             analyzeBang bang
 
+        SFunction r ->
+            analyzeHoles r.body
+
+        SBinaryOperator r ->
+            analyzeHoles r.body
+
+        SUnaryOperator r ->
+            analyzeHoles r.body
+
+        SValueAnnotation r ->
+            NoHoles
+
+        SBinaryOperatorAnnotation r ->
+            NoHoles
+
+        SUnaryOperatorAnnotation r ->
+            NoHoles
+
 
 analyzeBang : Bang -> HoleAnalysis
 analyzeBang bang =
@@ -140,10 +169,10 @@ analyzeBang bang =
             many (r.fn :: r.args)
 
 
-maybe : Maybe Expr -> HoleAnalysis
-maybe maybeExpr =
-    maybeExpr
-        |> Maybe.map analyzeHoles
+maybe : (a -> HoleAnalysis) -> Maybe a -> HoleAnalysis
+maybe fn val =
+    val
+        |> Maybe.map fn
         |> Maybe.withDefault NoHoles
 
 

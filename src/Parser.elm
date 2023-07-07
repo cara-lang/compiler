@@ -49,17 +49,7 @@ declaration =
             , ( [ T Test ], testDecl )
             ]
         , noncommited =
-            [ -- This needs to be before the valueAnnotationDecl to parse `x: Int = 123`
-              statementDecl
-            , {- can't prefix it because `x:Int = 123` is also possible and needs
-                 to be handled inside statementDecl (because of `private`!)
-              -}
-              valueAnnotationDecl
-            , functionDecl
-            , binaryOperatorDecl
-            , unaryOperatorDecl
-            , binaryOperatorAnnotationDecl
-            , unaryOperatorAnnotationDecl
+            [ statementDecl
             ]
         }
 
@@ -70,9 +60,9 @@ declaration =
     = f(a,b) = a + b
 
 -}
-functionDecl : Parser Decl
-functionDecl =
-    Parser.succeed (\name args body -> DFunction { name = name, args = args, body = body })
+functionStmt : Parser Stmt
+functionStmt =
+    Parser.succeed (\name args body -> SFunction { name = name, args = args, body = body })
         |> Parser.keep lowerName
         |> Parser.keep
             (Parser.separatedList
@@ -118,9 +108,9 @@ letModifier =
     = private `-`(a: Int, b: Int) = a * 2 + b
 
 -}
-binaryOperatorDecl : Parser Decl
-binaryOperatorDecl =
-    Parser.succeed (\op left right body -> DBinaryOperator { op = op, left = left, right = right, body = body })
+binaryOperatorStmt : Parser Stmt
+binaryOperatorStmt =
+    Parser.succeed (\op left right body -> SBinaryOperator { op = op, left = left, right = right, body = body })
         |> Parser.keep binaryOperatorName
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep pattern
@@ -140,9 +130,9 @@ binaryOperatorDecl =
     = private `-`(a) = a + 5
 
 -}
-unaryOperatorDecl : Parser Decl
-unaryOperatorDecl =
-    Parser.succeed (\op arg body -> DUnaryOperator { op = op, arg = arg, body = body })
+unaryOperatorStmt : Parser Stmt
+unaryOperatorStmt =
+    Parser.succeed (\op arg body -> SUnaryOperator { op = op, arg = arg, body = body })
         |> Parser.keep unaryOperatorName
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep pattern
@@ -360,9 +350,9 @@ typeModifier =
     = x : Int
 
 -}
-valueAnnotationDecl : Parser Decl
-valueAnnotationDecl =
-    Parser.succeed (\mod name type__ -> DValueAnnotation { mod = mod, name = name, type_ = type__ })
+valueAnnotationStmt : Parser Stmt
+valueAnnotationStmt =
+    Parser.succeed (\mod name type__ -> SValueAnnotation { mod = mod, name = name, type_ = type__ })
         |> Parser.keep letModifier
         |> Parser.keep (Parser.tokenData Token.getLowerName)
         |> Parser.skip (Parser.token Colon)
@@ -376,9 +366,9 @@ valueAnnotationDecl =
     = `-` : Int -> Int -> Int
 
 -}
-binaryOperatorAnnotationDecl : Parser Decl
-binaryOperatorAnnotationDecl =
-    Parser.succeed (\mod op left right ret -> DBinaryOperatorAnnotation { mod = mod, op = op, left = left, right = right, ret = ret })
+binaryOperatorAnnotationStmt : Parser Stmt
+binaryOperatorAnnotationStmt =
+    Parser.succeed (\mod op left right ret -> SBinaryOperatorAnnotation { mod = mod, op = op, left = left, right = right, ret = ret })
         |> Parser.keep letModifier
         |> Parser.keep binaryOperatorName
         |> Parser.skip (Parser.token Colon)
@@ -396,9 +386,9 @@ binaryOperatorAnnotationDecl =
     = `-` : Int -> Int
 
 -}
-unaryOperatorAnnotationDecl : Parser Decl
-unaryOperatorAnnotationDecl =
-    Parser.succeed (\mod op arg ret -> DUnaryOperatorAnnotation { mod = mod, op = op, arg = arg, ret = ret })
+unaryOperatorAnnotationStmt : Parser Stmt
+unaryOperatorAnnotationStmt =
+    Parser.succeed (\mod op arg ret -> SUnaryOperatorAnnotation { mod = mod, op = op, arg = arg, ret = ret })
         |> Parser.keep letModifier
         |> Parser.keep unaryOperatorName
         |> Parser.skip (Parser.token Colon)
@@ -678,9 +668,16 @@ statement =
     Parser.oneOf
         { commited = []
         , noncommited =
-            [ letBangStatement
+            [ -- These need to be before the valueAnnotationStmt to parse `x: Int = 123`
+              letBangStatement
             , letStatement
             , bangStatement
+            , functionStmt
+            , valueAnnotationStmt
+            , binaryOperatorStmt
+            , unaryOperatorStmt
+            , binaryOperatorAnnotationStmt
+            , unaryOperatorAnnotationStmt
             ]
         }
 
@@ -730,18 +727,14 @@ since exprs can never have effects.
 -}
 letStatement : Parser Stmt
 letStatement =
-    Parser.map SLet letStatementRaw
-
-
-letStatementRaw : Parser LetStmt
-letStatementRaw =
     Parser.succeed
         (\mod lhs t expr_ ->
-            { mod = mod
-            , lhs = lhs
-            , type_ = t
-            , expr = expr_
-            }
+            SLet
+                { mod = mod
+                , lhs = lhs
+                , type_ = t
+                , expr = expr_
+                }
         )
         |> Parser.keep letModifier
         |> Parser.keep
@@ -1292,7 +1285,7 @@ prefixExpr =
 
 {-|
 
-    : LBRACE EOL+ (letStatement EOL+)* expr EOL+ RBRACE
+    : LBRACE EOL+ (statement EOL+)* expr EOL+ RBRACE
     = {
         x = 1
         y = 1 + x
@@ -1302,14 +1295,17 @@ prefixExpr =
 -}
 blockExpr : Parser Expr
 blockExpr =
-    Parser.succeed (\letStmts ret -> Block { letStmts = letStmts, ret = ret })
+    Parser.succeed (\stmts ret -> Block { stmts = stmts, ret = ret })
         |> Parser.skip (Parser.token LBrace)
         |> Parser.skip (Parser.token EOL)
         |> Parser.skip Parser.skipEol
         |> Parser.keep
             (Parser.many
                 (Parser.succeed identity
-                    |> Parser.keep (Parser.lazy (\() -> letStatementRaw))
+                    |> Parser.keep
+                        (Parser.lazy (\() -> statement)
+                            |> Parser.butNot_ AST.isEffectfulStmt EffectfulStmtInBlock
+                        )
                     |> Parser.skip Parser.skipEol
                 )
             )
@@ -1321,7 +1317,7 @@ blockExpr =
 
 {-| TODO what about foo!(1,2,3) as the last item? instead of just an expr
 
-    : upperIdentifier LBRACE EOL+ (statement EOL+)* (expr EOL+)? RBRACE
+    : upperIdentifier LBRACE EOL+ (statement EOL+)* ((expr|bang) EOL+)? RBRACE
     = Maybe {
         head = doc.head!
         title = head.title!
@@ -1343,12 +1339,19 @@ effectBlockExpr =
                 )
             )
         |> Parser.keep
-            (Parser.maybe
-                (Parser.succeed identity
-                    |> Parser.keep (Parser.lazy (\() -> expr))
-                    |> Parser.skip Parser.skipEol
+            (Parser.lazy
+                (\() ->
+                    Parser.oneOf
+                        { commited = []
+                        , noncommited =
+                            [ bang |> Parser.map AST.B
+                            , expr |> Parser.map AST.E
+                            , Parser.succeed (AST.E Unit)
+                            ]
+                        }
                 )
             )
+        |> Parser.skip Parser.skipEol
         |> Parser.skip (Parser.token RBrace)
 
 

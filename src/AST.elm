@@ -1,5 +1,6 @@
 module AST exposing
     ( Bang(..)
+    , BangOrExpr(..)
     , BinaryOp(..)
     , CaseBranch
     , Constructor
@@ -18,6 +19,7 @@ module AST exposing
     , TypeAliasModifier(..)
     , TypeModifier(..)
     , UnaryOp(..)
+    , isEffectfulStmt
     )
 
 import Env exposing (Env)
@@ -47,8 +49,8 @@ type Expr
     | Call { fn : Expr, args : List Expr } -- foo(), bar(1,2)
     | RecordGet { record : Expr, field : String } -- record.field
       -- Blocks
-    | Block { letStmts : List LetStmt, ret : Expr } -- x = { ... }
-    | EffectBlock { monadModule : Id, stmts : List Stmt, ret : Maybe Expr } -- x = My.Monad { ... }
+    | Block { stmts : List Stmt, ret : Expr } -- x = { ... }
+    | EffectBlock { monadModule : Id, stmts : List Stmt, ret : BangOrExpr } -- x = My.Monad { ... }
       -- Other
     | Constructor_ { id : Id, args : List Expr } -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
     | Identifier Id -- foo, Bar.foo
@@ -88,6 +90,11 @@ type Bang
     | BCall { fn : Expr, args : List Expr } -- foo!(1,2), Bar.foo!(1,2), x |> foo!(1,2), foo.bar!(1,2)
 
 
+type BangOrExpr
+    = B Bang
+    | E Expr
+
+
 type alias LetStmt =
     { mod : LetModifier
     , lhs : Pattern
@@ -100,6 +107,12 @@ type Stmt
     = SLet LetStmt
     | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
+    | SFunction { name : String, args : List Pattern, body : Expr }
+    | SBinaryOperator { op : BinaryOp, left : Pattern, right : Pattern, body : Expr }
+    | SUnaryOperator { op : UnaryOp, arg : Pattern, body : Expr }
+    | SValueAnnotation { mod : LetModifier, name : String, type_ : Type }
+    | SBinaryOperatorAnnotation { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type }
+    | SUnaryOperatorAnnotation { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type }
 
 
 type TypeModifier
@@ -123,13 +136,7 @@ type Decl
     | DType { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
     | DExtendModule { id : Id, decls : List Decl }
-    | DFunction { name : String, args : List Pattern, body : Expr }
-    | DBinaryOperator { op : BinaryOp, left : Pattern, right : Pattern, body : Expr }
-    | DUnaryOperator { op : UnaryOp, arg : Pattern, body : Expr }
     | DStatement Stmt
-    | DValueAnnotation { mod : LetModifier, name : String, type_ : Type }
-    | DBinaryOperatorAnnotation { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type }
-    | DUnaryOperatorAnnotation { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type }
     | DUnitTest { name : Maybe String, expr : Expr }
     | DParameterizedTest
         { name : Maybe String
@@ -232,3 +239,35 @@ type BinaryOp
       -- ranges
     | RangeInclusive -- ..
     | RangeExclusive -- ...
+
+
+isEffectfulStmt : Stmt -> Bool
+isEffectfulStmt stmt =
+    case stmt of
+        SLetBang _ ->
+            True
+
+        SBang _ ->
+            True
+
+        --
+        SLet _ ->
+            False
+
+        SFunction _ ->
+            False
+
+        SBinaryOperator _ ->
+            False
+
+        SUnaryOperator _ ->
+            False
+
+        SValueAnnotation _ ->
+            False
+
+        SBinaryOperatorAnnotation _ ->
+            False
+
+        SUnaryOperatorAnnotation _ ->
+            False

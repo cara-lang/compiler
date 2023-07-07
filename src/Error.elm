@@ -63,6 +63,7 @@ type ParserError
     | NonNumberedHole String
     | UnknownBinaryOp String
     | UnknownUnaryOp String
+    | EffectfulStmtInBlock
 
 
 type InterpreterError
@@ -256,6 +257,10 @@ title error =
                         UnknownUnaryOp str ->
                             -- TODO error code
                             "Unknown unary op: " ++ str
+
+                        EffectfulStmtInBlock ->
+                            -- TODO error code
+                            "Effectful statement in (non-effectful) block"
                    )
 
         InterpreterError interpreterError ->

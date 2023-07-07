@@ -4,7 +4,7 @@ module Parser.Internal exposing
     , map, map2, andThen, skip, keep
     , many, manyUntilEOF
     , separatedList, separatedNonemptyList
-    , maybe, butNot
+    , maybe, butNot, butNot_
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
@@ -21,7 +21,7 @@ module Parser.Internal exposing
 @docs map, map2, andThen, skip, keep
 @docs many, manyUntilEOF
 @docs separatedList, separatedNonemptyList
-@docs maybe, butNot
+@docs maybe, butNot, butNot_
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
 @docs token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
@@ -612,6 +612,20 @@ butNot disallowedValue err parser =
             |> Result.andThen
                 (\( value, newTokens ) ->
                     if value == disallowedValue then
+                        fail_ tokens err
+
+                    else
+                        Ok ( value, newTokens )
+                )
+
+
+butNot_ : (a -> Bool) -> ParserError -> Parser a -> Parser a
+butNot_ disallowedPred err parser =
+    \tokens ->
+        parser tokens
+            |> Result.andThen
+                (\( value, newTokens ) ->
+                    if disallowedPred value then
                         fail_ tokens err
 
                     else
