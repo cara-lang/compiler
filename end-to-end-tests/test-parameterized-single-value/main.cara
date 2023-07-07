@@ -4,7 +4,8 @@ type alias PlusTestCase =
     expected: Int,
   }
 
-c(input: Int, expected: Int) = {input,expected}
+c : Int -> Int -> {input: Int, expected: Int}
+c(input,expected) = {input,expected}
 
 test "Parameterized" with [c(1,2),c(2,3)]: \{..} -> {
   actual = input + 1
