@@ -5,10 +5,10 @@ module IdGen {
 
   opaque type IdGen[a] = IdGen(Int -> (a,Int))
 
-  pure(a) : IdGen[a]
+  pure : a -> IdGen[a]
   pure(a) = IdGen(\id -> (a,id))
 
-  bind(fn: (a -> IdGen[b]), m: IdGen[a]): IdGen[b]
+  bind : (a -> IdGen[b]) -> IdGen[a] -> IdGen[b]
   bind(fn,IdGen(runA)) =
     IdGen(\id -> {
       (a,idA) = runA(id)
@@ -22,11 +22,8 @@ module IdGen {
   inc : IdGen[()]
   inc = IdGen(\id -> ((),id+1))
 
-  run(m: IdGen[a], Int): (a,Int)
+  run : IdGen[a] -> Int -> (a,Int)
   run(IdGen(run), startId) = run(startId)
-
-  each(fn: (a -> IdGen[b]), list: List[a]): IdGen[List[b]]
-  each = derived from Monad.each
 
 }
 
@@ -42,12 +39,13 @@ getAndInc = IdGen {
 
 idGenExample : IdGen[String]
 idGenExample = IdGen {
-  1..5 
-    |> each!(\_ -> IdGen {
-      id = getAndInc!
-      "$id"
-    })
-    |> String.join ","
+  i1 = getAndInc!
+  i2 = getAndInc!
+  i3 = getAndInc!
+  i4 = getAndInc!
+  i5 = getAndInc!
+  [i1,i2,i3,i4,i5]
+    |> String.join(",")
 }
 
 idGenExampleRan1 : (String, Int)
