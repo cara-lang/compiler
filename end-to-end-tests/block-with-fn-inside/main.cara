@@ -1,0 +1,6 @@
+foo = {
+  fn(a) = a + 1
+  a(1)
+}
+
+IO.println!(foo)

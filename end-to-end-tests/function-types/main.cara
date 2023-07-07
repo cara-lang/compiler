@@ -1,33 +1,55 @@
-add : Int,Int -> Int
-add(a,b) = a+b
+zeroArgs0 : -> Int
+zeroArgs0() = 1
 
-add2 : Int,Int -> Int
-add2 = \(a,b) -> a+b
+zeroArgs1 : -> Int
+zeroArgs1 = \ -> 1
 
-addCurried : Int -> Int -> Int
-addCurried = \a -> \b -> a+b
+zeroArgs2 : -> Int
+zeroArgs2 = #(1)
 
-addCurried2 : Int -> Int -> Int
-addCurried2(a) = \b -> a+b
+///////////
 
-addCurried3 : Int -> Int -> Int
-addCurried3(a) = {
-  fn(b) = a+b // TODO do we want to allow function declarations in blocks?
-  fn          // Seems like that would be cool!
-}
+oneArg0 : Int -> Int
+oneArg0(a) = a + 1
 
-first : (a,b) -> a
-first(a,_) = a
+oneArg1 : Int -> Int
+oneArg1 = \a -> a + 1
 
-first2 : (a,b) -> a
-first2 = \(a,_) -> a
+oneArg2 : Int -> Int
+oneArg2 = #(_+1)
 
-driveThePointHome(a) = {
-  a1 : Int        // We want to allow this too!
-  a1 = a + 1 
+///////////
 
-  fn : Int -> Int // And this!
-  fn(b) = a+b // TODO do we want to allow function declarations in blocks?
+twoArgs0 : Int -> Int -> Int
+twoArgs0(a,b) = a+b
 
-  fn(a1)
-}
+twoArgs1 : Int -> Int -> Int
+twoArgs1 = \a,b = a+b
+
+twoArgs2 : Int -> Int -> Int
+twoArgs2 = #(_1+_2)
+
+///////////
+
+tuple0 : (Int,Int) -> Int
+tuple0((a,b)) = a+b
+
+tuple1 : (Int,Int) -> Int
+tuple1 = \(a,b) = a+b
+
+///////////
+
+IO.println!(zeroArgs0())
+IO.println!(zeroArgs1())
+IO.println!(zeroArgs2())
+
+IO.println!(oneArg0(1))
+IO.println!(oneArg1(2))
+IO.println!(oneArg2(3))
+
+IO.println!(twoArgs0(1,2))
+IO.println!(twoArgs1(2,3))
+IO.println!(twoArgs2(3,4))
+
+IO.println!(tuple0((1,2)))
+IO.println!(tuple1((2,3)))
