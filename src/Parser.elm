@@ -1063,6 +1063,7 @@ prefixType =
             , ( [ P Token.isUpperName ], namedType )
             , ( [ P Token.isQualifier ], namedType )
             , ( [ P Token.isLowerName ], varType )
+            , ( [ T Arrow ], thunkType )
             ]
         , noncommited = []
         }
@@ -1174,6 +1175,19 @@ unitType =
     Parser.succeed TUnit
         |> Parser.skip (Parser.token LParen)
         |> Parser.skip (Parser.token RParen)
+
+
+{-|
+
+    : ARROW type
+    = -> x
+
+-}
+thunkType : Parser AST.Type
+thunkType =
+    Parser.succeed (\to -> TThunk { to = to })
+        |> Parser.skip (Parser.token Arrow)
+        |> Parser.keep (Parser.lazy (\() -> type_))
 
 
 {-|

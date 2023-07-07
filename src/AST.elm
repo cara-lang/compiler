@@ -66,6 +66,7 @@ type Type
     | TApplication { type_ : Type, args : List Type } -- List[a]
     | TVar String -- a
     | TFn { from : Type, to : Type } -- x -> y
+    | TThunk { to : Type } -- -> x
     | TTuple (List Type) -- (Int, Bool)
     | TRecord (List RecordTypeField) -- {a:Int,b:Bool}
     | TUnit -- ()
