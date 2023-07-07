@@ -128,8 +128,8 @@ type Decl
     | DUnaryOperator { op : UnaryOp, arg : Pattern, body : Expr }
     | DStatement Stmt
     | DValueAnnotation { mod : LetModifier, name : String, type_ : Type }
-    | DBinaryOperatorAnnotation { mod : LetModifier, name : String, left : Type, right : Type, ret : Type }
-    | DUnaryOperatorAnnotation { mod : LetModifier, name : String, arg : Type, ret : Type }
+    | DBinaryOperatorAnnotation { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type }
+    | DUnaryOperatorAnnotation { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type }
     | DUnitTest { name : Maybe String, expr : Expr }
     | DParameterizedTest
         { name : Maybe String

@@ -61,6 +61,8 @@ type ParserError
     | OneOfDidntMatchAnyCommited -- in case where there are no noncommited
     | MixedHoles
     | NonNumberedHole String
+    | UnknownBinaryOp String
+    | UnknownUnaryOp String
 
 
 type InterpreterError
@@ -246,6 +248,14 @@ title error =
                         NonNumberedHole str ->
                             -- TODO error code
                             "(Should be impossible, we shouldn't allow _x names in user code) Non-numbered hole: " ++ str
+
+                        UnknownBinaryOp str ->
+                            -- TODO error code
+                            "Unknown binary op: " ++ str
+
+                        UnknownUnaryOp str ->
+                            -- TODO error code
+                            "Unknown unary op: " ++ str
                    )
 
         InterpreterError interpreterError ->

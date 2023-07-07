@@ -121,7 +121,15 @@ letModifier =
 binaryOperatorDecl : Parser Decl
 binaryOperatorDecl =
     Parser.succeed (\op left right body -> DBinaryOperator { op = op, left = left, right = right, body = body })
-        |> Debug.todo "binary operator decl"
+        |> Parser.keep binaryOperatorName
+        |> Parser.skip (Parser.token LParen)
+        |> Parser.keep pattern
+        |> Parser.skip (Parser.token Comma)
+        |> Parser.keep pattern
+        |> Parser.skip (Parser.token RParen)
+        |> Parser.skip (Parser.token Token.Eq)
+        |> Parser.skip Parser.skipEolBeforeIndented
+        |> Parser.keep expr
 
 
 {-|
@@ -135,7 +143,13 @@ binaryOperatorDecl =
 unaryOperatorDecl : Parser Decl
 unaryOperatorDecl =
     Parser.succeed (\op arg body -> DUnaryOperator { op = op, arg = arg, body = body })
-        |> Debug.todo "unary operator decl"
+        |> Parser.keep unaryOperatorName
+        |> Parser.skip (Parser.token LParen)
+        |> Parser.keep pattern
+        |> Parser.skip (Parser.token RParen)
+        |> Parser.skip (Parser.token Token.Eq)
+        |> Parser.skip Parser.skipEolBeforeIndented
+        |> Parser.keep expr
 
 
 {-|
@@ -364,9 +378,15 @@ valueAnnotationDecl =
 -}
 binaryOperatorAnnotationDecl : Parser Decl
 binaryOperatorAnnotationDecl =
-    Parser.succeed (\mod name left right ret -> DBinaryOperatorAnnotation { mod = mod, name = name, left = left, right = right, ret = ret })
+    Parser.succeed (\mod op left right ret -> DBinaryOperatorAnnotation { mod = mod, op = op, left = left, right = right, ret = ret })
         |> Parser.keep letModifier
-        |> Debug.todo "binary operator annotation decl"
+        |> Parser.keep binaryOperatorName
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep type_
+        |> Parser.skip (Parser.token Arrow)
+        |> Parser.keep type_
+        |> Parser.skip (Parser.token Arrow)
+        |> Parser.keep type_
 
 
 {-|
@@ -378,8 +398,116 @@ binaryOperatorAnnotationDecl =
 -}
 unaryOperatorAnnotationDecl : Parser Decl
 unaryOperatorAnnotationDecl =
-    Parser.succeed (\mod name arg ret -> DUnaryOperatorAnnotation { mod = mod, name = name, arg = arg, ret = ret })
-        |> Debug.todo "unary operator annotation decl"
+    Parser.succeed (\mod op arg ret -> DUnaryOperatorAnnotation { mod = mod, op = op, arg = arg, ret = ret })
+        |> Parser.keep letModifier
+        |> Parser.keep unaryOperatorName
+        |> Parser.skip (Parser.token Colon)
+        |> Parser.keep type_
+        |> Parser.skip (Parser.token Arrow)
+        |> Parser.keep type_
+
+
+binaryOperatorName : Parser BinaryOp
+binaryOperatorName =
+    Parser.tokenData Token.getBacktickString
+        |> Parser.andThen
+            (\name ->
+                case name of
+                    "+" ->
+                        Parser.succeed AST.Plus
+
+                    "-" ->
+                        Parser.succeed AST.Minus
+
+                    "*" ->
+                        Parser.succeed AST.Times
+
+                    "/" ->
+                        Parser.succeed AST.Div
+
+                    "%" ->
+                        Parser.succeed Mod
+
+                    "**" ->
+                        Parser.succeed Pow
+
+                    "|" ->
+                        Parser.succeed OrBin
+
+                    "&" ->
+                        Parser.succeed AndBin
+
+                    "^" ->
+                        Parser.succeed XorBin
+
+                    "<<" ->
+                        Parser.succeed ShiftL
+
+                    ">>" ->
+                        Parser.succeed ShiftR
+
+                    ">>>" ->
+                        Parser.succeed ShiftRU
+
+                    "<=" ->
+                        Parser.succeed AST.Lte
+
+                    "<" ->
+                        Parser.succeed AST.Lt
+
+                    "==" ->
+                        Parser.succeed AST.Eq
+
+                    "!=" ->
+                        Parser.succeed AST.Neq
+
+                    ">" ->
+                        Parser.succeed AST.Gt
+
+                    ">=" ->
+                        Parser.succeed AST.Gte
+
+                    "||" ->
+                        Parser.succeed OrBool
+
+                    "&&" ->
+                        Parser.succeed AndBool
+
+                    "++" ->
+                        Parser.succeed Append
+
+                    ".." ->
+                        Parser.succeed RangeInclusive
+
+                    "..." ->
+                        Parser.succeed RangeExclusive
+
+                    _ ->
+                        Parser.fail <| UnknownBinaryOp name
+            )
+
+
+unaryOperatorName : Parser UnaryOp
+unaryOperatorName =
+    Parser.tokenData Token.getBacktickString
+        |> Parser.andThen
+            (\name ->
+                case name of
+                    "-" ->
+                        Parser.succeed NegateNum
+
+                    "!" ->
+                        Parser.succeed NegateBool
+
+                    "~" ->
+                        Parser.succeed NegateBin
+
+                    ".." ->
+                        Parser.succeed InfiniteRange
+
+                    _ ->
+                        Parser.fail <| UnknownUnaryOp name
+            )
 
 
 statementDecl : Parser Decl
