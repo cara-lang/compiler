@@ -13,7 +13,7 @@ type alias Head =
   , charset: String
   }
 
-isTitleNonEmpty1(Doc): Maybe[Bool]
+isTitleNonEmpty1 : Doc -> Maybe[Bool]
 isTitleNonEmpty1(doc) =
   case doc.head of
     Nothing -> Nothing
@@ -23,14 +23,14 @@ isTitleNonEmpty1(doc) =
         Just(title) -> Just(!title.isEmpty())
 
 
-isTitleNonEmpty2(Doc): Maybe[Bool]
+isTitleNonEmpty2 : Doc -> Maybe[Bool]
 isTitleNonEmpty2(doc) =
   doc.head
   |> Maybe.andThen(.title)
   |> Maybe.map(\t -> !t.isEmpty())
 
 
-isTitleNonEmpty3(Doc): Maybe[Bool]
+isTitleNonEmpty3 : Doc -> Maybe[Bool]
 isTitleNonEmpty3(doc) = Maybe {
   head = doc.head!
   title = head.title!
