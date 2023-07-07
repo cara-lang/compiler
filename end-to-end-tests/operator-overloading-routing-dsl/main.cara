@@ -2,6 +2,7 @@ type Route =
   | Root
   | Nest(Route,String)
 
-`/`(r: Route, s: String): Route = Nest(r,s)
+`/` : Route -> String -> Route
+`/`(r,s) = Nest(r,s)
 
 IO.println!(Root / "api" / "v1" / "workspaces")
