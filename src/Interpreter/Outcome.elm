@@ -2,7 +2,7 @@ module Interpreter.Outcome exposing
     ( Outcome(..)
     , succeed, fail
     , map, mapBoth, mapEnv, attemptMapEnv
-    , andThen
+    , andThen, onError
     )
 
 {-|
@@ -10,7 +10,7 @@ module Interpreter.Outcome exposing
 @docs Outcome
 @docs succeed, fail
 @docs map, mapBoth, mapEnv, attemptMapEnv
-@docs andThen
+@docs andThen, onError
 
 -}
 
@@ -135,3 +135,19 @@ andThen fn outcome1 =
 
         FoundError err ->
             FoundError err
+
+
+onError : (InterpreterError -> Outcome a) -> Outcome a -> Outcome a
+onError fn outcome1 =
+    case outcome1 of
+        FoundError err ->
+            fn err
+
+        DoneInterpreting env1 a ->
+            DoneInterpreting env1 a
+
+        NeedsEffect0 eff k ->
+            NeedsEffect0 eff (k >> onError fn)
+
+        NeedsEffectStr eff k ->
+            NeedsEffectStr eff (k >> onError fn)

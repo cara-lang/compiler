@@ -18,6 +18,7 @@ module AST exposing
     , TypeAliasModifier(..)
     , TypeModifier(..)
     , UnaryOp(..)
+    , binaryOpName
     , isEffectfulStmt
     , isSpreadPattern
     )
@@ -305,3 +306,76 @@ isSpreadPattern pattern =
 
         PRecordFields _ ->
             False
+
+
+binaryOpName : BinaryOp -> String
+binaryOpName op =
+    case op of
+        Plus ->
+            "+"
+
+        Minus ->
+            "-"
+
+        Times ->
+            "*"
+
+        Div ->
+            "/"
+
+        Mod ->
+            "%"
+
+        Pow ->
+            "**"
+
+        OrBin ->
+            "|"
+
+        AndBin ->
+            "&"
+
+        XorBin ->
+            "^"
+
+        ShiftL ->
+            "<<"
+
+        ShiftR ->
+            ">>"
+
+        ShiftRU ->
+            ">>>"
+
+        Lte ->
+            "<="
+
+        Lt ->
+            "<"
+
+        Eq ->
+            "=="
+
+        Neq ->
+            "!="
+
+        Gt ->
+            ">"
+
+        Gte ->
+            ">="
+
+        OrBool ->
+            "||"
+
+        AndBool ->
+            "&&"
+
+        Append ->
+            "++"
+
+        RangeInclusive ->
+            ".."
+
+        RangeExclusive ->
+            "..."

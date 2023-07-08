@@ -160,11 +160,18 @@ interpretBinaryOp : Interpreter { op : BinaryOp, left : Pattern, right : Pattern
 interpretBinaryOp =
     \env { op, left, right, body } ->
         let
-            _ =
-                Debug.log "TODO do something in interpretBinaryOp" ( op, ( left, right, body ) )
+            newEnv =
+                Env.addBinaryOp (AST.binaryOpName op)
+                    (VClosure
+                        { args = [ left, right ]
+                        , body = body
+                        , env = env
+                        }
+                    )
+                    env
         in
         -- TODO make type annotations do something
-        Outcome.succeed env ()
+        Outcome.succeed newEnv ()
 
 
 interpretUnaryOp : Interpreter { op : UnaryOp, arg : Pattern, body : Expr } ()
@@ -580,9 +587,15 @@ interpretCall =
     \env { fn, args } ->
         Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
         Interpreter.do (Interpreter.traverse interpretExpr env1 args) <| \env2 argVals ->
+        interpretCallVal env2 ( fnVal, argVals )
+
+
+interpretCallVal : Interpreter ( Value, List Value ) Value
+interpretCallVal =
+    \env ( fnVal, argVals ) ->
         case ( fnVal, argVals ) of
             ( VRecordGetter field, [ VTuple values ] ) ->
-                interpretRecordGetTuple env2 ( values, field )
+                interpretRecordGetTuple env ( values, field )
 
             ( VClosure r, _ ) ->
                 case compare (List.length r.args) (List.length argVals) of
@@ -602,13 +615,13 @@ interpretCall =
                                 r.args
                                     |> List.drop (List.length argVals)
                         in
-                        Interpreter.do (Interpreter.traverse interpretPattern env2 availablePairs) <| \env3 maybeDicts ->
+                        Interpreter.do (Interpreter.traverse interpretPattern env availablePairs) <| \env2 maybeDicts ->
                         case Maybe.combine maybeDicts of
                             Nothing ->
                                 Outcome.fail PatternMismatch
 
                             Just dicts ->
-                                Outcome.succeed env3 <|
+                                Outcome.succeed env2 <|
                                     VClosure
                                         { args = argsRest
                                         , body = r.body
@@ -621,14 +634,14 @@ interpretCall =
                             pairs =
                                 List.map2 Tuple.pair r.args argVals
                         in
-                        Interpreter.do (Interpreter.traverse interpretPattern env2 pairs) <| \env3 maybeDicts ->
+                        Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env2 maybeDicts ->
                         case Maybe.combine maybeDicts of
                             Nothing ->
                                 Outcome.fail PatternMismatch
 
                             Just dicts ->
                                 Interpreter.do (interpretExpr (List.foldl Env.addDict r.env dicts) r.body) <| \_ callResult ->
-                                Outcome.succeed env3 callResult
+                                Outcome.succeed env2 callResult
 
             _ ->
                 Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
@@ -705,6 +718,7 @@ interpretBinaryOpCallVal : Interpreter ( Value, BinaryOp, Value ) Value
 interpretBinaryOpCallVal =
     \env ( left, op, right ) ->
         case ( left, op, right ) of
+            -- language-given binary operators
             ( VInt a, Plus, VInt b ) ->
                 Outcome.succeed env <| VInt (a + b)
 
@@ -780,8 +794,32 @@ interpretBinaryOpCallVal =
             ( VInt a, ShiftRU, VInt b ) ->
                 Outcome.succeed env <| VInt (a |> Bitwise.shiftRightZfBy b)
 
+            -- user-given binary operators
             _ ->
-                Debug.todo <| "Unimplemented interpretBinaryOp: " ++ Debug.toString ( left, op, right )
+                let
+                    finishWithUnknown () =
+                        Debug.todo <| "interpretBinaryOp: " ++ Debug.toString ( left, op, right ) ++ " (and not found in user binary ops)"
+                in
+                case Env.getBinaryOp (AST.binaryOpName op) env of
+                    Nothing ->
+                        finishWithUnknown ()
+
+                    Just userOverloads ->
+                        interpretBinaryOpCallUser finishWithUnknown env ( left, userOverloads, right )
+
+
+interpretBinaryOpCallUser : (() -> Outcome Value) -> Interpreter ( Value, List Value, Value ) Value
+interpretBinaryOpCallUser finishWithUnknown =
+    \env ( left, userOverloads, right ) ->
+        -- TODO pick the correct overload based on the types.
+        -- Right now we try them all and pick the first one that doesn't error out
+        case userOverloads of
+            [] ->
+                finishWithUnknown ()
+
+            overload :: rest ->
+                interpretCallVal env ( overload, [ left, right ] )
+                    |> Outcome.onError (\_ -> interpretBinaryOpCallUser finishWithUnknown env ( left, rest, right ))
 
 
 interpretRecordGet : Interpreter { record : Expr, field : String } Value

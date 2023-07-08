@@ -1,17 +1,19 @@
 module Env exposing
     ( Env, initWithIntrinsics
-    , add, addId, addDict, createModule
+    , add, addId, addDict, addBinaryOp
+    , createModule
     , open, goUp
-    , get, toString
+    , get, getBinaryOp, toString
     , Module
     )
 
 {-|
 
 @docs Env, initWithIntrinsics
-@docs add, addId, addDict, createModule
+@docs add, addId, addDict, addBinaryOp
+@docs createModule
 @docs open, goUp
-@docs get, toString
+@docs get, getBinaryOp, toString
 @docs Module
 
 -}
@@ -35,6 +37,7 @@ type alias Module value =
 
     -- TODO private/public
     , values : Dict String value
+    , binaryOps : Dict String (List value)
     }
 
 
@@ -55,6 +58,7 @@ emptyModule : String -> Module value
 emptyModule name =
     { name = name
     , values = Dict.empty
+    , binaryOps = Dict.empty
     }
 
 
@@ -95,6 +99,24 @@ addDict dict env =
     dict
         |> EnvDict.toList
         |> List.foldl (\( id, value ) env_ -> addId id value env_) env
+
+
+addBinaryOp : String -> value -> Env value -> Env value
+addBinaryOp op impl env =
+    env
+        |> Zipper.mapLabel
+            (\m ->
+                { m
+                    | binaryOps =
+                        Dict.update
+                            op
+                            (Maybe.withDefault []
+                                >> (::) impl
+                                >> Just
+                            )
+                            m.binaryOps
+                }
+            )
 
 
 createModule : String -> Env value -> Env value
@@ -158,6 +180,11 @@ get id env =
                 (Zipper.label deepEnv).values
                     |> Dict.get id.name
             )
+
+
+getBinaryOp : String -> Env value -> Maybe (List value)
+getBinaryOp binop env =
+    Dict.get binop (Zipper.label env).binaryOps
 
 
 toString : { valueToString : value -> String } -> Env value -> String
