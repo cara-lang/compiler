@@ -43,33 +43,25 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    effect0 (Effect.Println "----------------------------") <|
-        \() ->
-            effect0 (Effect.Println "Running tests") <|
-                \() ->
-                    effect0 (Effect.Println "----------------------------") <|
-                        \() ->
-                            runTests flags.rootPath flags.dirs
+    effect0 (Effect.Println "Running tests") <| \() ->
+    effect0 (Effect.Println "----------------------------") <| \() ->
+    runTests flags.rootPath flags.dirs
 
 
 runTests : String -> List String -> ( Model, Cmd Msg )
 runTests rootPath testDirs =
     case testDirs of
         [] ->
-            effect0 (Effect.Println "Done running tests!") <|
-                \() ->
-                    ( Done, Cmd.none )
+            effect0 (Effect.Println "----------------------------") <| \() ->
+            effect0 (Effect.Println "Done running tests!") <| \() ->
+            ( Done, Cmd.none )
 
         testDir :: rest ->
-            effect0 (Effect.Chdir testDir) <|
-                \() ->
-                    effectStr (Effect.ReadFile { filename = "main.cara" }) <|
-                        \fileContents ->
-                            runTest testDir fileContents <|
-                                \() ->
-                                    effect0 (Effect.Chdir rootPath) <|
-                                        \() ->
-                                            runTests rootPath rest
+            effect0 (Effect.Chdir testDir) <| \() ->
+            effectStr (Effect.ReadFile { filename = "main.cara" }) <| \fileContents ->
+            runTest testDir fileContents <| \() ->
+            effect0 (Effect.Chdir rootPath) <| \() ->
+            runTests rootPath rest
 
 
 runTest : String -> String -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
@@ -85,7 +77,7 @@ runTest name fileContents k =
                 k ()
 
             else
-                effect0 (Effect.Println <| name ++ " | Lexer | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
+                effect0 (Effect.Eprintln <| ": " ++ name ++ " | Lexer | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
 
         Err (ParserError ( loc, err )) ->
             if String.endsWith "-err" name then
@@ -93,7 +85,7 @@ runTest name fileContents k =
                 k ()
 
             else
-                effect0 (Effect.Println <| name ++ " | Parser | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
+                effect0 (Effect.Eprintln <| ": " ++ name ++ " | Parser | " ++ Loc.toString loc ++ " | " ++ Debug.toString err) k
 
         Err (InterpreterError err) ->
             if String.endsWith "-err" name then
@@ -101,48 +93,54 @@ runTest name fileContents k =
                 k ()
 
             else
-                effect0 (Effect.Println <| name ++ " | Interpreter | " ++ Debug.toString err) k
+                effect0 (Effect.Eprintln <| ": " ++ name ++ " | Interpreter | " ++ Debug.toString err) k
 
         Ok astTree ->
-            {-
-               astTree
-                   |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
-                   |> handleInterpreterOutcome
-            -}
-            k ()
+            astTree
+                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                |> handleInterpreterOutcome name k
 
 
-handleInterpreterOutcome : Interpreter.Outcome () -> ( Model, Cmd Msg )
-handleInterpreterOutcome outcome =
+handleInterpreterOutcome :
+    String
+    -> (() -> ( Model, Cmd Msg ))
+    -> Interpreter.Outcome ()
+    -> ( Model, Cmd Msg )
+handleInterpreterOutcome testName k outcome =
     case outcome of
         Interpreter.DoneInterpreting _ _ ->
-            finish
+            k ()
 
-        Interpreter.FoundError error ->
-            Debug.todo "mark failure, continue with other tests"
+        Interpreter.FoundError err ->
+            effect0 (Effect.Eprintln <| ": " ++ testName ++ " | Interpreter | " ++ Debug.toString err) k
 
-        Interpreter.NeedsEffect0 effect k ->
-            pauseOnEffect0 effect k
+        Interpreter.NeedsEffect0 effect kOutcome ->
+            pauseOnEffect0 effect kOutcome testName k
 
-        Interpreter.NeedsEffectStr effect k ->
-            pauseOnEffectStr effect k
-
-
-finish : ( Model, Cmd Msg )
-finish =
-    ( Done, Cmd.none )
+        Interpreter.NeedsEffectStr effect kOutcome ->
+            pauseOnEffectStr effect kOutcome testName k
 
 
-pauseOnEffect0 : Effect0 -> (() -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
-pauseOnEffect0 effect k =
-    ( PausedOnEffect0 effect (k >> handleInterpreterOutcome)
+pauseOnEffect0 :
+    Effect0
+    -> (() -> Interpreter.Outcome ())
+    -> String
+    -> (() -> ( Model, Cmd Msg ))
+    -> ( Model, Cmd Msg )
+pauseOnEffect0 effect kOutcome testName k =
+    ( PausedOnEffect0 effect (kOutcome >> handleInterpreterOutcome testName k)
     , Effect.handleEffect0 effect
     )
 
 
-pauseOnEffectStr : EffectStr -> (String -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
-pauseOnEffectStr effect k =
-    ( PausedOnEffectStr effect (k >> handleInterpreterOutcome)
+pauseOnEffectStr :
+    EffectStr
+    -> (String -> Interpreter.Outcome ())
+    -> String
+    -> (() -> ( Model, Cmd Msg ))
+    -> ( Model, Cmd Msg )
+pauseOnEffectStr effect kOutcome testName k =
+    ( PausedOnEffectStr effect (kOutcome >> handleInterpreterOutcome testName k)
     , Effect.handleEffectStr effect
     )
 

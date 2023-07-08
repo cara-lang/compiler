@@ -5,7 +5,24 @@ DIM="\e[2m";
 
 function compile {
   # deno check test.ts src/*.ts 2>&1
-  yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js && ./src/index.ts 2>&1 | tail -n +2 | column -t -s\|
+  yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js \
+    && ./src/index.ts 2>&1 | tee >(grep -A2 ".*error.*Uncaught" >uncaught.txt) >(grep "^:" | column -t -s\| >table.txt)
+
+  echo
+  echo
+  echo
+  echo "-------------------"
+  echo
+  echo
+  echo
+
+  cat table.txt
+  rm table.txt
+  echo
+
+  cat uncaught.txt
+  rm uncaught.txt
+  echo
 }
 
 function run {
