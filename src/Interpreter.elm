@@ -301,22 +301,20 @@ interpretBang =
 interpretBangValue : Interpreter Expr Value
 interpretBangValue =
     \env expr ->
-        Interpreter.do (interpretExpr env expr) <|
-            \env1 val ->
-                Debug.todo <| "what the heck are we getting here? " ++ Debug.toString val
+        Interpreter.do (interpretExpr env expr) <| \env1 val ->
+        Debug.todo <| "what the heck are we getting here? " ++ Debug.toString val
 
 
 interpretBangCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretBangCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr env fn) <|
-            \env1 fnVal ->
-                case fnVal of
-                    VIntrinsic intrinsic ->
-                        interpretIntrinsicCall env1 ( intrinsic, args )
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        case fnVal of
+            VIntrinsic intrinsic ->
+                interpretIntrinsicCall env1 ( intrinsic, args )
 
-                    _ ->
-                        Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
+            _ ->
+                Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
 
 
 interpretIntrinsicCall : Interpreter ( Intrinsic, List Expr ) Value
@@ -346,18 +344,16 @@ interpretLet =
     \env { lhs, expr } ->
         -- TODO interpret the modifier
         -- TODO interpret the type
-        Interpreter.do (interpretExpr env expr) <|
-            \env1 value ->
-                Interpreter.do (interpretPattern env1 ( lhs, value )) <|
-                    \env2 envAdditions ->
-                        case envAdditions of
-                            Nothing ->
-                                Outcome.fail <| PatternDidNotMatch ( lhs, value )
+        Interpreter.do (interpretExpr env expr) <| \env1 value ->
+        Interpreter.do (interpretPattern env1 ( lhs, value )) <| \env2 envAdditions ->
+        case envAdditions of
+            Nothing ->
+                Outcome.fail <| PatternDidNotMatch ( lhs, value )
 
-                            Just additions ->
-                                Outcome.succeed
-                                    (Env.addDict additions env2)
-                                    ()
+            Just additions ->
+                Outcome.succeed
+                    (Env.addDict additions env2)
+                    ()
 
 
 interpretLetBang :
@@ -454,14 +450,13 @@ interpretPattern =
                                 pairs =
                                     List.map2 Tuple.pair args r.args
                             in
-                            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <|
-                                \env1 maybeAdditions ->
-                                    case Maybe.combine maybeAdditions of
-                                        Nothing ->
-                                            Outcome.succeed env Nothing
+                            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env1 maybeAdditions ->
+                            case Maybe.combine maybeAdditions of
+                                Nothing ->
+                                    Outcome.succeed env Nothing
 
-                                        Just additions ->
-                                            Outcome.succeed env (Just (EnvDict.unionAll additions))
+                                Just additions ->
+                                    Outcome.succeed env (Just (EnvDict.unionAll additions))
 
                         else
                             Outcome.succeed env Nothing
@@ -583,41 +578,60 @@ interpretExpr =
 interpretCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr env fn) <|
-            \env1 fnVal ->
-                Interpreter.do (Interpreter.traverse interpretExpr env1 args) <|
-                    \env2 argVals ->
-                        case ( fnVal, argVals ) of
-                            ( VRecordGetter field, [ VTuple values ] ) ->
-                                interpretRecordGetTuple env2 ( values, field )
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        Interpreter.do (Interpreter.traverse interpretExpr env1 args) <| \env2 argVals ->
+        case ( fnVal, argVals ) of
+            ( VRecordGetter field, [ VTuple values ] ) ->
+                interpretRecordGetTuple env2 ( values, field )
 
-                            ( VClosure r, _ ) ->
-                                case compare (List.length r.args) (List.length argVals) of
-                                    LT ->
-                                        Debug.todo "call closure #args < #values"
+            ( VClosure r, _ ) ->
+                case compare (List.length r.args) (List.length argVals) of
+                    LT ->
+                        Debug.todo "call closure #args < #values"
 
-                                    GT ->
-                                        Debug.todo "call closure #args > #values"
+                    GT ->
+                        -- More args than values
+                        -- We'll partially apply the function and return a new lambda waiting for the rest
+                        let
+                            availablePairs : List ( Pattern, Value )
+                            availablePairs =
+                                List.map2 Tuple.pair r.args argVals
 
-                                    EQ ->
-                                        let
-                                            pairs : List ( Pattern, Value )
-                                            pairs =
-                                                List.map2 Tuple.pair r.args argVals
-                                        in
-                                        Interpreter.do (Interpreter.traverse interpretPattern env2 pairs) <|
-                                            \env3 maybeDicts ->
-                                                case Maybe.combine maybeDicts of
-                                                    Nothing ->
-                                                        Outcome.fail PatternMismatch
+                            argsRest : List Pattern
+                            argsRest =
+                                r.args
+                                    |> List.drop (List.length argVals)
+                        in
+                        Interpreter.do (Interpreter.traverse interpretPattern env2 availablePairs) <| \env3 maybeDicts ->
+                        case Maybe.combine maybeDicts of
+                            Nothing ->
+                                Outcome.fail PatternMismatch
 
-                                                    Just dicts ->
-                                                        Interpreter.do (interpretExpr (List.foldl Env.addDict r.env dicts) r.body) <|
-                                                            \_ callResult ->
-                                                                Outcome.succeed env3 callResult
+                            Just dicts ->
+                                Outcome.succeed env3 <|
+                                    VClosure
+                                        { args = argsRest
+                                        , body = r.body
+                                        , env = List.foldl Env.addDict r.env dicts
+                                        }
 
-                            _ ->
-                                Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
+                    EQ ->
+                        let
+                            pairs : List ( Pattern, Value )
+                            pairs =
+                                List.map2 Tuple.pair r.args argVals
+                        in
+                        Interpreter.do (Interpreter.traverse interpretPattern env2 pairs) <| \env3 maybeDicts ->
+                        case Maybe.combine maybeDicts of
+                            Nothing ->
+                                Outcome.fail PatternMismatch
+
+                            Just dicts ->
+                                Interpreter.do (interpretExpr (List.foldl Env.addDict r.env dicts) r.body) <| \_ callResult ->
+                                Outcome.succeed env3 callResult
+
+            _ ->
+                Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
 
 
 interpretLambda : Interpreter { args : List Pattern, body : Expr } Value
@@ -629,18 +643,16 @@ interpretLambda =
 interpretBlock : Interpreter { stmts : List Stmt, ret : Expr } Value
 interpretBlock =
     \env { stmts, ret } ->
-        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <|
-            \env1 _ ->
-                interpretExpr env1 ret
+        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <| \env1 _ ->
+        interpretExpr env1 ret
 
 
 interpretEffectBlock : Interpreter { monadModule : Id, stmts : List Stmt, ret : BangOrExpr } Value
 interpretEffectBlock =
     \env { monadModule, stmts, ret } ->
         -- TODO use the monad module
-        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <|
-            \env1 _ ->
-                interpretBangOrExpr env1 ret
+        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <| \env1 _ ->
+        interpretBangOrExpr env1 ret
 
 
 interpretBangOrExpr : Interpreter BangOrExpr Value
@@ -657,9 +669,8 @@ interpretBangOrExpr =
 interpretUnaryOpCall : Interpreter ( UnaryOp, Expr ) Value
 interpretUnaryOpCall =
     \env ( op, expr ) ->
-        Interpreter.do (interpretExpr env expr) <|
-            \env1 val ->
-                interpretUnaryOpCallVal env1 ( op, val )
+        Interpreter.do (interpretExpr env expr) <| \env1 val ->
+        interpretUnaryOpCallVal env1 ( op, val )
 
 
 interpretUnaryOpCallVal : Interpreter ( UnaryOp, Value ) Value
@@ -685,11 +696,9 @@ interpretUnaryOpCallVal =
 interpretBinaryOpCall : Interpreter ( Expr, BinaryOp, Expr ) Value
 interpretBinaryOpCall =
     \env ( left, op, right ) ->
-        Interpreter.do (interpretExpr env left) <|
-            \env1 leftVal ->
-                Interpreter.do (interpretExpr env1 right) <|
-                    \env2 rightVal ->
-                        interpretBinaryOpCallVal env2 ( leftVal, op, rightVal )
+        Interpreter.do (interpretExpr env left) <| \env1 leftVal ->
+        Interpreter.do (interpretExpr env1 right) <| \env2 rightVal ->
+        interpretBinaryOpCallVal env2 ( leftVal, op, rightVal )
 
 
 interpretBinaryOpCallVal : Interpreter ( Value, BinaryOp, Value ) Value
@@ -778,22 +787,21 @@ interpretBinaryOpCallVal =
 interpretRecordGet : Interpreter { record : Expr, field : String } Value
 interpretRecordGet =
     \env { record, field } ->
-        Interpreter.do (interpretExpr env record) <|
-            \env1 recordVal ->
-                case recordVal of
-                    VTuple values ->
-                        interpretRecordGetTuple env1 ( values, field )
+        Interpreter.do (interpretExpr env record) <| \env1 recordVal ->
+        case recordVal of
+            VTuple values ->
+                interpretRecordGetTuple env1 ( values, field )
 
-                    VRecord fields ->
-                        case Dict.get field fields of
-                            Nothing ->
-                                Outcome.fail <| RecordFieldNotFound field
+            VRecord fields ->
+                case Dict.get field fields of
+                    Nothing ->
+                        Outcome.fail <| RecordFieldNotFound field
 
-                            Just content ->
-                                Outcome.succeed env1 content
+                    Just content ->
+                        Outcome.succeed env1 content
 
-                    _ ->
-                        Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
+            _ ->
+                Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
 
 
 specialTupleGetters : Dict String Int
@@ -896,35 +904,33 @@ interpretConstructor =
 interpretIf : Interpreter { cond : Expr, then_ : Expr, else_ : Expr } Value
 interpretIf =
     \env { cond, then_, else_ } ->
-        Interpreter.do (interpretExpr env cond) <|
-            \env1 cond_ ->
-                case cond_ of
-                    VBool True ->
-                        interpretExpr env1 then_
+        Interpreter.do (interpretExpr env cond) <| \env1 cond_ ->
+        case cond_ of
+            VBool True ->
+                interpretExpr env1 then_
 
-                    VBool False ->
-                        interpretExpr env1 else_
+            VBool False ->
+                interpretExpr env1 else_
 
-                    _ ->
-                        Outcome.fail IfConditionNotBool
+            _ ->
+                Outcome.fail IfConditionNotBool
 
 
 interpretCase : Interpreter { subject : Expr, branches : List CaseBranch } Value
 interpretCase =
     \env { subject, branches } ->
-        Interpreter.do (interpretExpr env subject) <|
-            \env1 subject_ ->
-                let
-                    flatBranches : List ( Pattern, Expr )
-                    flatBranches =
-                        branches
-                            |> List.concatMap
-                                (\branch ->
-                                    branch.orPatterns
-                                        |> List.map (\pattern -> ( pattern, branch.body ))
-                                )
-                in
-                interpretCaseBranches env1 ( subject_, flatBranches )
+        Interpreter.do (interpretExpr env subject) <| \env1 subject_ ->
+        let
+            flatBranches : List ( Pattern, Expr )
+            flatBranches =
+                branches
+                    |> List.concatMap
+                        (\branch ->
+                            branch.orPatterns
+                                |> List.map (\pattern -> ( pattern, branch.body ))
+                        )
+        in
+        interpretCaseBranches env1 ( subject_, flatBranches )
 
 
 interpretCaseBranches : Interpreter ( Value, List ( Pattern, Expr ) ) Value
@@ -935,18 +941,17 @@ interpretCaseBranches =
                 Outcome.fail NoCaseBranchMatched
 
             ( pattern, body ) :: rest ->
-                Interpreter.do (interpretPattern env ( pattern, subject )) <|
-                    \env1 maybeAdditions ->
-                        case maybeAdditions of
-                            Nothing ->
-                                interpretCaseBranches env ( subject, rest )
+                Interpreter.do (interpretPattern env ( pattern, subject )) <| \env1 maybeAdditions ->
+                case maybeAdditions of
+                    Nothing ->
+                        interpretCaseBranches env ( subject, rest )
 
-                            Just additions ->
-                                let
-                                    newEnv =
-                                        env1 |> Env.addDict additions
-                                in
-                                interpretExpr newEnv body
+                    Just additions ->
+                        let
+                            newEnv =
+                                env1 |> Env.addDict additions
+                        in
+                        interpretExpr newEnv body
 
 
 interpretList : Interpreter (List Expr) Value

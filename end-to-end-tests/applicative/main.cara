@@ -4,19 +4,15 @@ type I[a] = I(a)
 succeed : a -> I[a]
 succeed(a) = I(a)
 
-map : (a -> b) -> I[a] -> I[b]
-map(fn,I(a)) = I(fn(a))
-
-map2 : (a -> b -> c) -> I[a] -> I[b] -> I[c]
-map2(fn,I(a),I(b)) = I(fn(a,b))
-
-andMap : I[a] -> I[a -> b] -> I[b]
+andMap : I[a] -> I[a->b] -> I[b]
 andMap(I(a),I(fn)) = I(fn(a))
 
-// Thanks to allowing multiple-arg functions to be called with less than the needed number of arguments, we can do this.
-y = succeed(\a,b,c -> a+b+c)
-    |> andMap(succeed(4))
-    |> andMap(succeed(5))
-    |> andMap(succeed(6))
+/* Thanks to allowing multiple-arg functions to be called with
+   less than the needed number of arguments, we can do this.
+*/
+I(y) = succeed(\a,b,c -> a+b+c)
+        |> andMap(succeed(4))
+        |> andMap(succeed(5))
+        |> andMap(succeed(6))
 
-IO.println!(y)
+IO.println!(y) // -> 15
