@@ -1,0 +1,11 @@
+module Foo {
+  x = 1
+  module Bar {
+    y = 2
+  }
+}
+
+use Foo
+
+IO.println!(x)
+IO.println!(Bar.y)
