@@ -20,21 +20,21 @@ isTitleNonEmpty1(doc) =
     Just(head) ->
       case head.title of
         Nothing -> Nothing
-        Just(title) -> Just(!title.isEmpty())
+        Just(title) -> Just(!String.isEmpty(title))
 
 
 isTitleNonEmpty2 : Doc -> Maybe[Bool]
 isTitleNonEmpty2(doc) =
   doc.head
   |> Maybe.andThen(.title)
-  |> Maybe.map(\t -> !t.isEmpty())
+  |> Maybe.map(\t -> !String.isEmpty(t))
 
 
 isTitleNonEmpty3 : Doc -> Maybe[Bool]
 isTitleNonEmpty3(doc) = Maybe {
   head = doc.head!
   title = head.title!
-  !title.isEmpty()
+  !String.isEmpty(title)
 }
 
 value1: Doc = {

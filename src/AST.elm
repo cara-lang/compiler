@@ -19,6 +19,7 @@ module AST exposing
     , TypeModifier(..)
     , UnaryOp(..)
     , isEffectfulStmt
+    , isSpreadPattern
     )
 
 import Env exposing (Env)
@@ -266,4 +267,41 @@ isEffectfulStmt stmt =
             False
 
         SUseModule _ ->
+            False
+
+
+isSpreadPattern : Pattern -> Bool
+isSpreadPattern pattern =
+    case pattern of
+        PSpread _ ->
+            True
+
+        PUnit ->
+            False
+
+        PVar _ ->
+            False
+
+        PConstructor _ ->
+            False
+
+        PInt _ ->
+            False
+
+        PFloat _ ->
+            False
+
+        PList _ ->
+            False
+
+        PTuple _ ->
+            False
+
+        PWildcard ->
+            False
+
+        PRecordSpread ->
+            False
+
+        PRecordFields _ ->
             False

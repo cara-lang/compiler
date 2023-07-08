@@ -6,9 +6,11 @@ module Error exposing
     , title
     )
 
+import AST exposing (Pattern)
 import Id exposing (Id)
 import Loc exposing (Loc)
 import Token
+import Value exposing (Value)
 
 
 type Error
@@ -82,6 +84,9 @@ type InterpreterError
     | IfConditionNotBool
     | PatternMismatch
     | NoCaseBranchMatched
+    | MultipleSpreadPatterns
+    | PatternDidNotMatch ( Pattern, Value )
+    | RecordFieldNotFound String
 
 
 title : Error -> String
@@ -318,6 +323,18 @@ title error =
                         NoCaseBranchMatched ->
                             -- TODO error code
                             "No case..of branch matched"
+
+                        MultipleSpreadPatterns ->
+                            -- TODO error code
+                            "Multiple spread patterns in a list pattern"
+
+                        PatternDidNotMatch ( pattern, value ) ->
+                            -- TODO error code
+                            "Pattern did not match: " ++ Debug.toString ( pattern, value )
+
+                        RecordFieldNotFound field ->
+                            -- TODO error code
+                            "Record field not found: " ++ field
                    )
 
 

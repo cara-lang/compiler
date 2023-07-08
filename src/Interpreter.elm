@@ -346,20 +346,18 @@ interpretLet =
     \env { lhs, expr } ->
         -- TODO interpret the modifier
         -- TODO interpret the type
-        interpretExpr env expr
-            |> Outcome.map (\value -> ( lhs, value ))
-            |> Interpreter.andThen interpretPattern
-            |> Outcome.mapBoth
-                (\env_ envAdditions ->
-                    case envAdditions of
-                        Nothing ->
-                            Debug.todo "Pattern didn't match the expr. TODO Report this as user error?"
+        Interpreter.do (interpretExpr env expr) <|
+            \env1 value ->
+                Interpreter.do (interpretPattern env1 ( lhs, value )) <|
+                    \env2 envAdditions ->
+                        case envAdditions of
+                            Nothing ->
+                                Outcome.fail <| PatternDidNotMatch ( lhs, value )
 
-                        Just additions ->
-                            ( env_ |> Env.addDict additions
-                            , ()
-                            )
-                )
+                            Just additions ->
+                                Outcome.succeed
+                                    (Env.addDict additions env2)
+                                    ()
 
 
 interpretLetBang :
@@ -471,8 +469,44 @@ interpretPattern =
                     _ ->
                         Outcome.succeed env Nothing
 
+            PList ps ->
+                case value of
+                    VList vs ->
+                        interpretPatternList env ( ps, vs )
+
+                    _ ->
+                        Outcome.succeed env Nothing
+
             _ ->
                 Debug.todo <| "interpret pattern - other: " ++ Debug.toString pattern
+
+
+interpretPatternList : Interpreter ( List Pattern, List Value ) (Maybe (EnvDict Value))
+interpretPatternList =
+    \env ( ps, vs ) ->
+        case List.length (List.filter AST.isSpreadPattern ps) of
+            0 ->
+                Debug.todo "interpretPatternList - zero spreads"
+
+            1 ->
+                case ps of
+                    (PSpread a) :: rest ->
+                        Debug.todo "interpretPatternList - one spread - spread at the beginning"
+
+                    _ ->
+                        case List.reverse ps of
+                            (PSpread a) :: rest ->
+                                let
+                                    _ =
+                                        Debug.log "TODO - interpretPatternList - one spread - spread at the end"
+                                in
+                                Outcome.succeed env (Just EnvDict.empty)
+
+                            _ ->
+                                Debug.todo "interpretPatternList - one spread - spread somewhere in the middle"
+
+            _ ->
+                Outcome.fail MultipleSpreadPatterns
 
 
 interpretExpr : Interpreter Expr Value
@@ -748,7 +782,15 @@ interpretRecordGet =
             \env1 recordVal ->
                 case recordVal of
                     VTuple values ->
-                        interpretRecordGetTuple env ( values, field )
+                        interpretRecordGetTuple env1 ( values, field )
+
+                    VRecord fields ->
+                        case Dict.get field fields of
+                            Nothing ->
+                                Outcome.fail <| RecordFieldNotFound field
+
+                            Just content ->
+                                Outcome.succeed env1 content
 
                     _ ->
                         Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
