@@ -699,7 +699,9 @@ propertyGenTestDecl =
 statement : Parser Stmt
 statement =
     Parser.oneOf
-        { commited = []
+        { commited =
+            [ ( [ T Use ], useModuleStatement )
+            ]
         , noncommited =
             [ -- These need to be before the valueAnnotationStmt to parse `x: Int = 123`
               letBangStatement
@@ -713,6 +715,20 @@ statement =
             , unaryOperatorAnnotationStmt
             ]
         }
+
+
+{-|
+
+    : USE upperIdentifier
+    = use Foo
+    = use Foo.Bar
+
+-}
+useModuleStatement : Parser Stmt
+useModuleStatement =
+    Parser.succeed SUseModule
+        |> Parser.skip (Parser.token Use)
+        |> Parser.keep upperIdentifier
 
 
 {-|

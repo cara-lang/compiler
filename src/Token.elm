@@ -72,6 +72,7 @@ type Type
     | If
     | Then
     | Else
+    | Use
     | True_
     | False_
     | Type

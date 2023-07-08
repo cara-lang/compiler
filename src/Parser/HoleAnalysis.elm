@@ -158,6 +158,9 @@ analyzeStmt stmt =
         SUnaryOperatorAnnotation r ->
             NoHoles
 
+        SUseModule _ ->
+            NoHoles
+
 
 analyzeBang : Bang -> HoleAnalysis
 analyzeBang bang =

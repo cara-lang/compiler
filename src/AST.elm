@@ -105,6 +105,7 @@ type Stmt
     | SValueAnnotation { mod : LetModifier, name : String, type_ : Type }
     | SBinaryOperatorAnnotation { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type }
     | SUnaryOperatorAnnotation { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type }
+    | SUseModule Id
 
 
 type TypeModifier
@@ -262,4 +263,7 @@ isEffectfulStmt stmt =
             False
 
         SUnaryOperatorAnnotation _ ->
+            False
+
+        SUseModule _ ->
             False

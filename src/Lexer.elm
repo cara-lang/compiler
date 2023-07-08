@@ -410,6 +410,9 @@ lower source i row col =
                 "with" ->
                     token With
 
+                "use" ->
+                    token Use
+
                 "type" ->
                     token Type
 
