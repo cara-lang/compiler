@@ -89,6 +89,7 @@ type InterpreterError
     | RecordFieldNotFound String
     | EffectfulStmtInPureBlock_
     | UnnecessaryBang
+    | CallingNonFunction
 
 
 title : Error -> String
@@ -345,6 +346,10 @@ title error =
                         UnnecessaryBang ->
                             -- TODO error code
                             "Unnecessary bang"
+
+                        CallingNonFunction ->
+                            -- TODO error code
+                            "Calling a non-function"
                    )
 
 

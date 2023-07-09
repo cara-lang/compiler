@@ -1,13 +1,13 @@
-// you can do this but there's no reason
+// curried function
 f = \a -> \b -> \c -> a + b + c
-IO.println!(f(1)(2)(3))
-IO.println!(f(1,2,3))
-IO.println!(f(1,2)(3))
-IO.println!(f(1)(2,3))
+IO.println!(f(0)(0)(0)) // this is how you'd normally call these
+IO.println!(f(1,1,1))   // but you can do all this
+IO.println!(f(2)(2,2))
+IO.println!(f(3,3)(3))
 
-// idiomatically you should do this instead
+// non-curried function - idiomatic
 g = \a,b,c -> a + b + c
-IO.println!(g(1)(2)(3)) // this is important for applicatives
-IO.println!(g(1,2,3))
-IO.println!(g(1,2)(3))
-IO.println!(g(1)(2,3))
+IO.println!(g(4,4,4))   // this is how you'd normally call these functions
+IO.println!(g(5)(5)(5)) // this is important for applicatives
+IO.println!(g(6)(6,6))  // aaand you can do anything in between
+IO.println!(g(7,7)(7))  
