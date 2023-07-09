@@ -60,8 +60,8 @@ interpretDecl =
             DPropertyGenTest r ->
                 interpretPropertyGenTest env r
 
-            _ ->
-                Debug.todo <| "Unimplemented interpretDecl: " ++ Debug.toString decl
+            DExtendModule r ->
+                Debug.todo "interpretDecl: DExtendModule"
 
 
 interpretUnitTest : Interpreter { name : Maybe String, expr : Expr } ()
