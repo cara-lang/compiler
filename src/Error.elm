@@ -65,7 +65,7 @@ type ParserError
     | NonNumberedHole String
     | UnknownBinaryOp String
     | UnknownUnaryOp String
-    | EffectfulStmtInBlock
+    | EffectfulStmtInPureBlock
     | BinaryOpAnnotationNotFn2
     | UnaryOpAnnotationNotFn1
 
@@ -87,6 +87,8 @@ type InterpreterError
     | MultipleSpreadPatterns
     | PatternDidNotMatch ( Pattern, Value )
     | RecordFieldNotFound String
+    | EffectfulStmtInPureBlock_
+    | UnnecessaryBang
 
 
 title : Error -> String
@@ -265,9 +267,9 @@ title error =
                             -- TODO error code
                             "Unknown unary op: " ++ str
 
-                        EffectfulStmtInBlock ->
+                        EffectfulStmtInPureBlock ->
                             -- TODO error code
-                            "Effectful statement in (non-effectful) block"
+                            "Effectful statement in a pure block"
 
                         BinaryOpAnnotationNotFn2 ->
                             -- TODO error code
@@ -335,6 +337,14 @@ title error =
                         RecordFieldNotFound field ->
                             -- TODO error code
                             "Record field not found: " ++ field
+
+                        EffectfulStmtInPureBlock_ ->
+                            -- TODO error code
+                            "Effectful statement in a pure block"
+
+                        UnnecessaryBang ->
+                            -- TODO error code
+                            "Unnecessary bang"
                    )
 
 

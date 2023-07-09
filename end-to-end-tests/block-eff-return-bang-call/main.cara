@@ -3,7 +3,8 @@ const = IO {
 }
 
 foo = IO {
-  const!
+  x = const!
+  IO.println!(x)
 }
 
-IO.println!(foo)
+foo!

@@ -1367,7 +1367,7 @@ blockExpr =
                 (Parser.succeed identity
                     |> Parser.keep
                         (Parser.lazy (\() -> statement)
-                            |> Parser.butNot_ AST.isEffectfulStmt EffectfulStmtInBlock
+                            |> Parser.butNot_ AST.isEffectfulStmt EffectfulStmtInPureBlock
                         )
                     |> Parser.skip Parser.skipEol
                 )
@@ -1378,7 +1378,7 @@ blockExpr =
         |> Parser.skip (Parser.token RBrace)
 
 
-{-| TODO what about foo!(1,2,3) as the last item? instead of just an expr
+{-|
 
     : upperIdentifier LBRACE EOL+ (statement EOL+)* ((expr|bang) EOL+)? RBRACE
     = Maybe {
@@ -1387,10 +1387,28 @@ blockExpr =
         title != ""
       }
 
+NOTE: because we need to be able to consume a bang as the `ret`,
+we're doing a bit of post-processing here.
+
 -}
 effectBlockExpr : Parser Expr
 effectBlockExpr =
-    Parser.succeed (\module_ stmts ret -> EffectBlock { monadModule = module_, stmts = stmts, ret = ret })
+    Parser.succeed
+        (\monadId stmts maybeRet ->
+            let
+                module_ =
+                    monadId.qualifiers ++ [ monadId.name ]
+            in
+            case ( List.reverse stmts, maybeRet ) of
+                ( (SBang bang_) :: revRest, Nothing ) ->
+                    EffectBlock { monadModule = module_, stmts = List.reverse revRest, ret = AST.B bang_ }
+
+                ( _, Just ret ) ->
+                    EffectBlock { monadModule = module_, stmts = stmts, ret = ret }
+
+                ( _, Nothing ) ->
+                    EffectBlock { monadModule = module_, stmts = stmts, ret = AST.E Unit }
+        )
         |> Parser.keep upperIdentifier
         |> Parser.skip (Parser.token LBrace)
         |> Parser.skip Parser.skipEol
@@ -1402,16 +1420,17 @@ effectBlockExpr =
                 )
             )
         |> Parser.keep
-            (Parser.lazy
-                (\() ->
-                    Parser.oneOf
-                        { commited = []
-                        , noncommited =
-                            [ bang |> Parser.map AST.B
-                            , expr |> Parser.map AST.E
-                            , Parser.succeed (AST.E Unit)
-                            ]
-                        }
+            (Parser.maybe
+                (Parser.lazy
+                    (\() ->
+                        Parser.oneOf
+                            { commited = []
+                            , noncommited =
+                                [ bang |> Parser.map AST.B
+                                , expr |> Parser.map AST.E
+                                ]
+                            }
+                    )
                 )
             )
         |> Parser.skip Parser.skipEol

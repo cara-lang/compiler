@@ -66,12 +66,12 @@ addIntrinsics : { intrinsicToValue : Intrinsic -> value } -> Env value -> Env va
 addIntrinsics { intrinsicToValue } env =
     let
         addIntrinsic : Intrinsic -> Env value -> Env value
-        addIntrinsic intrinsic module_ =
+        addIntrinsic intrinsic env_ =
             let
                 id =
                     Intrinsic.id intrinsic
             in
-            env
+            env_
                 |> Zipper.mapRoot .name (addId id (intrinsicToValue intrinsic))
     in
     Intrinsic.all
@@ -194,8 +194,10 @@ toString cfg env =
         |> Tree.restructure
             (moduleToString cfg)
             (\self children ->
-                """{SELF}
-{CHILDREN}"""
+                """
+{SELF}
+{CHILDREN}
+"""
                     |> String.replace "{SELF}" self
                     |> String.replace "{CHILDREN}"
                         (String.join "\n" children

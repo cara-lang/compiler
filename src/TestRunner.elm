@@ -82,6 +82,7 @@ runTest name fileContents k =
         Ok astTree ->
             effect0 (Effect.Println <| "interpreting: " ++ name) <| \() ->
             astTree
+                |> Debug.log "AST tree"
                 |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                 |> handleInterpreterOutcome name k
 

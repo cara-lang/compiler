@@ -51,7 +51,7 @@ type Expr
     | RecordGet { record : Expr, field : String } -- record.field
       -- Blocks
     | Block { stmts : List Stmt, ret : Expr } -- x = { ... }
-    | EffectBlock { monadModule : Id, stmts : List Stmt, ret : BangOrExpr } -- x = My.Monad { ... }
+    | EffectBlock { monadModule : List String, stmts : List Stmt, ret : BangOrExpr } -- x = My.Monad { ... }
       -- Other
     | Constructor_ { id : Id, args : List Expr } -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
     | Identifier Id -- foo, Bar.foo

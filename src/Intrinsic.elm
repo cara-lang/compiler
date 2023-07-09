@@ -2,7 +2,6 @@ module Intrinsic exposing
     ( Intrinsic(..)
     , all
     , id
-    , is
     )
 
 import Id exposing (Id)
@@ -10,11 +9,15 @@ import Id exposing (Id)
 
 type Intrinsic
     = IoPrintln
+    | IoPure
+    | IoBind
 
 
 all : List Intrinsic
 all =
     [ IoPrintln
+    , IoPure
+    , IoBind
     ]
 
 
@@ -24,14 +27,29 @@ id intrinsic =
         IoPrintln ->
             ioPrintln
 
+        IoPure ->
+            ioPure
 
-is : Intrinsic -> Id -> Bool
-is intrinsic id_ =
-    id_ == id intrinsic
+        IoBind ->
+            ioBind
 
 
 ioPrintln : Id
 ioPrintln =
     { qualifiers = [ "IO" ]
     , name = "println"
+    }
+
+
+ioPure : Id
+ioPure =
+    { qualifiers = [ "IO" ]
+    , name = "pure"
+    }
+
+
+ioBind : Id
+ioBind =
+    { qualifiers = [ "IO" ]
+    , name = "bind"
     }

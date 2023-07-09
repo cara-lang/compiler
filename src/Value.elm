@@ -20,6 +20,7 @@ type Value
     | VRecordGetter String
     | VConstructor { id : Id, args : List Value }
     | VClosure { args : List Pattern, body : Expr, env : Env Value }
+    | VIo Value
 
 
 toString : Value -> String
@@ -80,3 +81,7 @@ toString value =
 
         VClosure _ ->
             "<closure>"
+
+        VIo val ->
+            "<IO: {VAL}>"
+                |> String.replace "{VAL}" (toString val)

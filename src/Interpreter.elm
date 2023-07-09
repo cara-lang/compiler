@@ -32,7 +32,7 @@ interpretDecl =
                 interpretModule env r
 
             DStatement stmt ->
-                interpretStatement env stmt
+                interpretStatement ToplevelIO env stmt
 
             DType r ->
                 interpretTypeDecl env r
@@ -100,20 +100,30 @@ interpretPropertyGenTest =
         Outcome.succeed env ()
 
 
-interpretStatement : Interpreter Stmt ()
-interpretStatement =
+interpretStatement : StmtMonad -> Interpreter Stmt ()
+interpretStatement monad =
     \env stmt ->
         case stmt of
             SLet r ->
                 interpretLet env r
 
             SLetBang r ->
-                interpretLetBang env r
+                case monad of
+                    Pure ->
+                        Outcome.fail EffectfulStmtInPureBlock_
+
+                    ToplevelIO ->
+                        interpretIoLetBang env r
 
             SBang bang ->
-                interpretBang env bang
-                    -- Throw the result away
-                    |> Outcome.map (\_ -> ())
+                case monad of
+                    Pure ->
+                        Outcome.fail EffectfulStmtInPureBlock_
+
+                    ToplevelIO ->
+                        interpretIoBang env bang
+                            -- Throw the result away
+                            |> Outcome.map (\_ -> ())
 
             SFunction r ->
                 interpretFunction env r
@@ -294,26 +304,28 @@ interpretTypeAlias =
         Outcome.succeed env ()
 
 
-interpretBang : Interpreter Bang Value
-interpretBang =
+interpretIoBang : Interpreter Bang Value
+interpretIoBang =
     \env bang ->
         case bang of
             BValue expr ->
-                interpretBangValue env expr
+                interpretIoBangValue env expr
 
             BCall r ->
-                interpretBangCall env r
+                interpretIoBangCall env r
 
 
-interpretBangValue : Interpreter Expr Value
-interpretBangValue =
-    \env expr ->
-        Interpreter.do (interpretExpr env expr) <| \env1 val ->
-        Debug.todo <| "what the heck are we getting here? " ++ Debug.toString val
+{-| foo!
+-}
+interpretIoBangValue : Interpreter Expr Value
+interpretIoBangValue =
+    interpretExpr
 
 
-interpretBangCall : Interpreter { fn : Expr, args : List Expr } Value
-interpretBangCall =
+{-| foo!(1,2,3)
+-}
+interpretIoBangCall : Interpreter { fn : Expr, args : List Expr } Value
+interpretIoBangCall =
     \env { fn, args } ->
         Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
         case fnVal of
@@ -326,14 +338,41 @@ interpretBangCall =
 
 interpretIntrinsicCall : Interpreter ( Intrinsic, List Expr ) Value
 interpretIntrinsicCall =
-    \env ( intrinsicFn, args ) ->
-        case intrinsicFn of
+    \env ( intrinsic, args ) ->
+        Interpreter.do (Interpreter.traverse interpretExpr env args) <| \env1 argVals ->
+        interpretIntrinsicCallValues env1 ( intrinsic, argVals )
+
+
+interpretIntrinsicCallValues : Interpreter ( Intrinsic, List Value ) Value
+interpretIntrinsicCallValues =
+    \env ( intrinsic, argVals ) ->
+        case intrinsic of
             IoPrintln ->
-                case args of
+                case argVals of
                     [ arg ] ->
-                        interpretExpr env arg
-                            |> Interpreter.andThen interpretPrintln
+                        interpretPrintln env arg
                             |> Outcome.map (\() -> VUnit)
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
+            IoPure ->
+                case argVals of
+                    [ arg ] ->
+                        Outcome.succeed env (VIo arg)
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
+            IoBind ->
+                case argVals of
+                    [ ioVal, fn ] ->
+                        case ioVal of
+                            VIo valueInIo ->
+                                interpretCallVal env ( fn, [ valueInIo ] )
+
+                            _ ->
+                                Debug.todo "We expected VIo here... is this a bug?"
 
                     _ ->
                         Outcome.fail UnexpectedArity
@@ -363,7 +402,7 @@ interpretLet =
                     ()
 
 
-interpretLetBang :
+interpretIoLetBang :
     Interpreter
         { mod : LetModifier
         , lhs : Pattern
@@ -371,11 +410,11 @@ interpretLetBang :
         , bang : Bang
         }
         ()
-interpretLetBang =
+interpretIoLetBang =
     \env { lhs, bang } ->
         -- TODO interpret the mod
         -- TODO interpret the type_
-        interpretBang env bang
+        interpretIoBang env bang
             |> Outcome.map (\value -> ( lhs, value ))
             |> Interpreter.andThen interpretPattern
             |> Outcome.mapBoth
@@ -643,6 +682,9 @@ interpretCallVal =
                                 Interpreter.do (interpretExpr (List.foldl Env.addDict r.env dicts) r.body) <| \_ callResult ->
                                 Outcome.succeed env2 callResult
 
+            ( VIntrinsic intrinsic, _ ) ->
+                interpretIntrinsicCallValues env ( intrinsic, argVals )
+
             _ ->
                 Debug.todo <| "interpretCall interpreted: " ++ Debug.toString ( fnVal, argVals )
 
@@ -653,27 +695,96 @@ interpretLambda =
         Outcome.succeed env <| VClosure { args = args, body = body, env = env }
 
 
+type StmtMonad
+    = ToplevelIO
+    | Pure
+
+
 interpretBlock : Interpreter { stmts : List Stmt, ret : Expr } Value
 interpretBlock =
     \env { stmts, ret } ->
-        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <| \env1 _ ->
+        Interpreter.do (Interpreter.traverse (interpretStatement Pure) env stmts) <| \env1 _ ->
         interpretExpr env1 ret
 
 
-interpretEffectBlock : Interpreter { monadModule : Id, stmts : List Stmt, ret : BangOrExpr } Value
+interpretEffectBlock : Interpreter { monadModule : List String, stmts : List Stmt, ret : BangOrExpr } Value
 interpretEffectBlock =
     \env { monadModule, stmts, ret } ->
-        -- TODO use the monad module
-        Interpreter.do (Interpreter.traverse interpretStatement env stmts) <| \env1 _ ->
-        interpretBangOrExpr env1 ret
+        let
+            pure : Expr -> Expr
+            pure expr =
+                Call
+                    { fn = Identifier (Id.pure monadModule)
+                    , args = [ expr ]
+                    }
+
+            bind : Expr -> Pattern -> Expr -> Expr
+            bind monadicExpr lhs kont =
+                Call
+                    { fn = Identifier (Id.bind monadModule)
+                    , args =
+                        [ monadicExpr
+                        , Lambda
+                            { args = [ lhs ]
+                            , body = kont
+                            }
+                        ]
+                    }
+
+            wrapInMonad : BangOrExpr -> Expr
+            wrapInMonad boe =
+                case boe of
+                    -- foo -> Monad.pure(foo)
+                    E expr ->
+                        pure expr
+
+                    -- foo! -> foo
+                    B (BValue expr) ->
+                        expr
+
+                    -- foo!(1,2) --> foo(1,2)
+                    B (BCall { fn, args }) ->
+                        Call { fn = fn, args = args }
+
+            blockExpr : Expr
+            blockExpr =
+                -- Here we fold an entire effect block into a pure+bind chain.
+                -- This is the do-notation desugaring
+                List.foldr
+                    addLayer
+                    (wrapInMonad ret)
+                    stmts
+                    |> Debug.log "block expr"
+
+            addLayer : Stmt -> Expr -> Expr
+            addLayer stmt innerExpr =
+                case stmt of
+                    -- TODO do something about mod,type? or disallow them in parser or make a separate EffectBlockStmt that doesn't hold them?
+                    -- x = foo --> pure(foo) >>= (\x -> ...)
+                    SLet { lhs, expr } ->
+                        bind (wrapInMonad (E expr)) lhs innerExpr
+
+                    -- TODO do something about mod,type? or disallow them in parser or make a separate EffectBlockStmt that doesn't hold them?
+                    -- x = foo! --> foo >>= (\x -> ...)
+                    SLetBang { lhs, bang } ->
+                        bind (wrapInMonad (B bang)) lhs innerExpr
+
+                    -- foo! --> foo >>= (\_ -> ...)
+                    SBang bang ->
+                        bind (wrapInMonad (B bang)) PWildcard innerExpr
+
+                    _ ->
+                        Debug.todo <| "effect block - statement to expr: " ++ Debug.toString stmt
+        in
+        interpretExpr env blockExpr
 
 
-interpretBangOrExpr : Interpreter BangOrExpr Value
-interpretBangOrExpr =
+interpretIoBangOrExpr : Interpreter BangOrExpr Value
+interpretIoBangOrExpr =
     \env boe ->
         case boe of
             B bang ->
-                interpretBang env bang
+                interpretIoBang env bang
 
             E expr ->
                 interpretExpr env expr
@@ -906,6 +1017,10 @@ interpretIdentifier =
             go env_ =
                 case env_ of
                     Nothing ->
+                        --let
+                        --    _ =
+                        --        Debug.log ("Not found in:\n" ++ Env.toString { valueToString = Value.toString } env) id
+                        --in
                         Outcome.fail <| VarNotFound id
 
                     Just env__ ->
