@@ -61,7 +61,13 @@ interpretDecl =
                 interpretPropertyGenTest env r
 
             DExtendModule r ->
-                Debug.todo "interpretDecl: DExtendModule"
+                interpretExtendModule env r
+
+
+interpretExtendModule : Interpreter { id : Id, decls : List Decl } ()
+interpretExtendModule =
+    \env { id, decls } ->
+        Debug.todo "interpret extend module"
 
 
 interpretUnitTest : Interpreter { name : Maybe String, expr : Expr } ()
