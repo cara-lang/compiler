@@ -137,7 +137,7 @@ type Decl
     = DTypeAlias { mod : TypeAliasModifier, name : String, vars : List String, body : Type }
     | DType { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
     | DModule { mod : ModuleModifier, name : String, decls : List Decl }
-    | DExtendModule { id : Id, decls : List Decl }
+    | DExtendModule { module_ : List String, decls : List Decl }
     | DStatement Stmt
     | DUnitTest { name : Maybe String, expr : Expr }
     | DParameterizedTest

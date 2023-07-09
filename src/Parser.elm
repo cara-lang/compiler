@@ -590,7 +590,13 @@ moduleDecl =
 -}
 extendModuleDecl : Parser Decl
 extendModuleDecl =
-    Parser.succeed (\id decls -> DExtendModule { id = id, decls = decls })
+    Parser.succeed
+        (\moduleId decls ->
+            DExtendModule
+                { module_ = moduleId.qualifiers ++ [ moduleId.name ]
+                , decls = decls
+                }
+        )
         |> Parser.skip (Parser.token Extend)
         |> Parser.skip (Parser.token Module)
         |> Parser.keep upperIdentifier

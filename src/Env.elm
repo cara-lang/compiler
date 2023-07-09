@@ -219,7 +219,7 @@ toString cfg env =
 """
                     |> String.replace "{SELF}" self
                     |> String.replace "{CHILDREN}"
-                        (String.join "\n" children
+                        (String.concat children
                             |> String.indent
                         )
             )
