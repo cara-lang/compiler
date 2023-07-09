@@ -514,7 +514,9 @@ interpretPattern =
                             |> Just
                             |> Outcome.succeed env
 
-                    -- TODO tuple record spread
+                    VTuple values ->
+                        Debug.todo "interpret pattern {..} for tuple"
+
                     _ ->
                         Debug.todo <| "interpret pattern {..} - other: " ++ Debug.toString value
 
@@ -532,6 +534,9 @@ interpretPattern =
                             |> ManyAdditions
                             |> Just
                             |> Outcome.succeed env
+
+                    VTuple values ->
+                        Debug.todo "interpret pattern {x,y,z} for tuple"
 
                     _ ->
                         Outcome.succeed env Nothing
@@ -831,37 +836,7 @@ interpretCallVal =
             VIntrinsic intrinsic ->
                 interpretIntrinsicCallValues env ( intrinsic, argVals )
 
-            VInt _ ->
-                Outcome.fail CallingNonFunction
-
-            VFloat _ ->
-                Outcome.fail CallingNonFunction
-
-            VUnit ->
-                Outcome.fail CallingNonFunction
-
-            VString _ ->
-                Outcome.fail CallingNonFunction
-
-            VChar _ ->
-                Outcome.fail CallingNonFunction
-
-            VBool _ ->
-                Outcome.fail CallingNonFunction
-
-            VList _ ->
-                Outcome.fail CallingNonFunction
-
-            VTuple _ ->
-                Outcome.fail CallingNonFunction
-
-            VRecord _ ->
-                Outcome.fail CallingNonFunction
-
-            VConstructor _ ->
-                Outcome.fail CallingNonFunction
-
-            VIo _ ->
+            _ ->
                 Outcome.fail CallingNonFunction
 
 
@@ -1003,8 +978,8 @@ interpretEffectBlock =
                         in
                         innerExpr
 
-                    _ ->
-                        Debug.todo <| "effect block - statement to expr: " ++ Debug.toString stmt
+                    SUseModule m ->
+                        Debug.todo "interpretEffecftBlock - SUseModule"
         in
         interpretExpr env blockExpr
 
