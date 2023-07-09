@@ -11,6 +11,7 @@ type Value
     = VInt Int
     | VFloat Float
     | VString String
+    | VChar String
     | VBool Bool
     | VUnit
     | VIntrinsic Intrinsic
@@ -33,6 +34,11 @@ toString value =
             String.fromFloat float
 
         VString str ->
+            -- TODO quoting?
+            -- TODO escaping?
+            str
+
+        VChar str ->
             -- TODO quoting?
             -- TODO escaping?
             str
