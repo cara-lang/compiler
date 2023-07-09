@@ -18,7 +18,7 @@ module Logger {
   log : log -> Logger[log,()]
   log(x) = Logger([x],())
 
-  run : Logger[log,a] -> (log,a)
+  run : Logger[log,a] -> (List[log],a)
   run(Logger(log,a)) = (log,a)
 
 }
@@ -28,10 +28,10 @@ module Logger {
 
 loggerExample : Logger[List[String], Int]
 loggerExample = Logger {
-  log!("Hello")
+  Logger.log!("Hello")
   sum = List.sum(1..5)
-  log!("The sum is $sum")
-  log!("Done")
+  Logger.log!("The sum is $sum")
+  Logger.log!("Done")
   sum
 }
 
