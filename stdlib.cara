@@ -16,9 +16,9 @@ length(List[a]): Int
 length(Empty)      = 0
 length(Cons(a,as)) = 1 + length(as)
 
-isEmpty(List[a]): Bool
-isEmpty(Empty) = True
-isEmpty(_)     = False
+empty?(List[a]): Bool
+empty?(Empty) = True
+empty?(_)     = False
 
 map(a -> b, List[a]): List[b]
 map(_, [])    = []

@@ -1,0 +1,7 @@
+x? = 1
+
+empty?(list) = list == []
+
+IO.println!(x?)
+IO.println!(empty?([]))
+IO.println!(empty?([1]))
