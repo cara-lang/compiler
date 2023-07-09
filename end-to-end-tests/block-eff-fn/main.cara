@@ -1,9 +1,9 @@
 foo(a) = IO {
   x = 1
-  y = 1 + x
+  y = a + x
   IO.println!(y)
   a + y
 }
 
-ret = foo(5)
+ret = foo!(5)
 IO.println!(ret)

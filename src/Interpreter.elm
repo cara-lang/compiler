@@ -2,6 +2,7 @@ module Interpreter exposing (interpretProgram)
 
 import AST exposing (..)
 import Bitwise
+import Debug.Extra as Debug
 import Dict exposing (Dict)
 import Effect
 import Env exposing (Env)
@@ -113,7 +114,7 @@ interpretStatement monad =
                         Outcome.fail EffectfulStmtInPureBlock_
 
                     ToplevelIO ->
-                        interpretIoLetBang env r
+                        interpretToplevelLetBang env r
 
             SBang bang ->
                 case monad of
@@ -121,7 +122,7 @@ interpretStatement monad =
                         Outcome.fail EffectfulStmtInPureBlock_
 
                     ToplevelIO ->
-                        interpretIoBang env bang
+                        interpretToplevelBang env bang
                             -- Throw the result away
                             |> Outcome.map (\_ -> ())
 
@@ -304,36 +305,32 @@ interpretTypeAlias =
         Outcome.succeed env ()
 
 
-interpretIoBang : Interpreter Bang Value
-interpretIoBang =
+interpretToplevelBang : Interpreter Bang Value
+interpretToplevelBang =
     \env bang ->
         case bang of
             BValue expr ->
-                interpretIoBangValue env expr
+                interpretToplevelBangValue env expr
 
             BCall r ->
-                interpretIoBangCall env r
+                interpretToplevelBangCall env r
 
 
 {-| foo!
 -}
-interpretIoBangValue : Interpreter Expr Value
-interpretIoBangValue =
+interpretToplevelBangValue : Interpreter Expr Value
+interpretToplevelBangValue =
     interpretExpr
 
 
 {-| foo!(1,2,3)
 -}
-interpretIoBangCall : Interpreter { fn : Expr, args : List Expr } Value
-interpretIoBangCall =
+interpretToplevelBangCall : Interpreter { fn : Expr, args : List Expr } Value
+interpretToplevelBangCall =
     \env { fn, args } ->
         Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
-        case fnVal of
-            VIntrinsic intrinsic ->
-                interpretIntrinsicCall env1 ( intrinsic, args )
-
-            _ ->
-                Debug.todo "Unsupported Value node in the `fn` position of a BangCall"
+        Interpreter.do (Interpreter.traverse interpretExpr env1 args) <| \env2 argVals ->
+        interpretCallVal env2 ( fnVal, argVals )
 
 
 interpretIntrinsicCall : Interpreter ( Intrinsic, List Expr ) Value
@@ -351,7 +348,7 @@ interpretIntrinsicCallValues =
                 case argVals of
                     [ arg ] ->
                         interpretPrintln env arg
-                            |> Outcome.map (\() -> VUnit)
+                            |> Outcome.map (\() -> VIo VUnit)
 
                     _ ->
                         Outcome.fail UnexpectedArity
@@ -367,15 +364,24 @@ interpretIntrinsicCallValues =
             IoBind ->
                 case argVals of
                     [ ioVal, fn ] ->
-                        case ioVal of
-                            VIo valueInIo ->
-                                interpretCallVal env ( fn, [ valueInIo ] )
-
-                            _ ->
-                                Debug.todo "We expected VIo here... is this a bug?"
+                        let
+                            valueInIo =
+                                unwrapIo ioVal
+                        in
+                        interpretCallVal env ( fn, [ valueInIo ] )
 
                     _ ->
                         Outcome.fail UnexpectedArity
+
+
+unwrapIo : Value -> Value
+unwrapIo ioVal =
+    case ioVal of
+        VIo valueInIo ->
+            valueInIo
+
+        _ ->
+            Debug.todo <| "We expected VIo here... is this a bug? " ++ Debug.toString ioVal
 
 
 interpretLet :
@@ -402,7 +408,7 @@ interpretLet =
                     ()
 
 
-interpretIoLetBang :
+interpretToplevelLetBang :
     Interpreter
         { mod : LetModifier
         , lhs : Pattern
@@ -410,12 +416,12 @@ interpretIoLetBang :
         , bang : Bang
         }
         ()
-interpretIoLetBang =
+interpretToplevelLetBang =
     \env { lhs, bang } ->
         -- TODO interpret the mod
         -- TODO interpret the type_
-        interpretIoBang env bang
-            |> Outcome.map (\value -> ( lhs, value ))
+        interpretToplevelBang env bang
+            |> Outcome.map (\value -> ( lhs, unwrapIo value ))
             |> Interpreter.andThen interpretPattern
             |> Outcome.mapBoth
                 (\env_ envAdditions ->
@@ -517,6 +523,9 @@ interpretPattern =
 
                     _ ->
                         Outcome.succeed env Nothing
+
+            PWildcard ->
+                Outcome.succeed env (Just EnvDict.empty)
 
             _ ->
                 Debug.todo <| "interpret pattern - other: " ++ Debug.toString pattern
@@ -754,7 +763,6 @@ interpretEffectBlock =
                     addLayer
                     (wrapInMonad ret)
                     stmts
-                    |> Debug.log "block expr"
 
             addLayer : Stmt -> Expr -> Expr
             addLayer stmt innerExpr =
@@ -779,12 +787,12 @@ interpretEffectBlock =
         interpretExpr env blockExpr
 
 
-interpretIoBangOrExpr : Interpreter BangOrExpr Value
-interpretIoBangOrExpr =
+interpretToplevelBangOrExpr : Interpreter BangOrExpr Value
+interpretToplevelBangOrExpr =
     \env boe ->
         case boe of
             B bang ->
-                interpretIoBang env bang
+                interpretToplevelBang env bang
 
             E expr ->
                 interpretExpr env expr
