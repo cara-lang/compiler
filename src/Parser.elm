@@ -60,9 +60,9 @@ declaration =
     = f(a,b) = a + b
 
 -}
-functionStmt : Parser Stmt
-functionStmt =
-    Parser.succeed (\name args body -> SFunction { name = name, args = args, body = body })
+functionDefStmt : Parser Stmt
+functionDefStmt =
+    Parser.succeed (\name args body -> SFunctionDef { name = name, args = args, body = body })
         |> Parser.keep lowerName
         |> Parser.keep
             (Parser.separatedList
@@ -108,9 +108,9 @@ letModifier =
     = private `-`(a: Int, b: Int) = a * 2 + b
 
 -}
-binaryOperatorStmt : Parser Stmt
-binaryOperatorStmt =
-    Parser.succeed (\op left right body -> SBinaryOperator { op = op, left = left, right = right, body = body })
+binaryOperatorDefStmt : Parser Stmt
+binaryOperatorDefStmt =
+    Parser.succeed (\op left right body -> SBinaryOperatorDef { op = op, left = left, right = right, body = body })
         |> Parser.keep binaryOperatorName
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep pattern
@@ -130,9 +130,9 @@ binaryOperatorStmt =
     = private `-`(a) = a + 5
 
 -}
-unaryOperatorStmt : Parser Stmt
-unaryOperatorStmt =
-    Parser.succeed (\op arg body -> SUnaryOperator { op = op, arg = arg, body = body })
+unaryOperatorDefStmt : Parser Stmt
+unaryOperatorDefStmt =
+    Parser.succeed (\op arg body -> SUnaryOperatorDef { op = op, arg = arg, body = body })
         |> Parser.keep unaryOperatorName
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep pattern
@@ -707,10 +707,10 @@ statement =
               letBangStatement
             , letStatement
             , bangStatement
-            , functionStmt
+            , functionDefStmt
             , valueAnnotationStmt
-            , binaryOperatorStmt
-            , unaryOperatorStmt
+            , binaryOperatorDefStmt
+            , unaryOperatorDefStmt
             , binaryOperatorAnnotationStmt
             , unaryOperatorAnnotationStmt
             ]

@@ -6,7 +6,6 @@ import Debug.Extra as Debug
 import Dict exposing (Dict)
 import Effect
 import Env exposing (Env)
-import EnvDict exposing (EnvDict)
 import Error exposing (InterpreterError(..))
 import Id exposing (Id)
 import Interpreter.Internal as Interpreter exposing (Interpreter)
@@ -17,6 +16,14 @@ import Maybe.Extra as Maybe
 import Set exposing (Set)
 import Tree.Zipper as Zipper
 import Value exposing (Value(..))
+
+
+type PatternAddition
+    = AddNothing
+    | AddValue String Value
+    | AddBinaryOp BinaryOp Value
+    | AddUnaryOp UnaryOp Value
+    | ManyAdditions (List PatternAddition)
 
 
 interpretProgram : Interpreter AST.Program ()
@@ -62,7 +69,7 @@ interpretUnitTest =
     \env { name, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretUnitTest" ( name, expr )
+                Debug.log "TODO do something in interpretUnitTest" ()
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -73,7 +80,7 @@ interpretParameterizedTest =
     \env { name, table, args, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretParameterizedTest" ( name, table, ( args, expr ) )
+                Debug.log "TODO do something in interpretParameterizedTest" ()
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -84,7 +91,7 @@ interpretPropertyTypeTest =
     \env { name, types, args, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretPropertyTypeTest" ( name, types, ( args, expr ) )
+                Debug.log "TODO do something in interpretPropertyTypeTest" ()
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -95,7 +102,7 @@ interpretPropertyGenTest =
     \env { name, gens, args, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretPropertyGenTest" ( name, gens, ( args, expr ) )
+                Debug.log "TODO do something in interpretPropertyGenTest" ()
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -126,14 +133,14 @@ interpretStatement monad =
                             -- Throw the result away
                             |> Outcome.map (\_ -> ())
 
-            SFunction r ->
-                interpretFunction env r
+            SFunctionDef r ->
+                interpretFunctionDef env r
 
-            SBinaryOperator r ->
-                interpretBinaryOp env r
+            SBinaryOperatorDef r ->
+                interpretBinaryOpDef env r
 
-            SUnaryOperator r ->
-                interpretUnaryOp env r
+            SUnaryOperatorDef r ->
+                interpretUnaryOpDef env r
 
             SValueAnnotation r ->
                 interpretValueAnnotation env r
@@ -148,8 +155,8 @@ interpretStatement monad =
                 interpretUseModule env r
 
 
-interpretFunction : Interpreter { name : String, args : List Pattern, body : Expr } ()
-interpretFunction =
+interpretFunctionDef : Interpreter { name : String, args : List Pattern, body : Expr } ()
+interpretFunctionDef =
     \env { name, args, body } ->
         -- TODO somehow group related function declarations together and make one case..of from them (also get the modifier from the annotation)
         let
@@ -167,8 +174,8 @@ interpretFunction =
         Outcome.succeed envWithFn ()
 
 
-interpretBinaryOp : Interpreter { op : BinaryOp, left : Pattern, right : Pattern, body : Expr } ()
-interpretBinaryOp =
+interpretBinaryOpDef : Interpreter { op : BinaryOp, left : Pattern, right : Pattern, body : Expr } ()
+interpretBinaryOpDef =
     \env { op, left, right, body } ->
         let
             newEnv =
@@ -185,12 +192,12 @@ interpretBinaryOp =
         Outcome.succeed newEnv ()
 
 
-interpretUnaryOp : Interpreter { op : UnaryOp, arg : Pattern, body : Expr } ()
-interpretUnaryOp =
+interpretUnaryOpDef : Interpreter { op : UnaryOp, arg : Pattern, body : Expr } ()
+interpretUnaryOpDef =
     \env { op, arg, body } ->
         let
             _ =
-                Debug.log "TODO do something in interpretUnaryOp" ( op, arg, body )
+                Debug.log "TODO do something in interpretUnaryOpDef" ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -201,7 +208,7 @@ interpretValueAnnotation =
     \env { mod, name, type_ } ->
         let
             _ =
-                Debug.log "TODO do something in interpretValueAnnotation" ( mod, name, type_ )
+                Debug.log "TODO do something in interpretValueAnnotation" ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -212,7 +219,7 @@ interpretBinaryOpAnnotation =
     \env { mod, op, left, right, ret } ->
         let
             _ =
-                Debug.log "TODO do something in interpretBinaryOpAnnotation" ( mod, op, ( left, right, ret ) )
+                Debug.log "TODO do something in interpretBinaryOpAnnotation" ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -223,7 +230,7 @@ interpretUnaryOpAnnotation =
     \env { mod, op, arg, ret } ->
         let
             _ =
-                Debug.log "TODO do something in interpretUnaryOpAnnotation" ( mod, op, ( arg, ret ) )
+                Debug.log "TODO do something in interpretUnaryOpAnnotation" ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -234,7 +241,7 @@ interpretUseModule =
     \env moduleId ->
         let
             _ =
-                Debug.log "TODO do something in interpretUseModule" moduleId
+                Debug.log "TODO do something in interpretUseModule" ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -252,7 +259,7 @@ interpretTypeDecl =
     \env r ->
         -- TODO interpret the modifier
         let
-            additions : EnvDict Value
+            additions : PatternAddition
             additions =
                 r.constructors
                     |> List.map
@@ -264,27 +271,45 @@ interpretTypeDecl =
                                         (\i _ -> "arg" ++ String.fromInt i)
                                         c.args
                             in
-                            ( Id.local c.name
-                            , VClosure
-                                { args = List.map PVar names
-                                , body =
-                                    Constructor_
-                                        { id =
-                                            -- TODO what about the module?
-                                            Id.local r.name
-                                        , args = List.map (Identifier << Id.local) names
-                                        }
-                                , env = env
-                                }
-                            )
+                            AddValue c.name <|
+                                VClosure
+                                    { args = List.map PVar names
+                                    , body =
+                                        Constructor_
+                                            { id =
+                                                -- TODO what about the module?
+                                                Id.local r.name
+                                            , args = List.map (Identifier << Id.local) names
+                                            }
+                                    , env = env
+                                    }
                         )
-                    |> EnvDict.fromList
+                    |> ManyAdditions
 
             newEnv : Env Value
             newEnv =
-                Env.addDict additions env
+                addToEnv additions env
         in
         Outcome.succeed newEnv ()
+
+
+addToEnv : PatternAddition -> Env Value -> Env Value
+addToEnv addition env =
+    case addition of
+        AddNothing ->
+            env
+
+        AddValue name value ->
+            Env.add name value env
+
+        AddBinaryOp op value ->
+            Env.addBinaryOp (AST.binaryOpName op) value env
+
+        AddUnaryOp op value ->
+            Env.addUnaryOp (AST.unaryOpName op) value env
+
+        ManyAdditions additions ->
+            List.foldl addToEnv env additions
 
 
 interpretTypeAlias :
@@ -299,7 +324,7 @@ interpretTypeAlias =
     \env { mod, name, vars, body } ->
         let
             _ =
-                Debug.log "TODO do something in interpretTypeAlias" ( mod, name, ( vars, body ) )
+                Debug.log "TODO do something in interpretTypeAlias" ()
         in
         -- TODO make type aliases do something
         Outcome.succeed env ()
@@ -404,7 +429,7 @@ interpretLet =
 
             Just additions ->
                 Outcome.succeed
-                    (Env.addDict additions env2)
+                    (addToEnv additions env2)
                     ()
 
 
@@ -430,7 +455,7 @@ interpretToplevelLetBang =
                             Debug.todo "Pattern didn't match the expr. TODO Report this as user error?"
 
                         Just additions ->
-                            ( env_ |> Env.addDict additions
+                            ( addToEnv additions env_
                             , ()
                             )
                 )
@@ -439,12 +464,12 @@ interpretToplevelLetBang =
 {-| Returns (NEW) env additions, instead of the whole env.
 Nothing is returned if the pattern doesn't match the expr.
 -}
-interpretPattern : Interpreter ( Pattern, Value ) (Maybe (EnvDict Value))
+interpretPattern : Interpreter ( Pattern, Value ) (Maybe PatternAddition)
 interpretPattern =
     \env ( pattern, value ) ->
         case pattern of
             PVar var ->
-                EnvDict.singleton (Id.local var) value
+                AddValue var value
                     |> Just
                     |> Outcome.succeed env
 
@@ -453,7 +478,20 @@ interpretPattern =
                     case value of
                         VInt n ->
                             if int == n then
-                                Just EnvDict.empty
+                                Just AddNothing
+
+                            else
+                                Nothing
+
+                        _ ->
+                            Nothing
+
+            PFloat float ->
+                Outcome.succeed env <|
+                    case value of
+                        VFloat n ->
+                            if float == n then
+                                Just AddNothing
 
                             else
                                 Nothing
@@ -466,8 +504,8 @@ interpretPattern =
                     VRecord fields ->
                         fields
                             |> Dict.toList
-                            |> List.map (Tuple.mapFirst Id.local)
-                            |> EnvDict.fromList
+                            |> List.map (\( field, val ) -> AddValue field val)
+                            |> ManyAdditions
                             |> Just
                             |> Outcome.succeed env
 
@@ -485,8 +523,8 @@ interpretPattern =
                         fields
                             |> Dict.toList
                             |> List.filter (\( field, _ ) -> Set.member field wantedFieldsSet)
-                            |> List.map (Tuple.mapFirst Id.local)
-                            |> EnvDict.fromList
+                            |> List.map (\( field, val ) -> AddValue field val)
+                            |> ManyAdditions
                             |> Just
                             |> Outcome.succeed env
 
@@ -508,10 +546,18 @@ interpretPattern =
                                     Outcome.succeed env Nothing
 
                                 Just additions ->
-                                    Outcome.succeed env (Just (EnvDict.unionAll additions))
+                                    Outcome.succeed env (Just (ManyAdditions additions))
 
                         else
                             Outcome.succeed env Nothing
+
+                    _ ->
+                        Outcome.succeed env Nothing
+
+            PTuple ps ->
+                case value of
+                    VTuple vs ->
+                        interpretPatternTuple env ( ps, vs )
 
                     _ ->
                         Outcome.succeed env Nothing
@@ -525,13 +571,58 @@ interpretPattern =
                         Outcome.succeed env Nothing
 
             PWildcard ->
-                Outcome.succeed env (Just EnvDict.empty)
+                Outcome.succeed env (Just AddNothing)
 
-            _ ->
-                Debug.todo <| "interpret pattern - other: " ++ Debug.toString pattern
+            PUnit ->
+                Outcome.succeed env <|
+                    case value of
+                        VUnit ->
+                            Just AddNothing
+
+                        _ ->
+                            Nothing
+
+            PSpread spread ->
+                Debug.todo <| "interpret pattern spread: " ++ Debug.toString spread
+
+            PUnaryOpDef unaryOp ->
+                case value of
+                    VClosure r ->
+                        Outcome.succeed env (Just (AddUnaryOp unaryOp value))
+
+                    _ ->
+                        Outcome.succeed env Nothing
+
+            PBinaryOpDef binaryOp ->
+                case value of
+                    VClosure r ->
+                        Outcome.succeed env (Just (AddBinaryOp binaryOp value))
+
+                    _ ->
+                        Outcome.succeed env Nothing
 
 
-interpretPatternList : Interpreter ( List Pattern, List Value ) (Maybe (EnvDict Value))
+interpretPatternTuple : Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
+interpretPatternTuple =
+    \env ( ps, vs ) ->
+        if List.length ps /= List.length vs then
+            Outcome.succeed env Nothing
+
+        else
+            let
+                pairs =
+                    List.map2 Tuple.pair ps vs
+            in
+            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env1 maybeAdditions ->
+            case Maybe.combine maybeAdditions of
+                Nothing ->
+                    Outcome.succeed env1 Nothing
+
+                Just additions ->
+                    Outcome.succeed env1 (Just (ManyAdditions additions))
+
+
+interpretPatternList : Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
 interpretPatternList =
     \env ( ps, vs ) ->
         case List.length (List.filter AST.isSpreadPattern ps) of
@@ -550,7 +641,7 @@ interpretPatternList =
                                     _ =
                                         Debug.log "TODO - interpretPatternList - one spread - spread at the end"
                                 in
-                                Outcome.succeed env (Just EnvDict.empty)
+                                Outcome.succeed env (Just AddNothing)
 
                             _ ->
                                 Debug.todo "interpretPatternList - one spread - spread somewhere in the middle"
@@ -663,17 +754,17 @@ interpretCallVal =
                                 r.args
                                     |> List.drop (List.length argVals)
                         in
-                        Interpreter.do (Interpreter.traverse interpretPattern env availablePairs) <| \env2 maybeDicts ->
-                        case Maybe.combine maybeDicts of
+                        Interpreter.do (Interpreter.traverse interpretPattern env availablePairs) <| \env2 maybeAdditions ->
+                        case Maybe.combine maybeAdditions of
                             Nothing ->
                                 Outcome.fail PatternMismatch
 
-                            Just dicts ->
+                            Just additions ->
                                 Outcome.succeed env2 <|
                                     VClosure
                                         { args = argsRest
                                         , body = r.body
-                                        , env = List.foldl Env.addDict r.env dicts
+                                        , env = List.foldl addToEnv r.env additions
                                         }
 
                     EQ ->
@@ -682,13 +773,13 @@ interpretCallVal =
                             pairs =
                                 List.map2 Tuple.pair r.args argVals
                         in
-                        Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env2 maybeDicts ->
-                        case Maybe.combine maybeDicts of
+                        Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env2 maybeAdditions ->
+                        case Maybe.combine maybeAdditions of
                             Nothing ->
                                 Outcome.fail PatternMismatch
 
-                            Just dicts ->
-                                Interpreter.do (interpretExpr (List.foldl Env.addDict r.env dicts) r.body) <| \_ callResult ->
+                            Just additions ->
+                                Interpreter.do (interpretExpr (List.foldl addToEnv r.env additions) r.body) <| \_ callResult ->
                                 Outcome.succeed env2 callResult
 
             ( VIntrinsic intrinsic, _ ) ->
@@ -781,6 +872,60 @@ interpretEffectBlock =
                     SBang bang ->
                         bind (wrapInMonad (B bang)) PWildcard innerExpr
 
+                    SFunctionDef { name, args, body } ->
+                        addLayer
+                            (SLet
+                                { lhs = PVar name
+                                , expr = Lambda { args = args, body = body }
+                                , mod = LetNoModifier
+                                , type_ = Nothing
+                                }
+                            )
+                            innerExpr
+
+                    SUnaryOperatorDef { op, arg, body } ->
+                        addLayer
+                            (SLet
+                                { lhs = PUnaryOpDef op
+                                , expr = Lambda { args = [ arg ], body = body }
+                                , mod = LetNoModifier
+                                , type_ = Nothing
+                                }
+                            )
+                            innerExpr
+
+                    SBinaryOperatorDef { op, left, right, body } ->
+                        addLayer
+                            (SLet
+                                { lhs = PBinaryOpDef op
+                                , expr = Lambda { args = [ left, right ], body = body }
+                                , mod = LetNoModifier
+                                , type_ = Nothing
+                                }
+                            )
+                            innerExpr
+
+                    SValueAnnotation r ->
+                        let
+                            _ =
+                                Debug.log "TODO do something in interpretEffectBlock - SValueAnnotation" ()
+                        in
+                        innerExpr
+
+                    SUnaryOperatorAnnotation r ->
+                        let
+                            _ =
+                                Debug.log "TODO do something in interpretEffectBlock - SUnaryOperatorAnnotation" ()
+                        in
+                        innerExpr
+
+                    SBinaryOperatorAnnotation r ->
+                        let
+                            _ =
+                                Debug.log "TODO do something in interpretEffectBlock - SBinaryOperatorAnnotation" ()
+                        in
+                        innerExpr
+
                     _ ->
                         Debug.todo <| "effect block - statement to expr: " ++ Debug.toString stmt
         in
@@ -809,6 +954,7 @@ interpretUnaryOpCallVal : Interpreter ( UnaryOp, Value ) Value
 interpretUnaryOpCallVal =
     \env ( op, val ) ->
         case ( op, val ) of
+            -- language-given unary operators
             ( NegateNum, VInt n ) ->
                 Outcome.succeed env <| VInt (negate n)
 
@@ -821,8 +967,32 @@ interpretUnaryOpCallVal =
             ( NegateBin, VInt n ) ->
                 Outcome.succeed env <| VInt (Bitwise.complement n)
 
+            -- user-given binary operators
             _ ->
-                Debug.todo <| "Unimplemented interpretUnaryOpVal: " ++ Debug.toString ( op, val )
+                let
+                    finishWithUnknown () =
+                        Debug.todo <| "interpretUnaryOp: " ++ Debug.toString ( op, val ) ++ " (and not found in user unary ops)"
+                in
+                case Env.getUnaryOp (AST.unaryOpName op) env of
+                    Nothing ->
+                        finishWithUnknown ()
+
+                    Just userOverloads ->
+                        interpretUnaryOpCallUser finishWithUnknown env ( userOverloads, val )
+
+
+interpretUnaryOpCallUser : (() -> Outcome Value) -> Interpreter ( List Value, Value ) Value
+interpretUnaryOpCallUser finishWithUnknown =
+    \env ( userOverloads, arg ) ->
+        -- TODO pick the correct overload based on the types.
+        -- Right now we try them all and pick the first one that doesn't error out
+        case userOverloads of
+            [] ->
+                finishWithUnknown ()
+
+            overload :: rest ->
+                interpretCallVal env ( overload, [ arg ] )
+                    |> Outcome.onError (\_ -> interpretUnaryOpCallUser finishWithUnknown env ( rest, arg ))
 
 
 interpretBinaryOpCall : Interpreter ( Expr, BinaryOp, Expr ) Value
@@ -1110,7 +1280,7 @@ interpretCaseBranches =
                     Just additions ->
                         let
                             newEnv =
-                                env1 |> Env.addDict additions
+                                addToEnv additions env1
                         in
                         interpretExpr newEnv body
 

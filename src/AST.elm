@@ -21,6 +21,7 @@ module AST exposing
     , binaryOpName
     , isEffectfulStmt
     , isSpreadPattern
+    , unaryOpName
     )
 
 import Env exposing (Env)
@@ -85,6 +86,12 @@ type Pattern
     | PSpread (Maybe String) -- ...a, ..._
     | PRecordSpread -- {..}
     | PRecordFields (List String) -- {a}, {a,b}
+      {- These aren't ever parsed, but they're a way for interpretEffectBlock
+         to create an expression out of SUnaryOperatorDef and
+         SBinaryOperatorDef statements.
+      -}
+    | PUnaryOpDef UnaryOp
+    | PBinaryOpDef BinaryOp
 
 
 type Bang
@@ -101,9 +108,9 @@ type Stmt
     = SLet { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, expr : Expr }
     | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
     | SBang Bang
-    | SFunction { name : String, args : List Pattern, body : Expr }
-    | SBinaryOperator { op : BinaryOp, left : Pattern, right : Pattern, body : Expr }
-    | SUnaryOperator { op : UnaryOp, arg : Pattern, body : Expr }
+    | SFunctionDef { name : String, args : List Pattern, body : Expr }
+    | SBinaryOperatorDef { op : BinaryOp, left : Pattern, right : Pattern, body : Expr }
+    | SUnaryOperatorDef { op : UnaryOp, arg : Pattern, body : Expr }
     | SValueAnnotation { mod : LetModifier, name : String, type_ : Type }
     | SBinaryOperatorAnnotation { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type }
     | SUnaryOperatorAnnotation { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type }
@@ -249,13 +256,13 @@ isEffectfulStmt stmt =
         SLet _ ->
             False
 
-        SFunction _ ->
+        SFunctionDef _ ->
             False
 
-        SBinaryOperator _ ->
+        SBinaryOperatorDef _ ->
             False
 
-        SUnaryOperator _ ->
+        SUnaryOperatorDef _ ->
             False
 
         SValueAnnotation _ ->
@@ -305,6 +312,12 @@ isSpreadPattern pattern =
             False
 
         PRecordFields _ ->
+            False
+
+        PUnaryOpDef _ ->
+            False
+
+        PBinaryOpDef _ ->
             False
 
 
@@ -379,3 +392,19 @@ binaryOpName op =
 
         RangeExclusive ->
             "..."
+
+
+unaryOpName : UnaryOp -> String
+unaryOpName op =
+    case op of
+        NegateNum ->
+            "-"
+
+        NegateBool ->
+            "!"
+
+        NegateBin ->
+            "~"
+
+        InfiniteRange ->
+            ".."

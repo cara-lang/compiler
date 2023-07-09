@@ -140,13 +140,13 @@ analyzeStmt stmt =
         SBang bang ->
             analyzeBang bang
 
-        SFunction r ->
+        SFunctionDef r ->
             analyzeHoles r.body
 
-        SBinaryOperator r ->
+        SBinaryOperatorDef r ->
             analyzeHoles r.body
 
-        SUnaryOperator r ->
+        SUnaryOperatorDef r ->
             analyzeHoles r.body
 
         SValueAnnotation r ->

@@ -39,4 +39,6 @@ foo = IO {
 
 }
 
-IO.println!(foo)
+result = foo!
+
+IO.println!(result)

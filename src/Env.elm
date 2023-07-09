@@ -1,25 +1,26 @@
 module Env exposing
     ( Env, initWithIntrinsics
-    , add, addId, addDict, addBinaryOp
+    , add, addId, addBinaryOp, addUnaryOp
     , createModule
     , open, goUp
-    , get, getBinaryOp, toString
+    , get, getBinaryOp, getUnaryOp
+    , toString
     , Module
     )
 
 {-|
 
 @docs Env, initWithIntrinsics
-@docs add, addId, addDict, addBinaryOp
+@docs add, addId, addBinaryOp, addUnaryOp
 @docs createModule
 @docs open, goUp
-@docs get, getBinaryOp, toString
+@docs get, getBinaryOp, getUnaryOp
+@docs toString
 @docs Module
 
 -}
 
 import Dict exposing (Dict)
-import EnvDict exposing (EnvDict)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
 import String.Extra as String
@@ -38,6 +39,7 @@ type alias Module value =
     -- TODO private/public
     , values : Dict String value
     , binaryOps : Dict String (List value)
+    , unaryOps : Dict String (List value)
     }
 
 
@@ -59,6 +61,7 @@ emptyModule name =
     { name = name
     , values = Dict.empty
     , binaryOps = Dict.empty
+    , unaryOps = Dict.empty
     }
 
 
@@ -94,13 +97,6 @@ addId id value env =
             (add id.name value)
 
 
-addDict : EnvDict value -> Env value -> Env value
-addDict dict env =
-    dict
-        |> EnvDict.toList
-        |> List.foldl (\( id, value ) env_ -> addId id value env_) env
-
-
 addBinaryOp : String -> value -> Env value -> Env value
 addBinaryOp op impl env =
     env
@@ -115,6 +111,24 @@ addBinaryOp op impl env =
                                 >> Just
                             )
                             m.binaryOps
+                }
+            )
+
+
+addUnaryOp : String -> value -> Env value -> Env value
+addUnaryOp op impl env =
+    env
+        |> Zipper.mapLabel
+            (\m ->
+                { m
+                    | unaryOps =
+                        Dict.update
+                            op
+                            (Maybe.withDefault []
+                                >> (::) impl
+                                >> Just
+                            )
+                            m.unaryOps
                 }
             )
 
@@ -183,8 +197,13 @@ get id env =
 
 
 getBinaryOp : String -> Env value -> Maybe (List value)
-getBinaryOp binop env =
-    Dict.get binop (Zipper.label env).binaryOps
+getBinaryOp binaryOp env =
+    Dict.get binaryOp (Zipper.label env).binaryOps
+
+
+getUnaryOp : String -> Env value -> Maybe (List value)
+getUnaryOp unaryOp env =
+    Dict.get unaryOp (Zipper.label env).unaryOps
 
 
 toString : { valueToString : value -> String } -> Env value -> String
