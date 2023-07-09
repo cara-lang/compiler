@@ -90,6 +90,7 @@ type InterpreterError
     | EffectfulStmtInPureBlock_
     | UnnecessaryBang
     | CallingNonFunction
+    | CallingRecordGetterOnNonRecord
 
 
 title : Error -> String
@@ -350,6 +351,10 @@ title error =
                         CallingNonFunction ->
                             -- TODO error code
                             "Calling a non-function"
+
+                        CallingRecordGetterOnNonRecord ->
+                            -- TODO error code
+                            "Calling a record getter on a non-record"
                    )
 
 
