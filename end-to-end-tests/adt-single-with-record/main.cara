@@ -1,0 +1,6 @@
+type Foo = 
+  | Bar({a: Int, b: Float})
+
+x = Bar({a: 123, b: 1.5})
+
+IO.println!(x)
