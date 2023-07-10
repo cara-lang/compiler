@@ -30,13 +30,6 @@
 - [ ] type annotation: omit return type - error
 - [ ] monad examples - multiple files, show off the possibility to import and use unqualified
 
-
-### Multiline strings trimming
-
-- [ ] multiline strings trim automatically
-  - https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
-  - https://docs.swift.org/swift-book/_images/multilineStringWhitespace_2x.png
-
 ### Char, String escaping
 
 - [ ] char unicode escape: '\u{1F496}'
