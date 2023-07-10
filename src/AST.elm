@@ -21,6 +21,7 @@ module AST exposing
     , binaryOpName
     , isEffectfulStmt
     , isSpreadPattern
+    , lambdaToString
     , unaryOpName
     )
 
@@ -408,3 +409,172 @@ unaryOpName op =
 
         InfiniteRange ->
             ".."
+
+
+lambdaToString : { args : List Pattern, body : Expr } -> String
+lambdaToString { args, body } =
+    "\\{ARGS} -> {BODY}"
+        |> String.replace "{ARGS}" (String.join "," (List.map patternToString args))
+        |> String.replace "{BODY}" (exprToString body)
+
+
+patternToString : Pattern -> String
+patternToString pattern =
+    case pattern of
+        PUnit ->
+            "()"
+
+        PVar name ->
+            name
+
+        PConstructor { id, args } ->
+            Id.toString id
+                ++ (if List.isEmpty args then
+                        ""
+
+                    else
+                        "("
+                            ++ String.join "," (List.map patternToString args)
+                            ++ ")"
+                   )
+
+        PInt n ->
+            String.fromInt n
+
+        PFloat n ->
+            String.fromFloat n
+
+        PList xs ->
+            "[" ++ String.join "," (List.map patternToString xs) ++ "]"
+
+        PTuple xs ->
+            "(" ++ String.join "," (List.map patternToString xs) ++ ")"
+
+        PWildcard ->
+            "_"
+
+        PSpread val ->
+            "..." ++ Maybe.withDefault "_" val
+
+        PRecordSpread ->
+            "{..}"
+
+        PRecordFields fields ->
+            "{" ++ String.join "," fields ++ "}"
+
+        PUnaryOpDef _ ->
+            "<UNARY OP DEF>"
+
+        PBinaryOpDef _ ->
+            "<BINARY OP DEF>"
+
+
+recordExprContentToString : RecordExprContent -> String
+recordExprContentToString content =
+    case content of
+        Field { field, expr } ->
+            field ++ ":" ++ exprToString expr
+
+        Pun field ->
+            field
+
+        Spread id ->
+            "..." ++ Id.toString id
+
+
+exprToString : Expr -> String
+exprToString expr =
+    case expr of
+        Int n ->
+            String.fromInt n
+
+        Float n ->
+            String.fromFloat n
+
+        Char c ->
+            "'" ++ c ++ "'"
+
+        String s ->
+            "\"" ++ s ++ "\""
+
+        Bool b ->
+            if b then
+                "True"
+
+            else
+                "False"
+
+        Unit ->
+            "()"
+
+        Tuple xs ->
+            "(" ++ String.join "," (List.map exprToString xs) ++ ")"
+
+        List xs ->
+            "[" ++ String.join "," (List.map exprToString xs) ++ "]"
+
+        Record contents ->
+            "{" ++ String.join "," (List.map recordExprContentToString contents) ++ "}"
+
+        UnaryOp InfiniteRange e ->
+            exprToString e ++ unaryOpName InfiniteRange
+
+        UnaryOp op e ->
+            unaryOpName op ++ exprToString e
+
+        BinaryOp left op right ->
+            exprToString left ++ binaryOpName op ++ exprToString right
+
+        Call { fn, args } ->
+            exprToString fn
+                ++ "("
+                ++ String.join "," (List.map exprToString args)
+                ++ ")"
+
+        RecordGet { record, field } ->
+            exprToString record ++ "." ++ field
+
+        Block { stmts, ret } ->
+            "{\n" ++ String.join "\n" (List.map (stmtToString >> indent) stmts) ++ "\n}"
+
+        EffectBlock _ ->
+            Debug.todo "expr to string - effect block"
+
+        Constructor_ { id, args } ->
+            Id.toString id
+                ++ (if List.isEmpty args then
+                        ""
+
+                    else
+                        "("
+                            ++ String.join "," (List.map exprToString args)
+                            ++ ")"
+                   )
+
+        Identifier id ->
+            Id.toString id
+
+        RootIdentifier id ->
+            "::" ++ Id.toString id
+
+        Lambda r ->
+            lambdaToString r
+
+        RecordGetter field ->
+            "." ++ field
+
+        If _ ->
+            Debug.todo "expr to string - if"
+
+        Case _ ->
+            Debug.todo "expr to string - case"
+
+
+stmtToString : Stmt -> String
+stmtToString stmt =
+    Debug.todo "stmt to string"
+
+
+indent : String -> String
+indent str =
+    "    " ++ str

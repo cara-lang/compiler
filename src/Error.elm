@@ -91,6 +91,7 @@ type InterpreterError
     | UnnecessaryBang
     | CallingNonFunction
     | CallingRecordGetterOnNonRecord
+    | EquatingNonequatable
 
 
 title : Error -> String
@@ -355,6 +356,10 @@ title error =
                         CallingRecordGetterOnNonRecord ->
                             -- TODO error code
                             "Calling a record getter on a non-record"
+
+                        EquatingNonequatable ->
+                            -- TODO error code
+                            "Equating nonequatable"
                    )
 
 

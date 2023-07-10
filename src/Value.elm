@@ -1,4 +1,9 @@
-module Value exposing (Value(..), toString)
+module Value exposing
+    ( Value(..)
+    , closureToString
+    , isEqualityAllowed
+    , toString
+    )
 
 import AST exposing (Expr, Pattern)
 import Dict exposing (Dict)
@@ -91,3 +96,59 @@ toString value =
         VIo val ->
             "<IO: {VAL}>"
                 |> String.replace "{VAL}" (toString val)
+
+
+isEqualityAllowed : Value -> Bool
+isEqualityAllowed val =
+    case val of
+        VInt _ ->
+            True
+
+        VFloat _ ->
+            True
+
+        VString _ ->
+            True
+
+        VChar _ ->
+            True
+
+        VBool _ ->
+            True
+
+        VUnit ->
+            True
+
+        VRecordGetter _ ->
+            True
+
+        VList xs ->
+            List.all isEqualityAllowed xs
+
+        VTuple xs ->
+            List.all isEqualityAllowed xs
+
+        VRecord fields ->
+            List.all isEqualityAllowed (Dict.values fields)
+
+        VConstructor { args } ->
+            List.all isEqualityAllowed args
+
+        VIntrinsic _ ->
+            False
+
+        VClosure _ ->
+            False
+
+        VIo _ ->
+            False
+
+
+closureToString : Value -> String
+closureToString val =
+    case val of
+        VClosure { args, body, env } ->
+            AST.lambdaToString { args = args, body = body }
+
+        _ ->
+            "NOT A CLOSURE"

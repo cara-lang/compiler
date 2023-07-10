@@ -1106,6 +1106,9 @@ interpretBinaryOpCallVal =
             ( VInt a, Times, VInt b ) ->
                 Outcome.succeed env <| VInt (a * b)
 
+            ( VInt a, Times, VFloat b ) ->
+                Outcome.succeed env <| VFloat (toFloat a * b)
+
             ( VFloat a, Times, VFloat b ) ->
                 Outcome.succeed env <| VFloat (a * b)
 
@@ -1177,6 +1180,16 @@ interpretBinaryOpCallVal =
             ( VInt a, Eq, VInt b ) ->
                 Outcome.succeed env <| VBool (a == b)
 
+            ( VList xs, Eq, VList ys ) ->
+                if List.length xs /= List.length ys then
+                    Outcome.succeed env <| VBool False
+
+                else if List.all Value.isEqualityAllowed (xs ++ ys) then
+                    Outcome.succeed env <| VBool (xs == ys)
+
+                else
+                    Outcome.fail EquatingNonequatable
+
             ( VConstructor a, Eq, VConstructor b ) ->
                 Outcome.succeed env <| VBool (a == b)
 
@@ -1245,6 +1258,10 @@ interpretBinaryOpCallUser finishWithUnknown =
                 finishWithUnknown ()
 
             overload :: rest ->
+                let
+                    _ =
+                        Debug.log "trying out overload" (Value.closureToString overload)
+                in
                 interpretCallVal env ( overload, [ left, right ] )
                     |> Outcome.onError (\_ -> interpretBinaryOpCallUser finishWithUnknown env ( left, rest, right ))
 
