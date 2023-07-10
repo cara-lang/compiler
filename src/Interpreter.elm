@@ -1163,16 +1163,12 @@ interpretBinaryOpCallVal =
                 Outcome.succeed env <| VInt (a |> Bitwise.shiftRightZfBy b)
 
             -- LTE: ints, floats, strings, chars, bools, unit,
-            --      lists (of comparable? TODO),
-            --      tuples (of comparable? TODO),
-            --      records (of comparable? TODO)
+            --      lists, tuples, records
             ( VInt a, Lte, VInt b ) ->
                 Outcome.succeed env <| VBool (a <= b)
 
             -- LT: ints, floats, strings, chars, bools, unit,
-            --     lists (of comparable? TODO),
-            --     tuples (of comparable? TODO),
-            --     records (of comparable? TODO)
+            --      lists, tuples, records
             ( VInt a, Lt, VInt b ) ->
                 Outcome.succeed env <| VBool (a < b)
 
@@ -1190,16 +1186,12 @@ interpretBinaryOpCallVal =
                 Outcome.succeed env <| VBool (a /= b)
 
             -- GT: ints, floats, strings, chars, bools, unit,
-            --     lists (of comparable? TODO),
-            --     tuples (of comparable? TODO),
-            --     records (of comparable? TODO)
+            --      lists, tuples, records
             ( VInt a, Gt, VInt b ) ->
                 Outcome.succeed env <| VBool (a > b)
 
             -- GTE: ints, floats, strings, chars, bools, unit,
-            --      lists (of comparable? TODO),
-            --      tuples (of comparable? TODO),
-            --      records (of comparable? TODO)
+            --      lists, tuples, records
             ( VInt a, Gte, VInt b ) ->
                 Outcome.succeed env <| VBool (a >= b)
 
