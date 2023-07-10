@@ -14,11 +14,11 @@ Here are some of its characteristics:
 
 ## Status
 
-At the moment, Cara is in the design phase: I'm trying to figure out its features, syntax and behaviour and produce a grammar, a set of examples and end-to-end tests showing whole programs. You can see some in `examples/` and `tests/end-to-end/`.
+At the moment, Cara is in the design phase: I'm trying to figure out its features, syntax and behaviour and produce a grammar, a set of examples and end-to-end tests showing whole programs. You can see some in `end-to-end-tests/`.
 
 ## Examples
 
-```cara
+```rust
 #!/usr/bin/env cara
 
 dst = IO.ask!("Enter destination filename: ")
@@ -32,7 +32,7 @@ timestampFmt = "hh:mm:ss.fff"
 })
 ```
 
-```cara
+```rust
 isPrime(n) =
   2..sqrt(n)
     |> Seq.any(#(n % _ == 0))
@@ -42,8 +42,8 @@ x = isPrime(1111111111111111111)
 IO.println!(x) // -> True
 ```
 
-```cara
-quickSort(List[Int]): List[Int]
+```rust
+quickSort : List[Int] -> List[Int]
 quickSort([]) = []
 quickSort([x,...xs]) = {
   (lt, gt) = List.partition(#(x >= _), xs)
@@ -55,19 +55,21 @@ quickSort([x,...xs]) = {
   |> IO.println!
 ```
 
-```cara
+```rust
 type Maybe[a] =
   | Nothing
   | Just(a)
 
-traverse(fn: a -> Maybe[b], list: List[a]): Maybe[List[b]]
-traverse(fn,list) = go(list,[])
-  where
-    go([],bs) = Just(List.reverse(bs))
-    go([a,...as],bs) = 
-      case fn(a) of
-        Nothing -> Nothing
-        Just(b) -> go(as,b++bs)
+traverse: (a -> Maybe[b]) -> List[a] -> Maybe[List[b]]
+traverse(fn,list) = {
+  go([],bs) = Just(List.reverse(bs))
+  go([a,...as],bs) = 
+    case fn(a) of
+      Nothing -> Nothing
+      Just(b) -> go(as,b++bs)
+
+  go(list,[])
+}
 
 xs = [1,2,3,4,5]
 ys = [6,7,8,9,10]
@@ -77,12 +79,12 @@ IO.println!(xs |> traverse(f)) // -> Nothing
 IO.println!(ys |> traverse(f)) // -> Just([6,7,8,9,10])
 ```
 
-```cara
+```rust
 fizzbuzz(n) =
   if n % 15 == 0 then "FizzBuzz"
   else if n % 3 == 0 then "Fizz"
   else if n % 5 == 0 then "Buzz"
-  else String.fromInt(n)
+  else "$n"
 
 1..20
   |> List.map(fizzbuzz)
