@@ -1082,48 +1082,136 @@ interpretBinaryOpCallVal =
     \env ( left, op, right ) ->
         case ( left, op, right ) of
             -- language-given binary operators
+            -- Plus: ints, floats
             ( VInt a, Plus, VInt b ) ->
                 Outcome.succeed env <| VInt (a + b)
 
+            ( VInt a, Plus, VFloat b ) ->
+                Outcome.succeed env <| VFloat (toFloat a + b)
+
+            ( VFloat a, Plus, VInt b ) ->
+                Outcome.succeed env <| VFloat (a + toFloat b)
+
+            ( VFloat a, Plus, VFloat b ) ->
+                Outcome.succeed env <| VFloat (a + b)
+
+            -- Minus: ints, floats
             ( VInt a, Minus, VInt b ) ->
                 Outcome.succeed env <| VInt (a - b)
 
+            ( VFloat a, Minus, VFloat b ) ->
+                Outcome.succeed env <| VFloat (a - b)
+
+            -- Times: ints, floats, lists
             ( VInt a, Times, VInt b ) ->
                 Outcome.succeed env <| VInt (a * b)
 
+            ( VFloat a, Times, VFloat b ) ->
+                Outcome.succeed env <| VFloat (a * b)
+
+            -- Div: ints, floats
             ( VInt a, Div, VInt b ) ->
                 Outcome.succeed env <| VInt (a // b)
 
-            ( VInt a, Pow, VInt b ) ->
-                Outcome.succeed env <| VInt (a ^ b)
+            ( VFloat a, Div, VFloat b ) ->
+                -- TODO handle div by 0? make it be Infinity?
+                Outcome.succeed env <| VFloat (a / b)
 
-            ( VInt a, Lte, VInt b ) ->
-                Outcome.succeed env <| VBool (a <= b)
-
-            ( VInt a, Lt, VInt b ) ->
-                Outcome.succeed env <| VBool (a < b)
-
-            ( VInt a, Eq, VInt b ) ->
-                Outcome.succeed env <| VBool (a == b)
-
-            ( VInt a, Neq, VInt b ) ->
-                Outcome.succeed env <| VBool (a /= b)
-
-            ( VInt a, Gt, VInt b ) ->
-                Outcome.succeed env <| VBool (a > b)
-
-            ( VInt a, Gte, VInt b ) ->
-                Outcome.succeed env <| VBool (a >= b)
-
+            -- Mod: ints, floats
             ( VInt a, Mod, VInt b ) ->
                 Outcome.succeed env <| VInt (a |> modBy b)
 
+            ( VFloat a, Mod, VInt b ) ->
+                let
+                    integer =
+                        floor a
+
+                    result =
+                        toFloat (integer |> modBy b) + a - toFloat integer
+                in
+                Outcome.succeed env <| VFloat result
+
+            ( VFloat a, Mod, VFloat b ) ->
+                Outcome.succeed env <| VFloat (a - b * toFloat (floor (a / b)))
+
+            -- Pow: ints, floats
+            ( VInt a, Pow, VInt b ) ->
+                Outcome.succeed env <| VInt (a ^ b)
+
+            -- OrBin: ints
+            ( VInt a, OrBin, VInt b ) ->
+                Outcome.succeed env <| VInt (Bitwise.or a b)
+
+            -- AndBin: ints
+            ( VInt a, AndBin, VInt b ) ->
+                Outcome.succeed env <| VInt (Bitwise.and a b)
+
+            -- XorBin: ints
+            ( VInt a, XorBin, VInt b ) ->
+                Outcome.succeed env <| VInt (Bitwise.xor a b)
+
+            -- ShiftL: ints
+            ( VInt a, ShiftL, VInt b ) ->
+                Outcome.succeed env <| VInt (a |> Bitwise.shiftLeftBy b)
+
+            -- ShiftR: ints
+            ( VInt a, ShiftR, VInt b ) ->
+                Outcome.succeed env <| VInt (a |> Bitwise.shiftRightBy b)
+
+            -- ShiftRU: ints
+            ( VInt a, ShiftRU, VInt b ) ->
+                Outcome.succeed env <| VInt (a |> Bitwise.shiftRightZfBy b)
+
+            -- LTE: ints, floats, strings, chars, bools, unit,
+            --      lists (of comparable? TODO),
+            --      tuples (of comparable? TODO),
+            --      records (of comparable? TODO)
+            ( VInt a, Lte, VInt b ) ->
+                Outcome.succeed env <| VBool (a <= b)
+
+            -- LT: ints, floats, strings, chars, bools, unit,
+            --     lists (of comparable? TODO),
+            --     tuples (of comparable? TODO),
+            --     records (of comparable? TODO)
+            ( VInt a, Lt, VInt b ) ->
+                Outcome.succeed env <| VBool (a < b)
+
+            -- EQ: ints, floats, strings, chars, bools, unit,
+            --     list, tuples, records, record getters, constructors
+            ( VInt a, Eq, VInt b ) ->
+                Outcome.succeed env <| VBool (a == b)
+
+            ( VConstructor a, Eq, VConstructor b ) ->
+                Outcome.succeed env <| VBool (a == b)
+
+            -- NEQ: ints, floats, strings, chars, bools, unit,
+            --     lists, tuples, records, record getters, constructors
+            ( VInt a, Neq, VInt b ) ->
+                Outcome.succeed env <| VBool (a /= b)
+
+            -- GT: ints, floats, strings, chars, bools, unit,
+            --     lists (of comparable? TODO),
+            --     tuples (of comparable? TODO),
+            --     records (of comparable? TODO)
+            ( VInt a, Gt, VInt b ) ->
+                Outcome.succeed env <| VBool (a > b)
+
+            -- GTE: ints, floats, strings, chars, bools, unit,
+            --      lists (of comparable? TODO),
+            --      tuples (of comparable? TODO),
+            --      records (of comparable? TODO)
+            ( VInt a, Gte, VInt b ) ->
+                Outcome.succeed env <| VBool (a >= b)
+
+            -- OrBool: Bool
             ( VBool a, OrBool, VBool b ) ->
                 Outcome.succeed env <| VBool (a || b)
 
+            -- AndBool: Bool
             ( VBool a, AndBool, VBool b ) ->
                 Outcome.succeed env <| VBool (a && b)
 
+            -- Append: Strings, Lists
             ( VList a, Append, VList b ) ->
                 Outcome.succeed env <| VList (a ++ b)
 
@@ -1133,32 +1221,13 @@ interpretBinaryOpCallVal =
             ( VList a, Append, b ) ->
                 Outcome.succeed env <| VList (a ++ [ b ])
 
+            -- RangeInclusive: Ints, Chars
             ( VInt a, RangeInclusive, VInt b ) ->
                 Outcome.succeed env <| VList (List.range a b |> List.map VInt)
 
+            -- RangeExclusive: Ints, Chars
             ( VInt a, RangeExclusive, VInt b ) ->
                 Outcome.succeed env <| VList (List.range a (b - 1) |> List.map VInt)
-
-            ( VInt a, OrBin, VInt b ) ->
-                Outcome.succeed env <| VInt (Bitwise.or a b)
-
-            ( VInt a, AndBin, VInt b ) ->
-                Outcome.succeed env <| VInt (Bitwise.and a b)
-
-            ( VInt a, XorBin, VInt b ) ->
-                Outcome.succeed env <| VInt (Bitwise.xor a b)
-
-            ( VInt a, ShiftL, VInt b ) ->
-                Outcome.succeed env <| VInt (a |> Bitwise.shiftLeftBy b)
-
-            ( VInt a, ShiftR, VInt b ) ->
-                Outcome.succeed env <| VInt (a |> Bitwise.shiftRightBy b)
-
-            ( VInt a, ShiftRU, VInt b ) ->
-                Outcome.succeed env <| VInt (a |> Bitwise.shiftRightZfBy b)
-
-            ( VConstructor a, Eq, VConstructor b ) ->
-                Outcome.succeed env <| VBool (a == b)
 
             -- user-given binary operators
             _ ->
