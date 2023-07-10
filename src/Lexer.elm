@@ -755,7 +755,7 @@ consumeWhile pred source i row col =
 
 isIdentifierSecond : Char -> Bool
 isIdentifierSecond c =
-    Char.isAlphaNum c || c == '_' || c == '\''
+    Char.isAlphaNum c || c == '_' || c == '\'' || c == '?'
 
 
 isDigitOrUnderscore : Char -> Bool

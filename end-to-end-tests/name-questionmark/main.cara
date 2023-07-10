@@ -1,7 +1,20 @@
 x? = 1
-
 empty?(list) = list == []
 
 IO.println!(x?)
 IO.println!(empty?([]))
 IO.println!(empty?([1]))
+
+type Thing = Fizz? | Buzz?(Int)
+y = Fizz?
+z = Buzz?(123)
+
+IO.println!(y)
+IO.println!(z)
+
+type alias Even? = Int -> Bool
+a : Even? -> Int -> Bool
+a(even?,n) = even?(n)
+
+IO.println!(a(#(_ % 2 == 0), 5))
+IO.println!(a(#(_ % 2 == 0), 4))
