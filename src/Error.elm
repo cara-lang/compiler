@@ -349,8 +349,7 @@ title error =
                     "Calling a record getter on a non-record"
 
                 CallingRecordGetOnNonRecord ->
-                    -- TODO error code
-                    "Calling a record get on a non-record"
+                    "E0022: Trying to access a record field from a non-record"
 
                 SpreadingNonRecord ->
                     -- TODO error code
