@@ -250,8 +250,7 @@ title error =
                     "oneOf didn't match any commited path (and there were no noncommited paths)"
 
                 MixedHoles ->
-                    -- TODO error code
-                    "Mixed holes"
+                    "E0020: Anonymous function shorthand with mixed holes"
 
                 NonNumberedHole str ->
                     -- TODO error code
