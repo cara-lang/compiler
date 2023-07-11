@@ -22,6 +22,7 @@ module AST exposing
     , isEffectfulStmt
     , isSpreadPattern
     , lambdaToString
+    , patternToString
     , unaryOpName
     )
 

@@ -8,8 +8,8 @@ module Logger {
   pure : a -> Logger[log,a]
   pure(a) = Logger([],a)
 
-  bind : (a -> Logger[log,b]) -> Logger[log,a] -> Logger[log,b]
-  bind(fn,Logger(aLog,a)) = {
+  bind : Logger[log,a] -> (a -> Logger[log,b]) -> Logger[log,b]
+  bind(Logger(aLog,a),fn) = {
     (bLog,b) = fn(a)
     log = aLog ++ bLog
     Logger(aLog,b)
