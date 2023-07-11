@@ -1,0 +1,137 @@
+module Seq {
+  /* Lazy list, potentially infinite. */
+
+  opaque type Seq[a] =
+    | Empty
+    | Cons(a,(-> Seq[a]))
+
+  extend module Gen {
+    finiteSeq : Gen[a] -> Gen[Seq[a]]
+    finiteSeq(itemGen) = Gen {
+      list = Gen.list!(itemGen)
+      fromList(list)
+    }
+
+    infiniteSeq : (a -> (b,a)) -> Gen[a] -> Gen[Seq[b]]
+    infiniteSeq(fn,seedGen) = Gen {
+      seed = seedGen!
+      unfold(fn,seed)
+    }
+
+    maybeInfiniteSeq : (a -> (b,Maybe[a])) -> Gen[a] -> Gen[Seq[b]]
+    maybeInfiniteSeq(fn,seedGen) = Gen {
+      seed = seedGen!
+      unfoldMaybe(fn,seed)
+    }
+  }
+
+  empty : Seq[a]
+  empty = Empty
+
+  cons : a -> Seq[a] -> Seq[a]
+  cons(x,xs) = Cons(x,\->xs)
+
+  singleton : a -> Seq[a]
+  singleton(x) = cons(x,empty)
+
+  empty? : Seq[a] -> Bool
+  empty?(Empty) = True
+  empty?(Cons(_,_)) = False
+
+  head : Seq[a] -> Maybe[a]
+  head(Empty) = Nothing
+  head(Cons(x,_)) = Just(x)
+
+  tail : Seq[a] -> Maybe[Seq[a]]
+  tail(Empty) = Nothing
+  tail(Cons(_,xs)) = Just(xs())
+
+  member? : a -> Seq[a] -> Bool
+  member?(_,Empty) = False
+  member?(toFind,Cons(x,xs)) = x == toFind || member?(toFind,xs())
+
+  nth : Int -> Seq[a] -> Maybe[a]
+  nth(n,seq) = head(drop(n-1,seq))
+
+  length : Seq[a] -> Int
+  length(seq) = fold(\_,n -> n+1, 0, seq)
+
+  fromList : List[a] -> Seq[a]
+  fromList(xs) = List.foldr(cons,empty,xs)
+
+  unfold : (a -> (b,a)) -> a -> Seq[b]
+  unfold(fn,seed) = {
+    (x,newSeed) = fn(seed)
+    Cons(x,#(unfold(fn,newSeed)))
+  }
+
+  unfoldMaybe : (a -> (b,Maybe[a])) -> a -> Seq[b]
+  unfoldMaybe(fn,seed) = {
+    (x,maybeNewSeed) = fn(seed)
+    case maybeNewSeed of
+      Nothing -> singleton(x)
+      Just(newSeed) -> Cons(x,#(unfold(fn,newSeed)))
+  }
+
+  toList : Seq[a] -> List[a]
+  toList(seq) = {
+
+    go : Seq[a] -> List[a] -> List[a]
+    go(Empty,acc) = List.reverse(acc)
+    go(Cons(x,xs),acc) = go(xs(),x++acc)
+
+    go(seq,[])
+
+  }
+
+  map : (a -> b) -> Seq[a] -> Seq[b]
+  map(_,Empty) = Empty
+  map(fn,Cons(x,xs)) = Cons(fn(x),(\->map(fn,xs())))
+
+  // TODO fold
+  // TODO scan
+  // TODO concat
+  // TODO append
+  // TODO intersperse
+  // TODO interleave
+  // TODO reverse
+  // TODO cycle
+  // TODO iterate
+  // TODO repeat
+  // TODO repeatN
+  // TODO take
+  // TODO takeWhile
+  // TODO drop
+  // TODO dropWhile
+  // TODO filter
+  // TODO reject
+  // TODO filterMap
+  // TODO unique
+  // TODO andMap
+  // TODO andThen
+  // TODO concatMap
+  // TODO flatMap
+  // TODO bind
+  // TODO sum
+  // TODO product
+  // TODO map2
+  // TODO map3
+  // TODO indexed
+  // TODO minimum
+  // TODO maximum
+  // TODO last
+
+  // TODO all?
+  // TODO any?
+
+  // TODO numbers0
+  // TODO numbers1
+  // TODO numbersFrom
+  // TODO numbersBy
+  // TODO range
+  // TODO linspace
+
+  // TODO check list, list-extra
+
+  // TODO tests
+}

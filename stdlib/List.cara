@@ -8,24 +8,25 @@ module List {
     | Empty
     | Cons(a,List[a])
 
-  // TODO use some advanced data structure for List, to allow fast append at end
-  // since it's syntactically so easy?
-
   extend module Gen {
 
     list : Gen[a] -> Gen[List[a]]
-    list(itemGen) = list(itemGen,[])
+    list(itemGen) = {
 
-    private list : Gen[a] -> List[a] -> Gen[List[a]]
-    list(itemGen,acc) = Gen {
-      nextPlease = Gen.weightedBool!(0.6)
-      next =
-        if nextPlease then Gen {
-          newItem = itemGen!
-          list!(itemGen, acc ++ newItem)
-        } 
-        else Gen { acc } 
-      next!
+      go : List[a] -> Gen[List[a]]
+      go(acc) = Gen {
+        nextPlease = Gen.weightedBool!(0.6)
+        next =
+          if nextPlease then Gen {
+            newItem = itemGen!
+            go!(acc ++ newItem)
+          } 
+          else Gen { acc } 
+        next!
+      }
+
+      go([])
+
     }
 
   }
@@ -40,11 +41,15 @@ module List {
   pure(a) = singleton(a)
 
   map : (a -> b) -> List[a] -> List[b]
-  map(f,xs) = map(f,xs,[])
+  map(f,xs) = {
 
-  private map : (a -> b) -> List[a] -> List[b] -> List[b]
-  map(_,[],acc) = acc
-  map(f,x::xs,acc) = map(f,xs,f(x)++acc)
+    go : List[a] -> List[b] -> List[b]
+    go([],acc) = acc
+    go(x::xs,acc) = go(xs,f(x)++acc)
+
+    go(xs,[])
+
+  }
 
   test: map(#(_+1),[1,2,3]) == [2,3,4]
   test: map(#(_+1),[]) == []
@@ -52,11 +57,15 @@ module List {
     \xs -> length(map(#(_+1),xs)) == length(xs)
 
   sum : List[Int] -> Int
-  sum(xs) = sum(xs,0)
+  sum(xs) = {
 
-  private sum : List[Int] -> Int -> Int
-  sum([],acc) = acc
-  sum([x,...xs],acc) = sum(xs,acc+x)
+    go : List[Int] -> Int -> Int
+    go([],acc) = acc
+    go([x,...xs],acc) = sum(xs,acc+x)
+
+    go(xs,0)
+
+  }
 
   test: sum([]) == 0
   test: sum([1,2,3]) == 6
@@ -64,11 +73,15 @@ module List {
     \ones -> sum(ones) == length(ones)
 
   concat : List[List[a]] -> List[a]
-  concat(lists) = concat(lists,[])
+  concat(lists) = {
 
-  private concat : List[List[a]] -> List[a] -> List[a]
-  concat([],acc) = acc
-  concat([list,...lists],acc) = concat(lists, acc ++ list)
+    go : List[List[a]] -> List[a] -> List[a]
+    go([],acc) = acc
+    go([list,...lists],acc) = concat(lists, acc ++ list)
+
+    go(lists,[])
+
+  }
 
   test: concat([]) == []
   test: concat([[],[]]) == []
@@ -80,17 +93,20 @@ module List {
     \lists -> length(concat(lists)) == sum(map(length,lists))
 
   repeat : Int -> a -> List[a]
-  repeat(n,x) =
+  repeat(n,x) = {
+
     // TODO what about the 5*[x] built-in operator?
     // Can we depend on it here?
     // Or can we make _it_ depend on this function?
     // Or can we remove it from the compiler and put it into the stdlib?
-    if n <= 0 then []
-    else repeat(n,x,[])
 
-  private repeat : Int -> a -> List[a] -> List[a]
-  repeat(0,_,acc) = acc
-  repeat(n,x,acc) = repeat(n-1,x,x++acc)
+    go : Int -> List[a] -> List[a]
+    go(0,acc) = acc
+    go(n,acc) = go(n-1,x++acc)
+
+    if n <= 0 then []
+    else go(n,[])
+  }
 
   test: repeat(0,()) == []
   test: repeat(3,()) == [(),(),()]
@@ -126,6 +142,35 @@ module List {
   test: [1] != empty
   test: [[]] != empty
 
+  cons : a -> List[a] -> List[a]
+  cons(a,as) = Cons(a,as)
+
+  test: [1]   == cons(1,[])
+  test: [1,2] == cons(1,cons(2,[]))
+
+  head : List[a] -> Maybe[a]
+  head([]) = Nothing
+  head([x,..._]) = Just(x)
+
+  test: head([]) == Nothing
+  test: head([1]) == Just(1)
+
+  tail : List[a] -> Maybe[List[a]]
+  tail([]) = Nothing
+  tail([_,...xs]) = Just(xs)
+
+  test: tail([]) == Nothing
+  test: tail([1]) == Just([])
+  test: tail([1,2,3]) == Just([2,3])
+
+  uncons : List[a] -> Maybe[(a,List[a])]
+  uncons([]) = Nothing
+  uncons([x,...xs]) = Just((x,xs))
+
+  test: uncons([]) == Nothing
+  test: uncons([1]) == Just((1,[]))
+  test: uncons([1,2,3]) == Just((1,[2,3]))
+
   empty? : List[a] -> Bool
   empty?(Empty) = True
   empty?(_)     = False
@@ -134,18 +179,16 @@ module List {
   test "cons is not empty" with (Int,List[Int]):
     \x,xs -> !empty?(cons(x,xs))
 
-  cons : a -> List[a] -> List[a]
-  cons(a,as) = Cons(a,as)
-
-  test: [1]   == cons(1,[])
-  test: [1,2] == cons(1,cons(2,[]))
-
   length : List[a] -> Int
-  length(xs) = length(xs,0)
+  length(xs) = {
 
-  private length : List[a] -> Int -> Int
-  length(Empty,acc) = acc
-  length(Cons(a,as),acc) = length(as,acc+1)
+    go : List[a] -> Int -> Int
+    go([],n) = n
+    go([x,...xs],n) = go(xs,n+1)
+
+    go(xs,0)
+
+  }
 
   test: length([]) == 0
   test: length([1]) == 1
@@ -154,5 +197,40 @@ module List {
     \x,xs -> length(x++xs) == length(xs) + 1
   test "length(xs++x)" with (Int,List[Int]):
     \x,xs -> length(xs++x) == length(xs) + 1
+
+  // TODO take
+  // TODO drop
+  // TODO reverse
+  // TODO filter
+  // TODO reject
+  // TODO filterMap
+  // TODO nth
+  // TODO foldl
+  // TODO foldr
+  // TODO scanl
+  // TODO scanr
+  // TODO append
+  // TODO intersperse
+  // TODO interleave
+  // TODO iterate
+  // TODO takeWhile
+  // TODO dropWhile
+  // TODO unique
+  // TODO andMap
+  // TODO product
+  // TODO map2
+  // TODO map3
+  // TODO range
+  // TODO indexedMap
+  // TODO unfold (a -> (b,Maybe[a])) -> a -> List[b]
+  // TODO minimum
+  // TODO maximum
+  // TODO last
+
+  // TODO member?
+  // TODO all?
+  // TODO any?
+
+  // TODO check list-extra
 
 }
