@@ -1480,7 +1480,8 @@ interpretRecordExprContent =
                     |> Outcome.map (\value -> [ ( field, value ) ])
 
             Pun field ->
-                Debug.todo "interpret record pun content"
+                interpretExpr env (Identifier (Id.local field))
+                    |> Outcome.map (\value -> [ ( field, value ) ])
 
             Spread id ->
                 Debug.todo "interpret record spread content"
