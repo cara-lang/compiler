@@ -311,8 +311,7 @@ title error =
                         |> String.replace "{FIELD}" field
 
                 IfConditionNotBool ->
-                    -- TODO error code
-                    "If condition not bool"
+                    "E0025: If expression with a non-bool condition"
 
                 PatternMismatch ->
                     -- TODO error code
