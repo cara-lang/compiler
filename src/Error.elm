@@ -92,6 +92,7 @@ type InterpreterError
     | CallingNonFunction
     | CallingRecordGetterOnNonRecord
     | CallingRecordGetOnNonRecord
+    | SpreadingNonRecord
     | EquatingNonequatable
     | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
     | UnknownUnaryOpOverload ( UnaryOp, Value )
@@ -363,6 +364,10 @@ title error =
                         CallingRecordGetOnNonRecord ->
                             -- TODO error code
                             "Calling a record get on a non-record"
+
+                        SpreadingNonRecord ->
+                            -- TODO error code
+                            "Spreading a non-record"
 
                         EquatingNonequatable ->
                             -- TODO error code
