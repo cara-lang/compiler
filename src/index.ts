@@ -61,6 +61,14 @@ function registerPorts(app) {
       const content = await Deno.readTextFile(r.filename);
       app.ports.completedReadFile.send(content);
   });
+  app.ports.readFileMaybe.subscribe(async (r: {filename: string}) => {
+      try {
+        const content = await Deno.readTextFile(r.filename);
+        app.ports.completedReadFileMaybe.send(content);
+      } catch (e) {
+        app.ports.completedReadFileMaybe.send(null);
+      }
+  });
   app.ports.writeFile.subscribe(async (r: {filename: string, content: string}) => {
       await Deno.writeTextFile(r.filename, r.content);
       app.ports.completedWriteFile.send(null);

@@ -1,6 +1,6 @@
 module TestRunner exposing (Flags, Model, Msg, main)
 
-import Effect exposing (Effect0, EffectStr)
+import Effect exposing (Effect0, EffectMaybeStr, EffectStr)
 import Env
 import Error exposing (Error(..))
 import Interpreter
@@ -30,6 +30,7 @@ type Model
     = Done
     | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
     | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
+    | PausedOnEffectMaybeStr EffectMaybeStr (Maybe String -> ( Model, Cmd Msg ))
 
 
 type Msg
@@ -38,6 +39,7 @@ type Msg
     | CompletedPrintln
     | CompletedEprintln
     | CompletedReadFile String
+    | CompletedReadFileMaybe (Maybe String)
     | CompletedWriteFile
 
 
@@ -81,8 +83,13 @@ runTest name fileContents k =
     of
         Err err ->
             if String.endsWith "-err" name then
-                -- TODO and if the err is actually the one we want!
-                k ()
+                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <|
+                    \stderr ->
+                        if Maybe.andThen (List.head << String.lines) stderr == Just (Error.title err) then
+                            k ()
+
+                        else
+                            effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
 
             else
                 effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
@@ -107,8 +114,13 @@ handleInterpreterOutcome testName k outcome =
 
         Interpreter.FoundError err ->
             if String.endsWith "-err" testName then
-                -- TODO and if the err is actually the one we want!
-                k ()
+                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <|
+                    \stderr ->
+                        if Maybe.andThen (List.head << String.lines) stderr == Just (Error.title (InterpreterError err)) then
+                            k ()
+
+                        else
+                            effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
 
             else
                 effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
@@ -118,6 +130,9 @@ handleInterpreterOutcome testName k outcome =
 
         Interpreter.NeedsEffectStr effect kOutcome ->
             pauseOnEffectStr effect kOutcome testName k
+
+        Interpreter.NeedsEffectMaybeStr effect kOutcome ->
+            pauseOnEffectMaybeStr effect kOutcome testName k
 
 
 pauseOnEffect0 :
@@ -144,6 +159,18 @@ pauseOnEffectStr effect kOutcome testName k =
     )
 
 
+pauseOnEffectMaybeStr :
+    EffectMaybeStr
+    -> (Maybe String -> Interpreter.Outcome ())
+    -> String
+    -> (() -> ( Model, Cmd Msg ))
+    -> ( Model, Cmd Msg )
+pauseOnEffectMaybeStr effect kOutcome testName k =
+    ( PausedOnEffectMaybeStr effect (kOutcome >> handleInterpreterOutcome testName k)
+    , Effect.handleEffectMaybeStr effect
+    )
+
+
 effect0 : Effect0 -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
 effect0 eff k =
     ( PausedOnEffect0 eff k
@@ -155,6 +182,13 @@ effectStr : EffectStr -> (String -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
 effectStr eff k =
     ( PausedOnEffectStr eff k
     , Effect.handleEffectStr eff
+    )
+
+
+effectMaybeStr : EffectMaybeStr -> (Maybe String -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+effectMaybeStr eff k =
+    ( PausedOnEffectMaybeStr eff k
+    , Effect.handleEffectMaybeStr eff
     )
 
 
@@ -204,6 +238,14 @@ update msg model =
                 ( Effect.ReadFile _, _ ) ->
                     Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
 
+        PausedOnEffectMaybeStr effect k ->
+            case ( effect, msg ) of
+                ( Effect.ReadFileMaybe _, CompletedReadFileMaybe content ) ->
+                    k content
+
+                ( Effect.ReadFileMaybe _, _ ) ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -213,5 +255,6 @@ subscriptions _ =
         , Effect.completedPrintln (\_ -> CompletedPrintln)
         , Effect.completedEprintln (\_ -> CompletedEprintln)
         , Effect.completedReadFile CompletedReadFile
+        , Effect.completedReadFileMaybe CompletedReadFileMaybe
         , Effect.completedWriteFile (\_ -> CompletedWriteFile)
         ]

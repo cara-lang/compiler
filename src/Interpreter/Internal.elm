@@ -61,6 +61,10 @@ map fn interpreter =
                     NeedsEffectStr eff k
                         |> Outcome.andThen int2
 
+                NeedsEffectMaybeStr eff k ->
+                    NeedsEffectMaybeStr eff k
+                        |> Outcome.andThen int2
+
 But that leads to code like
 
     (interpretExpr
@@ -94,6 +98,10 @@ andThen interpreter outcome =
 
         NeedsEffectStr eff k ->
             NeedsEffectStr eff k
+                |> Outcome.andThen interpreter
+
+        NeedsEffectMaybeStr eff k ->
+            NeedsEffectMaybeStr eff k
                 |> Outcome.andThen interpreter
 
 

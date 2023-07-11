@@ -1,16 +1,17 @@
 port module Effect exposing
     ( Effect0(..), EffectStr(..)
-    , handleEffect0, handleEffectStr
-    , chdir, print, println, eprintln, writeFile, readFile
-    , completedChdir, completedPrint, completedPrintln, completedEprintln, completedReadFile, completedWriteFile
+    , handleEffect0, handleEffectStr, handleEffectMaybeStr
+    , chdir, print, println, eprintln, writeFile, readFile, readFileMaybe
+    , completedChdir, completedPrint, completedPrintln, completedEprintln, completedReadFile, completedWriteFile, completedReadFileMaybe
+    , EffectMaybeStr(..)
     )
 
 {-|
 
 @docs Effect0, EffectStr
-@docs handleEffect0, handleEffectStr
-@docs chdir, print, println, eprintln, writeFile, readFile
-@docs completedChdir, completedPrint, completedPrintln, completedEprintln, completedReadFile, completedWriteFile
+@docs handleEffect0, handleEffectStr, handleEffectMaybeStr
+@docs chdir, print, println, eprintln, writeFile, readFile, readFileMaybe
+@docs completedChdir, completedPrint, completedPrintln, completedEprintln, completedReadFile, completedWriteFile, completedReadFileMaybe
 
 -}
 
@@ -27,6 +28,10 @@ type EffectStr
     = ReadFile { filename : String }
 
 
+type EffectMaybeStr
+    = ReadFileMaybe { filename : String }
+
+
 port chdir : String -> Cmd msg
 
 
@@ -40,6 +45,9 @@ port eprintln : String -> Cmd msg
 
 
 port readFile : { filename : String } -> Cmd msg
+
+
+port readFileMaybe : { filename : String } -> Cmd msg
 
 
 port writeFile : { filename : String, content : String } -> Cmd msg
@@ -58,6 +66,9 @@ port completedEprintln : (() -> msg) -> Sub msg
 
 
 port completedReadFile : (String -> msg) -> Sub msg
+
+
+port completedReadFileMaybe : (Maybe String -> msg) -> Sub msg
 
 
 port completedWriteFile : (() -> msg) -> Sub msg
@@ -87,3 +98,10 @@ handleEffectStr effect =
     case effect of
         ReadFile r ->
             readFile r
+
+
+handleEffectMaybeStr : EffectMaybeStr -> Cmd msg
+handleEffectMaybeStr effect =
+    case effect of
+        ReadFileMaybe r ->
+            readFileMaybe r

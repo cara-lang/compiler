@@ -1,7 +1,7 @@
 module Main exposing (Flags, Model, Msg, main)
 
 import AST
-import Effect exposing (Effect0, EffectStr)
+import Effect exposing (Effect0, EffectMaybeStr, EffectStr)
 import Env
 import Error exposing (Error(..))
 import Interpreter
@@ -30,6 +30,7 @@ type Model
     | ExitingWithError
     | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
     | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
+    | PausedOnEffectMaybeStr EffectMaybeStr (Maybe String -> ( Model, Cmd Msg ))
 
 
 type Msg
@@ -38,6 +39,7 @@ type Msg
     | CompletedPrintln
     | CompletedEprintln
     | CompletedReadFile String
+    | CompletedReadFileMaybe (Maybe String)
     | CompletedWriteFile
 
 
@@ -83,6 +85,9 @@ handleInterpreterOutcome outcome =
         Interpreter.NeedsEffectStr effect k ->
             pauseOnEffectStr effect k
 
+        Interpreter.NeedsEffectMaybeStr effect k ->
+            pauseOnEffectMaybeStr effect k
+
 
 finishWithError : Error -> ( Model, Cmd Msg )
 finishWithError err =
@@ -106,6 +111,13 @@ pauseOnEffectStr : EffectStr -> (String -> Interpreter.Outcome ()) -> ( Model, C
 pauseOnEffectStr effect k =
     ( PausedOnEffectStr effect (k >> handleInterpreterOutcome)
     , Effect.handleEffectStr effect
+    )
+
+
+pauseOnEffectMaybeStr : EffectMaybeStr -> (Maybe String -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
+pauseOnEffectMaybeStr effect k =
+    ( PausedOnEffectMaybeStr effect (k >> handleInterpreterOutcome)
+    , Effect.handleEffectMaybeStr effect
     )
 
 
@@ -168,6 +180,14 @@ update msg model =
                 ( Effect.ReadFile _, _ ) ->
                     Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
 
+        PausedOnEffectMaybeStr effect k ->
+            case ( effect, msg ) of
+                ( Effect.ReadFileMaybe _, CompletedReadFileMaybe content ) ->
+                    k content
+
+                ( Effect.ReadFileMaybe _, _ ) ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -177,5 +197,6 @@ subscriptions _ =
         , Effect.completedPrintln (\_ -> CompletedPrintln)
         , Effect.completedEprintln (\_ -> CompletedEprintln)
         , Effect.completedReadFile CompletedReadFile
+        , Effect.completedReadFileMaybe CompletedReadFileMaybe
         , Effect.completedWriteFile (\_ -> CompletedWriteFile)
         ]
