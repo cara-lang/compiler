@@ -125,8 +125,7 @@ title error =
                     "E0018: Unescaped tab in a character"
 
                 UnescapedNewlineInChar ->
-                    -- TODO error code
-                    "EXXXX: Unescaped newline in a character"
+                    "E0017: Unescaped newline in a character"
 
                 UnescapedNewlineInString ->
                     "E0012: Unescaped newline in a single-line string"
