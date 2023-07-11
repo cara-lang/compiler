@@ -91,6 +91,7 @@ type InterpreterError
     | UnnecessaryBang
     | CallingNonFunction
     | CallingRecordGetterOnNonRecord
+    | CallingRecordGetOnNonRecord
     | EquatingNonequatable
     | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
     | UnknownUnaryOpOverload ( UnaryOp, Value )
@@ -358,6 +359,10 @@ title error =
                         CallingRecordGetterOnNonRecord ->
                             -- TODO error code
                             "Calling a record getter on a non-record"
+
+                        CallingRecordGetOnNonRecord ->
+                            -- TODO error code
+                            "Calling a record get on a non-record"
 
                         EquatingNonequatable ->
                             -- TODO error code

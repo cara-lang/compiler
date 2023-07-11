@@ -1285,7 +1285,7 @@ interpretRecordGet =
                                 Outcome.succeed env1 content
 
                     _ ->
-                        Debug.todo <| "Unimplemented interpretRecordGet: " ++ Debug.toString recordVal
+                        Outcome.fail CallingRecordGetOnNonRecord
 
 
 specialTupleGetters : Dict String Int
