@@ -1,4 +1,4 @@
-build: yarn elm-esm make src/Main.elm --output=dist/elm.js
+build: yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js
 test: clr && ok build && ./src/test.ts
 run: ./src/run.ts "$1"
 

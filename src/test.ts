@@ -3,12 +3,12 @@
 import fs from 'node:fs/promises';
 import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
+import registerPorts from './registerPorts.ts';
 
 const selectedTest = null;
 
 ///////////////////////////////////////////
 
-const textEncoder = new TextEncoder();
 const testsDir = 'end-to-end-tests';
 
 if (selectedTest == null) {
@@ -38,39 +38,4 @@ if (selectedTest == null) {
   const app = Elm.Main.init({flags: {sourceCode}});
   registerPorts(app);
 
-}
-
-function registerPorts(app) {
-  app.ports.chdir.subscribe(async (path: string) => {
-      chdir(path);
-      app.ports.completedChdir.send(null);
-  });
-  app.ports.print.subscribe(async (str: string) => {
-      await Deno.stdout.write(textEncoder.encode(str));
-      app.ports.completedPrint.send(null);
-  });
-  app.ports.println.subscribe(async (str: string) => {
-      await Deno.stdout.write(textEncoder.encode(str + "\n"));
-      app.ports.completedPrintln.send(null);
-  });
-  app.ports.eprintln.subscribe(async (str: string) => {
-      await Deno.stderr.write(textEncoder.encode(str + "\n"));
-      app.ports.completedEprintln.send(null);
-  });
-  app.ports.readFile.subscribe(async (r: {filename: string}) => {
-      const content = await Deno.readTextFile(r.filename);
-      app.ports.completedReadFile.send(content);
-  });
-  app.ports.readFileMaybe.subscribe(async (r: {filename: string}) => {
-      try {
-        const content = await Deno.readTextFile(r.filename);
-        app.ports.completedReadFileMaybe.send(content);
-      } catch (e) {
-        app.ports.completedReadFileMaybe.send(null);
-      }
-  });
-  app.ports.writeFile.subscribe(async (r: {filename: string, content: string}) => {
-      await Deno.writeTextFile(r.filename, r.content);
-      app.ports.completedWriteFile.send(null);
-  });
 }
