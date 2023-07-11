@@ -529,7 +529,7 @@ interpretPattern =
                             |> Outcome.succeed env
 
                     VTuple values ->
-                        Debug.todo "interpret pattern {..} for tuple"
+                        interpretPattern env ( PRecordSpread, VRecord (tupleToNumericRecord values) )
 
                     _ ->
                         Debug.todo <| "interpret pattern {..} - other: " ++ Debug.toString value
@@ -760,15 +760,10 @@ interpretCallVal =
             VRecordGetter field ->
                 case argVals of
                     [ VTuple values ] ->
-                        interpretRecordGetTuple env ( values, field )
+                        interpretRecordGetDict env ( field, tupleToNumericAndWordyRecord values )
 
                     [ VRecord fields ] ->
-                        case Dict.get field fields of
-                            Nothing ->
-                                Outcome.fail <| RecordFieldNotFound field
-
-                            Just value ->
-                                Outcome.succeed env value
+                        interpretRecordGetDict env ( field, fields )
 
                     _ ->
                         Outcome.fail CallingRecordGetterOnNonRecord
@@ -1256,73 +1251,91 @@ interpretRecordGet =
         Interpreter.do (interpretExpr env record) <| \env1 recordVal ->
         case recordVal of
             VTuple values ->
-                interpretRecordGetTuple env1 ( values, field )
+                interpretRecordGetDict env1 ( field, tupleToNumericAndWordyRecord values )
 
             VRecord fields ->
-                case Dict.get field fields of
-                    Nothing ->
-                        Outcome.fail <| RecordFieldNotFound field
-
-                    Just content ->
-                        Outcome.succeed env1 content
+                interpretRecordGetDict env1 ( field, fields )
 
             _ ->
                 Outcome.fail CallingRecordGetOnNonRecord
 
 
-specialTupleGetters : Dict String Int
-specialTupleGetters =
-    Dict.fromList
-        [ ( "first", 0 )
-        , ( "second", 1 )
-        , ( "third", 2 )
-        , ( "fourth", 3 )
-        , ( "fifth", 4 )
-        , ( "sixth", 5 )
-        , ( "seventh", 6 )
-        , ( "eighth", 7 )
-        , ( "ninth", 8 )
-        , ( "tenth", 9 )
-        ]
-
-
-interpretRecordGetTuple : Interpreter ( List Value, String ) Value
-interpretRecordGetTuple =
-    \env ( values, field ) ->
-        let
-            accessIndex : Int -> Outcome Value
-            accessIndex index =
-                case List.getAt index values of
-                    Just value ->
-                        Outcome.succeed env value
-
-                    Nothing ->
-                        Outcome.fail
-                            (TupleLengthMismatch
-                                { wanted = index
-                                , length = List.length values
-                                }
-                            )
-
-            unknownField : () -> Outcome Value
-            unknownField () =
-                Outcome.fail (TupleUnknownField field)
-        in
-        case Dict.get field specialTupleGetters of
-            Just index ->
-                accessIndex index
-
+interpretRecordGetDict : Interpreter ( String, Dict String Value ) Value
+interpretRecordGetDict =
+    \env ( field, fields ) ->
+        case Dict.get field fields of
             Nothing ->
-                if String.startsWith "el" field then
-                    case String.toInt (String.dropLeft 2 field) of
-                        Nothing ->
-                            unknownField ()
+                Outcome.fail <| RecordFieldNotFound field
 
-                        Just index ->
-                            accessIndex index
+            Just content ->
+                Outcome.succeed env content
 
-                else
-                    unknownField ()
+
+tupleIndexToWordyField : Int -> Maybe String
+tupleIndexToWordyField n =
+    case n of
+        0 ->
+            Just "first"
+
+        1 ->
+            Just "second"
+
+        2 ->
+            Just "third"
+
+        3 ->
+            Just "fourth"
+
+        4 ->
+            Just "fifth"
+
+        5 ->
+            Just "sixth"
+
+        6 ->
+            Just "seventh"
+
+        7 ->
+            Just "eighth"
+
+        8 ->
+            Just "ninth"
+
+        9 ->
+            Just "tenth"
+
+        _ ->
+            Nothing
+
+
+tupleIndexToNumericField : Int -> String
+tupleIndexToNumericField n =
+    "el" ++ String.fromInt (n + 1)
+
+
+{-| Useful for spreads
+-}
+tupleToNumericRecord : List Value -> Dict String Value
+tupleToNumericRecord values =
+    values
+        |> List.indexedMap (\i value -> ( tupleIndexToNumericField i, value ))
+        |> Dict.fromList
+
+
+{-| Useful for record gets
+-}
+tupleToNumericAndWordyRecord : List Value -> Dict String Value
+tupleToNumericAndWordyRecord values =
+    values
+        |> List.indexedMap
+            (\i value ->
+                [ Just ( tupleIndexToNumericField i, value )
+                , tupleIndexToWordyField i |> Maybe.map (\field -> ( field, value ))
+                ]
+                    |> List.filterMap identity
+            )
+        |> List.concat
+        |> Dict.fromList
 
 
 {-| Try to find the ID in the current Env, then in the parent, ... up to the root.
