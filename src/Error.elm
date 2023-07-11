@@ -6,7 +6,7 @@ module Error exposing
     , title
     )
 
-import AST exposing (Pattern)
+import AST exposing (BinaryOp, Pattern, UnaryOp)
 import Id exposing (Id)
 import Loc exposing (Loc)
 import Token
@@ -92,6 +92,8 @@ type InterpreterError
     | CallingNonFunction
     | CallingRecordGetterOnNonRecord
     | EquatingNonequatable
+    | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
+    | UnknownUnaryOpOverload ( UnaryOp, Value )
 
 
 title : Error -> String
@@ -360,6 +362,14 @@ title error =
                         EquatingNonequatable ->
                             -- TODO error code
                             "Equating nonequatable"
+
+                        UnknownBinaryOpOverload ( left, op, right ) ->
+                            -- TODO error code
+                            "Unknown binary op: " ++ Debug.toString ( left, op, right )
+
+                        UnknownUnaryOpOverload ( op, arg ) ->
+                            -- TODO error code
+                            "Unknown unary op: " ++ Debug.toString ( op, arg )
                    )
 
 
