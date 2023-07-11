@@ -1,0 +1,158 @@
+module List {
+
+  //////////
+  // List //
+  //////////
+
+  opaque type List[a] = 
+    | Empty
+    | Cons(a,List[a])
+
+  // TODO use some advanced data structure for List, to allow fast append at end
+  // since it's syntactically so easy?
+
+  extend module Gen {
+
+    list : Gen[a] -> Gen[List[a]]
+    list(itemGen) = list(itemGen,[])
+
+    private list : Gen[a] -> List[a] -> Gen[List[a]]
+    list(itemGen,acc) = Gen {
+      nextPlease = Gen.weightedBool!(0.6)
+      next =
+        if nextPlease then Gen {
+          newItem = itemGen!
+          list!(itemGen, acc ++ newItem)
+        } 
+        else Gen { acc } 
+      next!
+    }
+
+  }
+
+  singleton : a -> List[a]
+  singleton(a) = [a]
+
+  test: singleton(1) == [1]
+  test: singleton(2) == [2]
+
+  pure : a -> List[a]
+  pure(a) = singleton(a)
+
+  map : (a -> b) -> List[a] -> List[b]
+  map(f,xs) = map(f,xs,[])
+
+  private map : (a -> b) -> List[a] -> List[b] -> List[b]
+  map(_,[],acc) = acc
+  map(f,x::xs,acc) = map(f,xs,f(x)++acc)
+
+  test: map(#(_+1),[1,2,3]) == [2,3,4]
+  test: map(#(_+1),[]) == []
+  test "map: keeps length" with List[Int]:
+    \xs -> length(map(#(_+1),xs)) == length(xs)
+
+  sum : List[Int] -> Int
+  sum(xs) = sum(xs,0)
+
+  private sum : List[Int] -> Int -> Int
+  sum([],acc) = acc
+  sum([x,...xs],acc) = sum(xs,acc+x)
+
+  test: sum([]) == 0
+  test: sum([1,2,3]) == 6
+  test "sum: known sum" with Gen.list(Gen.const(1)):
+    \ones -> sum(ones) == length(ones)
+
+  concat : List[List[a]] -> List[a]
+  concat(lists) = concat(lists,[])
+
+  private concat : List[List[a]] -> List[a] -> List[a]
+  concat([],acc) = acc
+  concat([list,...lists],acc) = concat(lists, acc ++ list)
+
+  test: concat([]) == []
+  test: concat([[],[]]) == []
+  test: concat([[1]]) == [1]
+  test: concat([["x"]]) == ["x"]
+  test: concat([[[1]]]) == [[1]]
+  test: concat([[1,2],[3],[],[4,5,6]]) == [1,2,3,4,5,6]
+  test "concat: keeps length" with List[List[Int]]:
+    \lists -> length(concat(lists)) == sum(map(length,lists))
+
+  repeat : Int -> a -> List[a]
+  repeat(n,x) =
+    // TODO what about the 5*[x] built-in operator?
+    // Can we depend on it here?
+    // Or can we make _it_ depend on this function?
+    // Or can we remove it from the compiler and put it into the stdlib?
+    if n <= 0 then []
+    else repeat(n,x,[])
+
+  private repeat : Int -> a -> List[a] -> List[a]
+  repeat(0,_,acc) = acc
+  repeat(n,x,acc) = repeat(n-1,x,x++acc)
+
+  test: repeat(0,()) == []
+  test: repeat(3,()) == [(),(),()]
+  test: repeat(2,"a") == ["a","a"]
+  test: repeat(1,1) == [1]
+  test "repeat(1) = singleton" with Int:
+    \x -> repeat(1,x) == singleton(x)
+
+  concatMap : (a -> List[b]) -> List[a] -> List[b]
+  concatMap(fn,list) = concat(map(fn,list))
+
+  test: concatMap(\_ -> [1],[]) == []
+  test: concatMap(\_ -> [1],["x"]) == [1]
+  test: concatMap(\_ -> [1],["x","y"]) == [1,1]
+  test: concatMap(\_ -> [1,2],["x","y"]) == [1,2,1,2]
+  test: concatMap(\x -> repeat(2,x),["x","y"]) == ["x","x","y","y"]
+  test "bind(pure) = identity" with List[Int]:
+    \xs -> concatMap(singleton,xs) == xs
+
+  bind : (a -> List[b]) -> List[a] -> List[b]
+  bind = concatMap
+
+  flatMap : (a -> List[b]) -> List[a] -> List[b]
+  flatMap = concatMap
+
+  andThen : List[a] -> (a -> List[b]) -> List[b]
+  andThen(list,fn) = bind(fn,list)
+
+  empty : List[a]
+  empty = Empty
+
+  test: [] == empty
+  test: [1] != empty
+  test: [[]] != empty
+
+  empty? : List[a] -> Bool
+  empty?(Empty) = True
+  empty?(_)     = False
+
+  test: empty?(empty)
+  test "cons is not empty" with (Int,List[Int]):
+    \x,xs -> !empty?(cons(x,xs))
+
+  cons : a -> List[a] -> List[a]
+  cons(a,as) = Cons(a,as)
+
+  test: [1]   == cons(1,[])
+  test: [1,2] == cons(1,cons(2,[]))
+
+  length : List[a] -> Int
+  length(xs) = length(xs,0)
+
+  private length : List[a] -> Int -> Int
+  length(Empty,acc) = acc
+  length(Cons(a,as),acc) = length(as,acc+1)
+
+  test: length([]) == 0
+  test: length([1]) == 1
+  test: length([1,2,3]) == 3
+  test "length(x++xs)" with (Int,List[Int]):
+    \x,xs -> length(x++xs) == length(xs) + 1
+  test "length(xs++x)" with (Int,List[Int]):
+    \x,xs -> length(xs++x) == length(xs) + 1
+
+}

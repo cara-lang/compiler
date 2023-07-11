@@ -1,0 +1,22 @@
+/*
+`Gen` is used for property-based testing.
+
+It's a bit more advanced version of `Random` that holds the random numbers it
+used to generate the random values.
+
+This, together with the generator function hidden in Gen, is used by the tooling
+to shrink the values automatically. You can think of the generators as parsers of
+these random numbers.
+*/
+module Gen {
+
+  // TODO
+  // TODO pure
+  // TODO bind
+
+  char = Gen {
+    code = int!(25,83)
+    Char.fromCode(code)
+  }
+
+}

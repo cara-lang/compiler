@@ -50,14 +50,7 @@ init flags =
         astResult =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
-                |> Result.map
-                    (\ts ->
-                        let
-                            _ =
-                                ts |> List.reverse |> List.map (.type_ >> Debug.log "lexed")
-                        in
-                        ts
-                    )
+                --|> Result.map (\ts -> let _ = ts |> List.reverse |> List.map (.type_ >> Debug.log "lexed") in ts)
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
     case astResult of

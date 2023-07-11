@@ -77,7 +77,8 @@ type Type
 
 
 type Pattern
-    = PUnit -- ()
+    = -- TODO what about the "as" renaming pattern?
+      PUnit -- ()
     | PVar String -- a
     | PConstructor { id : Id, args : List Pattern } -- Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
     | PInt Int -- 1

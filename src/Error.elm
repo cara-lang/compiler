@@ -236,7 +236,7 @@ title error =
 
                 ExpectedToken t ->
                     -- TODO error code
-                    "Expected token: " ++ Debug.toString t
+                    Loc.toString loc ++ " - Expected token: " ++ Debug.toString t
 
                 AssignmentOfExprToUnderscore ->
                     "E0013: Assignment of expression to underscore"

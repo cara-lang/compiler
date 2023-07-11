@@ -1,0 +1,48 @@
+module Random {
+
+  /*
+  `Random` allows generating random values, given a PRNG seed number.
+  It uses the [PCG] algorithm.
+
+  [PCG]: https://www.pcg-random.org
+  */
+
+  opaque type Seed = Seed(state: Int, incr: Int)
+
+  extend module Gen {
+    seed : Gen[Seed]
+    seed = Gen.map2(#(Seed(_1,_2)),
+                    Gen.intAtLeast(0),
+                    Gen.intAtLeast(0))
+  }
+
+  /* TODO are we missing a "modulo by 32" here?
+     Seems to be the case based on the comment in elm/random.
+  */
+  private next : Seed -> Seed
+  next(Seed(state0,incr)) =
+    // The magic constant is from Numerical Recipes and is inlined for perf.
+    Seed(state0 * 1664525 + incr, incr)
+
+  initSeed : Int -> Seed
+  initSeed x = {
+    // the default increment magic constant is taken from Numerical Recipes
+    Seed(state1,incr) = next(Seed(0,1013904223))
+    state2 = state1 + x
+    next(Seed(state2,incr))
+  }
+
+  opaque type Random[a] = R(Seed -> (a, Seed))
+
+  run : Seed -> Random[a] -> (a, Seed)
+  run(seed,R(fn)) = fn(seed)
+
+  const : a -> Random[a]
+  const(a) = R(\s -> (a,s))
+
+  test: run(initSeed(0),const(5)).el1 == 5
+  test: run(initSeed(1),const(5)).el1 == 5
+  test "const: seed doesn't matter" with (Gen.seed,Gen.int):
+    \seed,n -> run(seed,const(n)).el1 == n
+
+}

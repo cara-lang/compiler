@@ -1,0 +1,64 @@
+extend module List {
+
+  type alias Nonempty[a] = (a,List[a])
+
+  extend module Gen {
+    nonemptyList : Gen[a] -> Gen[List.Nonempty[a]]
+    nonemptyList(itemGen) = Gen {
+      x = itemGen!
+      xs = Gen.list!(itemGen)
+      (x,xs)
+    }
+  }
+
+  module Nonempty {
+    
+    singleton : a -> Nonempty[a]
+    singleton(x) = (x,[])
+
+    test: singleton(1) == (1,[])
+    test: singleton(2) == (2,[])
+
+    fromCons : a -> List[a] -> Nonempty[a]
+    fromCons(x,xs) = (x,xs)
+
+    test: fromCons(1,[]) == (1,[])
+    test: fromCons(1,[2,3]) == (1,[2,3])
+
+    head : Nonempty[a] -> a
+    head((x,_)) = x
+
+    test: head((1,[])) == 1
+    test: head((2,[3,4])) == 2
+    test "head fromCons" with (Gen.int,Gen.list(Gen.int)):
+      \x,xs -> head(fromCons(x,xs)) == xs
+
+    length : Nonempty[a] -> Int
+    length((x,xs)) = 1 + List.length(xs)
+
+    test: length((1,[])) == 1
+    test: length((1,[2,3])) == 3
+    test "length >0" with Gen.nonemptyList(Gen.int):
+      \xs -> length(xs) > 0
+
+    toList : Nonempty[a] -> List[a]
+    toList((x,xs)) = x++xs
+
+    test: toList((1,[])) == [1]
+    test: toList((1,[2,3])) == [1,2,3]
+    test "toList length" with Gen.nonemptyList(Gen.int):
+      \xs -> List.length(toList(xs)) == length(xs)
+
+    fromList : List[a] -> Maybe[Nonempty[a]]
+    fromList([]) = Nothing
+    fromList([x,...xs]) = Just((x,xs))
+
+    test: fromList([]) == Nothing
+    test: fromList([1]) == Just((1,[]))
+    test: fromList([1,2,3]) == Just((1,[2,3]))
+    test "fromList toList" with Gen.nonemptyList(Gen.int):
+      \xs -> fromList(toList(xs)) == Just(xs)
+
+  }
+
+}
