@@ -1481,6 +1481,9 @@ interpretRecordExprContent =
                     VRecord fields ->
                         Outcome.succeed env1 (Dict.toList fields)
 
+                    VTuple values ->
+                        Outcome.succeed env1 (Dict.toList (tupleToNumericRecord values))
+
                     _ ->
                         Outcome.fail SpreadingNonRecord
 
