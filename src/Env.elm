@@ -2,7 +2,7 @@ module Env exposing
     ( Env, initWithIntrinsics
     , add, addId, addBinaryOp, addUnaryOp
     , createModule
-    , open, goUp
+    , goInto, goUp
     , get, getBinaryOp, getUnaryOp
     , toString
     , Module
@@ -13,13 +13,14 @@ module Env exposing
 @docs Env, initWithIntrinsics
 @docs add, addId, addBinaryOp, addUnaryOp
 @docs createModule
-@docs open, goUp
+@docs goInto, goUp
 @docs get, getBinaryOp, getUnaryOp
 @docs toString
 @docs Module
 
 -}
 
+import Basics.Extra as Basics
 import Dict exposing (Dict)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
@@ -148,16 +149,17 @@ ensurePath path env =
     let
         goUpNTimes : Int -> Env value -> Env value
         goUpNTimes n env_ =
-            if n <= 0 then
+            Basics.doNTimes
+                n
+                (\e ->
+                    case Zipper.parent e of
+                        Nothing ->
+                            Debug.todo "Bug: couldn't go up the specified number of times"
+
+                        Just env__ ->
+                            env__
+                )
                 env_
-
-            else
-                case Zipper.parent env_ of
-                    Nothing ->
-                        Debug.todo "Bug: couldn't go up the specified number of times"
-
-                    Just env__ ->
-                        goUpNTimes (n - 1) env__
 
         go : List String -> Env value -> Env value
         go path_ env_ =
@@ -170,10 +172,10 @@ ensurePath path env =
                     case
                         env_
                             |> createModule m
-                            |> open [ m ]
+                            |> goInto [ m ]
                     of
                         Nothing ->
-                            Debug.todo "Bug: couldn't open a freshly created module"
+                            Debug.todo "Bug: couldn't go into a freshly created module"
 
                         Just newEnv ->
                             go rest newEnv
@@ -181,8 +183,8 @@ ensurePath path env =
     go path env
 
 
-open : List String -> Env value -> Maybe (Env value)
-open modules env =
+goInto : List String -> Env value -> Maybe (Env value)
+goInto modules env =
     Zipper.navigate .name modules env
 
 

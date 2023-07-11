@@ -5,6 +5,20 @@ module Foo {
   }
 }
 
+x = 500
+
+z = IO {
+  use Foo
+  IO.println!(x)
+  IO.println!(Bar.y)
+}
+
+IO.println!("Gonna do things inside a block, these shouldn't leak")
+
+z!
+
+IO.println!(x)
+
 use Foo
 
 IO.println!(x)

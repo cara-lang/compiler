@@ -1,2 +1,6 @@
+Gonna do things inside a block, these shouldn't leak
+1
+2
+500
 1
 2
