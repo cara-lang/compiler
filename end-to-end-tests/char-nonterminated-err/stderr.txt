@@ -1,0 +1,8 @@
+E0033: Non-terminated character
+
+A non-terminated character was found. Add the second ' character.
+
+main.cara:1:5
+━━┓
+1 ┃ x = '
+  ┃     ^

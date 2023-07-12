@@ -1,0 +1,8 @@
+E0035: Non-terminated multi-line string
+
+A non-terminated multi-line string was found. Add the second ` character.
+
+main.cara:1:5
+━━┓
+1 ┃ x = `abc
+  ┃     ^

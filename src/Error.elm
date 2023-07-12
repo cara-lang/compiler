@@ -3,6 +3,7 @@ module Error exposing
     , InterpreterError(..)
     , LexerError(..)
     , ParserError(..)
+    , code
     , title
     )
 
@@ -105,279 +106,490 @@ title error =
         LexerError ( loc, lexerError ) ->
             case lexerError of
                 NonterminatedChar ->
-                    -- TODO error code
-                    "EXXXX: Nonterminated character"
+                    "Non-terminated character"
 
                 NonterminatedString ->
-                    -- TODO error code
-                    "EXXXX: Nonterminated string"
+                    "Non-terminated string"
 
                 NonterminatedMultilineString ->
-                    -- TODO error code
-                    "EXXXX: Nonterminated multiline string"
+                    "Non-terminated multi-line string"
 
                 UnfinishedBlockComment ->
-                    "E0009: Unfinished block comment"
+                    "Unfinished block comment"
 
                 EmptyChar ->
-                    "E0019: Empty character"
+                    "Empty character"
 
                 UnescapedTabInChar ->
-                    "E0018: Unescaped tab in a character"
+                    "Unescaped tab in a character"
 
                 UnescapedNewlineInChar ->
-                    "E0017: Unescaped newline in a character"
+                    "Unescaped newline in a character"
 
                 UnescapedNewlineInString ->
-                    "E0012: Unescaped newline in a single-line string"
+                    "Unescaped newline in a single-line string"
 
                 UnexpectedEscapedCharacterInChar _ ->
-                    "E0028: Unexpected escaped character in a character"
+                    "Unexpected escaped character in a character"
 
                 UnexpectedEscapedCharacterInString _ ->
-                    "E0014: Unexpected escaped character in a string"
+                    "Unexpected escaped character in a string"
 
                 UnexpectedEscapedCharacterInMultilineString _ ->
-                    "E0029: Unexpected escaped character in a multi-line string"
+                    "Unexpected escaped character in a multi-line string"
 
                 ExpectedLowerName ->
-                    -- TODO error code
                     "Expected lower name"
 
                 ExpectedUpperName ->
-                    -- TODO error code
                     "Expected upper name"
 
                 ExpectedNumber ->
-                    -- TODO error code
                     "Expected number"
 
                 UnexpectedChar c ->
-                    -- TODO error code
                     "Unexpected character: '{CHAR}'"
                         |> String.replace "{CHAR}" (String.fromChar c)
 
                 HexIntStartedWith0X ->
-                    "E0024: Hexadecimal integer started with 0X"
+                    "Hexadecimal integer started with 0X"
 
                 BinaryIntStartedWith0X ->
-                    "E0025: Binary integer started with 0B"
+                    "Binary integer started with 0B"
 
                 OctalIntStartedWith0X ->
-                    "E0026: Octal integer started with 0O"
+                    "Octal integer started with 0O"
 
                 ShebangIsNotFirst ->
-                    "E0015: Shebang comment is not first"
+                    "Shebang comment is not first"
 
                 FloatExpectedNumbersAfterE ->
-                    -- TODO error code
                     "Float: expected numbers after E"
 
                 FloatExpectedNumbersAfterDot ->
-                    -- TODO error code
                     "Float: expected numbers after dot"
 
                 UnexpectedBinaryIntCharacter c ->
-                    -- TODO error code
                     "Binary integer: unexpected character '{C}'"
                         |> String.replace "{C}" (String.fromChar c)
 
                 UnexpectedOctIntCharacter c ->
-                    -- TODO error code
                     "Octal integer: unexpected character '{C}'"
                         |> String.replace "{C}" (String.fromChar c)
 
                 UnexpectedHexIntCharacter c ->
-                    -- TODO error code
                     "Hexadecimal integer: unexpected character '{C}'"
                         |> String.replace "{C}" (String.fromChar c)
 
                 UnfinishedBinaryInt ->
-                    -- TODO error code
                     "Unfinished binary integer"
 
                 UnfinishedOctInt ->
-                    -- TODO error code
                     "Unfinished octal integer"
 
                 UnfinishedHexInt ->
-                    -- TODO error code
                     "Unfinished hexadecimal integer"
 
                 InvalidBinaryInt ->
-                    -- TODO error code
                     "Invalid binary integer"
 
                 InvalidOctInt ->
-                    -- TODO error code
                     "Invalid octal integer"
 
                 InvalidHexInt ->
-                    -- TODO error code
                     "Invalid hexadecimal integer"
 
         ParserError ( loc, parserError ) ->
             case parserError of
                 ExpectedNonemptyTokens ->
-                    -- TODO error code
                     -- Shouldn't happen
                     "Expected nonempty tokens"
 
                 CouldntMoveLeft ->
-                    -- TODO error code
                     "Couldn't move the token list left"
 
                 RanPastEndOfTokens ->
-                    -- TODO error code
                     "Ran past end of tokens"
 
                 CouldntGetTokenData ->
-                    -- TODO error code
                     "Couldn't get token data"
 
                 ExpectedToken t ->
-                    -- TODO error code
                     Loc.toString loc ++ " - Expected token: " ++ Token.toString t
 
                 AssignmentOfExprToUnderscore ->
-                    "E0013: Assignment of expression to underscore"
+                    "Assignment of expression to underscore"
 
                 EmptyOneOf ->
-                    -- TODO error code
                     "oneOf was given empty list of parsers to try"
 
                 OneOfDidntMatchAnyCommited ->
-                    -- TODO error code
                     "oneOf didn't match any commited path (and there were no noncommited paths)"
 
                 MixedHoles ->
-                    "E0020: Anonymous function shorthand with mixed holes"
+                    "Anonymous function shorthand with mixed holes"
 
                 NonNumberedHole str ->
-                    -- TODO error code
                     "(Should be impossible, we shouldn't allow _x names in user code) Non-numbered hole: " ++ str
 
                 UnknownBinaryOp str ->
-                    -- TODO error code
                     "Unknown binary op: " ++ str
 
                 UnknownUnaryOp str ->
-                    -- TODO error code
                     "Unknown unary op: " ++ str
 
                 EffectfulStmtInPureBlock ->
-                    -- TODO error code
                     "Effectful statement in a pure block"
 
                 BinaryOpAnnotationNotFn2 ->
-                    -- TODO error code
                     "Binary operation annotation was not a 2-arg function"
 
                 UnaryOpAnnotationNotFn1 ->
-                    -- TODO error code
                     "Unary operation annotation was not a 1-arg function"
 
         InterpreterError interpreterError ->
             case interpreterError of
                 VarNotFound id ->
-                    -- TODO error code
                     "Var not found: " ++ Id.toString id
 
                 RootVarNotFound id ->
-                    -- TODO error code
                     "Root var not found: " ++ Id.toString id
 
                 ExpectedModule module_ ->
-                    -- TODO error code
                     "Expected module " ++ module_
 
                 ExpectedParent ->
-                    -- TODO error code
                     "Expected parent"
 
                 UnexpectedArity ->
-                    -- TODO error code
                     "Unexpected arity"
 
                 TupleLengthMismatch { wanted, length } ->
-                    -- TODO error code
                     "Tuple length mismatch: wanted to get {WHICH} field of a tuple that has only {LENGTH} items"
                         |> String.replace "{WHICH}" (String.fromInt wanted ++ th (wanted + 1))
                         |> String.replace "{LENGTH}" (String.fromInt length)
 
                 TupleUnknownField field ->
-                    -- TODO error code
                     "Tried to access field '{FIELD}' on a tuple"
                         |> String.replace "{FIELD}" field
 
                 IfConditionNotBool ->
-                    "E0025: If expression with a non-bool condition"
+                    "If expression with a non-bool condition"
 
                 PatternMismatch ->
-                    -- TODO error code
                     "Pattern mismatch"
 
                 NoCaseBranchMatched ->
-                    -- TODO error code
                     "No case..of branch matched"
 
                 MultipleSpreadPatterns ->
-                    -- TODO error code
                     "Multiple spread patterns in a list pattern"
 
                 PatternDidNotMatch ( pattern, value ) ->
-                    -- TODO error code
                     "Pattern did not match: ({PATTERN}, {VALUE})"
                         |> String.replace "{PATTERN}" (AST.patternToString pattern)
                         |> String.replace "{VALUE}" (Value.toInspectString value)
 
                 RecordFieldNotFound field ->
-                    -- TODO error code
                     "Record field not found: " ++ field
 
                 EffectfulStmtInPureBlock_ ->
-                    -- TODO error code
                     "Effectful statement in a pure block"
 
                 UnnecessaryBang ->
-                    -- TODO error code
                     "Unnecessary bang"
 
                 CallingNonFunction ->
-                    -- TODO error code
                     "Calling a non-function"
 
                 CallingRecordGetterOnNonRecord ->
-                    -- TODO error code
                     "Calling a record getter on a non-record"
 
                 CallingRecordGetOnNonRecord ->
-                    "E0022: Trying to access a record field from a non-record"
+                    "Trying to access a record field from a non-record"
 
                 SpreadingNonRecord ->
-                    -- TODO error code
                     "Spreading a non-record"
 
                 EquatingNonequatable ->
-                    -- TODO error code
                     "Equating nonequatable"
 
                 UnknownBinaryOpOverload ( left, op, right ) ->
-                    -- TODO error code
                     "Unknown binary op: {LEFT}, {OP}, {RIGHT}"
                         |> String.replace "{LEFT}" (Value.toInspectString left)
                         |> String.replace "{OP}" (AST.binaryOp op)
                         |> String.replace "{RIGHT}" (Value.toInspectString right)
 
                 UnknownUnaryOpOverload ( op, arg ) ->
-                    -- TODO error code
                     "Unknown unary op: {OP}, {ARG}"
                         |> String.replace "{OP}" (AST.unaryOp op)
                         |> String.replace "{ARG}" (Value.toInspectString arg)
 
                 UnexpectedArgument value ->
-                    -- TODO error code
                     "Unexpected argument: " ++ Value.toInspectString value
+
+
+code : Error -> String
+code error =
+    case error of
+        LexerError ( loc, lexerError ) ->
+            case lexerError of
+                NonterminatedChar ->
+                    "E0033"
+
+                NonterminatedString ->
+                    "E0034"
+
+                NonterminatedMultilineString ->
+                    "E0035"
+
+                UnfinishedBlockComment ->
+                    "E0009"
+
+                EmptyChar ->
+                    "E0019"
+
+                UnescapedTabInChar ->
+                    "E0018"
+
+                UnescapedNewlineInChar ->
+                    "E0017"
+
+                UnescapedNewlineInString ->
+                    "E0012"
+
+                UnexpectedEscapedCharacterInChar _ ->
+                    "E0028"
+
+                UnexpectedEscapedCharacterInString _ ->
+                    "E0014"
+
+                UnexpectedEscapedCharacterInMultilineString _ ->
+                    "E0029"
+
+                ExpectedLowerName ->
+                    -- TODO
+                    "EXXXX"
+
+                ExpectedUpperName ->
+                    -- TODO
+                    "EXXXX"
+
+                ExpectedNumber ->
+                    -- TODO
+                    "EXXXX"
+
+                UnexpectedChar c ->
+                    -- TODO
+                    "EXXXX"
+
+                HexIntStartedWith0X ->
+                    "E0024"
+
+                BinaryIntStartedWith0X ->
+                    "E0025"
+
+                OctalIntStartedWith0X ->
+                    "E0026"
+
+                ShebangIsNotFirst ->
+                    "E0015"
+
+                FloatExpectedNumbersAfterE ->
+                    -- TODO
+                    "EXXXX"
+
+                FloatExpectedNumbersAfterDot ->
+                    -- TODO
+                    "EXXXX"
+
+                UnexpectedBinaryIntCharacter c ->
+                    -- TODO
+                    "EXXXX"
+
+                UnexpectedOctIntCharacter c ->
+                    -- TODO
+                    "EXXXX"
+
+                UnexpectedHexIntCharacter c ->
+                    -- TODO
+                    "EXXXX"
+
+                UnfinishedBinaryInt ->
+                    -- TODO
+                    "EXXXX"
+
+                UnfinishedOctInt ->
+                    -- TODO
+                    "EXXXX"
+
+                UnfinishedHexInt ->
+                    -- TODO
+                    "EXXXX"
+
+                InvalidBinaryInt ->
+                    -- TODO
+                    "EXXXX"
+
+                InvalidOctInt ->
+                    -- TODO
+                    "EXXXX"
+
+                InvalidHexInt ->
+                    -- TODO
+                    "EXXXX"
+
+        ParserError ( loc, parserError ) ->
+            case parserError of
+                ExpectedNonemptyTokens ->
+                    -- TODO
+                    "EXXXX"
+
+                CouldntMoveLeft ->
+                    -- TODO
+                    "EXXXX"
+
+                RanPastEndOfTokens ->
+                    -- TODO
+                    "EXXXX"
+
+                CouldntGetTokenData ->
+                    -- TODO
+                    "EXXXX"
+
+                ExpectedToken t ->
+                    -- TODO
+                    "EXXXX"
+
+                AssignmentOfExprToUnderscore ->
+                    "E0013"
+
+                EmptyOneOf ->
+                    -- TODO
+                    "EXXXX"
+
+                OneOfDidntMatchAnyCommited ->
+                    -- TODO
+                    "EXXXX"
+
+                MixedHoles ->
+                    "E0020"
+
+                NonNumberedHole str ->
+                    -- TODO
+                    "EXXXX"
+
+                UnknownBinaryOp str ->
+                    -- TODO
+                    "EXXXX"
+
+                UnknownUnaryOp str ->
+                    -- TODO
+                    "EXXXX"
+
+                EffectfulStmtInPureBlock ->
+                    -- TODO
+                    "EXXXX"
+
+                BinaryOpAnnotationNotFn2 ->
+                    -- TODO
+                    "EXXXX"
+
+                UnaryOpAnnotationNotFn1 ->
+                    -- TODO
+                    "EXXXX"
+
+        InterpreterError interpreterError ->
+            case interpreterError of
+                VarNotFound id ->
+                    -- TODO
+                    "EXXXX"
+
+                RootVarNotFound id ->
+                    -- TODO
+                    "EXXXX"
+
+                ExpectedModule module_ ->
+                    -- TODO
+                    "EXXXX"
+
+                ExpectedParent ->
+                    -- TODO
+                    "EXXXX"
+
+                UnexpectedArity ->
+                    -- TODO
+                    "EXXXX"
+
+                TupleLengthMismatch { wanted, length } ->
+                    -- TODO
+                    "EXXXX"
+
+                TupleUnknownField field ->
+                    -- TODO
+                    "EXXXX"
+
+                IfConditionNotBool ->
+                    "E0025"
+
+                PatternMismatch ->
+                    -- TODO
+                    "EXXXX"
+
+                NoCaseBranchMatched ->
+                    -- TODO
+                    "EXXXX"
+
+                MultipleSpreadPatterns ->
+                    -- TODO
+                    "EXXXX"
+
+                PatternDidNotMatch ( pattern, value ) ->
+                    -- TODO
+                    "EXXXX"
+
+                RecordFieldNotFound field ->
+                    -- TODO
+                    "EXXXX"
+
+                EffectfulStmtInPureBlock_ ->
+                    -- TODO
+                    "EXXXX"
+
+                UnnecessaryBang ->
+                    -- TODO
+                    "EXXXX"
+
+                CallingNonFunction ->
+                    -- TODO
+                    "EXXXX"
+
+                CallingRecordGetterOnNonRecord ->
+                    -- TODO
+                    "EXXXX"
+
+                CallingRecordGetOnNonRecord ->
+                    "E0022"
+
+                SpreadingNonRecord ->
+                    -- TODO
+                    "EXXXX"
+
+                EquatingNonequatable ->
+                    -- TODO
+                    "EXXXX"
+
+                UnknownBinaryOpOverload ( left, op, right ) ->
+                    -- TODO
+                    "EXXXX"
+
+                UnknownUnaryOpOverload ( op, arg ) ->
+                    -- TODO
+                    "EXXXX"
+
+                UnexpectedArgument value ->
+                    -- TODO
+                    "EXXXX"
 
 
 th : Int -> String

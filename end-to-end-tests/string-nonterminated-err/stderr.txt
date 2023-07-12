@@ -1,0 +1,8 @@
+E0034: Non-terminated string
+
+A non-terminated string was found. Add the second " character.
+
+main.cara:1:5
+━━┓
+1 ┃ x = "abc
+  ┃     ^
