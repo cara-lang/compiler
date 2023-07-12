@@ -1,9 +1,17 @@
 module IO {
 
-  toString : a -> IO[String]
+  pure : a -> IO[a]
+  bind : IO[a] -> (a -> IO[b]) -> IO[b]
+
   println : a -> IO[()]
+  inspect : a -> IO[()]
+
+  toString        : a -> String
+  toInspectString : a -> String
+
   ask : String -> IO[String]
-  readFile : String -> IO[Maybe[String]]
+
+  readFile  : String -> IO[Maybe[String]]
   writeFile : {filename: String, content: String} -> IO[()]
   
 }

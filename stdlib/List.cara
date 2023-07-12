@@ -1,9 +1,5 @@
 module List {
 
-  //////////
-  // List //
-  //////////
-
   opaque type List[a] = 
     | Empty
     | Cons(a,List[a])

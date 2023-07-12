@@ -1,0 +1,21 @@
+module Maybe {
+
+  type Maybe[a] =
+    | Nothing
+    | Just(a)
+
+  // TODO withDefault
+  // TODO map
+  // TODO map2
+  // TODO map3
+  // TODO map4
+  // TODO map5
+
+  // TODO andThen
+  // TODO bind
+  // TODO pure
+
+  // TODO tests
+  // TODO gen
+
+}

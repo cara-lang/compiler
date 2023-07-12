@@ -9,6 +9,9 @@ import Id exposing (Id)
 
 type Intrinsic
     = IoPrintln
+    | IoInspect
+    | IoToInspectString
+    | IoToString
     | IoPure
     | IoBind
     | IoReadFile
@@ -18,6 +21,9 @@ type Intrinsic
 all : List Intrinsic
 all =
     [ IoPrintln
+    , IoInspect
+    , IoToInspectString
+    , IoToString
     , IoPure
     , IoBind
     , IoReadFile
@@ -30,6 +36,15 @@ id intrinsic =
     case intrinsic of
         IoPrintln ->
             ioPrintln
+
+        IoInspect ->
+            ioInspect
+
+        IoToInspectString ->
+            ioToInspectString
+
+        IoToString ->
+            ioToString
 
         IoPure ->
             ioPure
@@ -48,6 +63,27 @@ ioPrintln : Id
 ioPrintln =
     { qualifiers = [ "IO" ]
     , name = "println"
+    }
+
+
+ioInspect : Id
+ioInspect =
+    { qualifiers = [ "IO" ]
+    , name = "inspect"
+    }
+
+
+ioToInspectString : Id
+ioToInspectString =
+    { qualifiers = [ "IO" ]
+    , name = "toInspectString"
+    }
+
+
+ioToString : Id
+ioToString =
+    { qualifiers = [ "IO" ]
+    , name = "toString"
     }
 
 

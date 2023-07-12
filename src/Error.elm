@@ -329,7 +329,7 @@ title error =
                     -- TODO error code
                     "Pattern did not match: ({PATTERN}, {VALUE})"
                         |> String.replace "{PATTERN}" (AST.patternToString pattern)
-                        |> String.replace "{VALUE}" (Value.toString value)
+                        |> String.replace "{VALUE}" (Value.toInspectString value)
 
                 RecordFieldNotFound field ->
                     -- TODO error code
@@ -365,19 +365,19 @@ title error =
                 UnknownBinaryOpOverload ( left, op, right ) ->
                     -- TODO error code
                     "Unknown binary op: {LEFT}, {OP}, {RIGHT}"
-                        |> String.replace "{LEFT}" (Value.toString left)
+                        |> String.replace "{LEFT}" (Value.toInspectString left)
                         |> String.replace "{OP}" (AST.binaryOp op)
-                        |> String.replace "{RIGHT}" (Value.toString right)
+                        |> String.replace "{RIGHT}" (Value.toInspectString right)
 
                 UnknownUnaryOpOverload ( op, arg ) ->
                     -- TODO error code
                     "Unknown unary op: {OP}, {ARG}"
                         |> String.replace "{OP}" (AST.unaryOp op)
-                        |> String.replace "{ARG}" (Value.toString arg)
+                        |> String.replace "{ARG}" (Value.toInspectString arg)
 
                 UnexpectedArgument value ->
                     -- TODO error code
-                    "Unexpected argument: " ++ Value.toString value
+                    "Unexpected argument: " ++ Value.toInspectString value
 
 
 th : Int -> String

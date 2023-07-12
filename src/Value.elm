@@ -4,7 +4,8 @@ module Value exposing
     , isEqualityAllowed
     , just
     , nothing
-    , toString
+    , toInspectString
+    , toShowString
     )
 
 import AST exposing (Expr, Pattern)
@@ -31,8 +32,8 @@ type Value
     | VIo Value
 
 
-toString : Value -> String
-toString value =
+toShowString : Value -> String
+toShowString value =
     case value of
         VInt int ->
             String.fromInt int
@@ -65,16 +66,16 @@ toString value =
                 |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
 
         VList values ->
-            "[" ++ String.join "," (List.map toString values) ++ "]"
+            "[" ++ String.join "," (List.map toShowString values) ++ "]"
 
         VTuple values ->
-            "(" ++ String.join "," (List.map toString values) ++ ")"
+            "(" ++ String.join "," (List.map toShowString values) ++ ")"
 
         VRecord fields ->
             "{"
                 ++ (fields
                         |> Dict.toList
-                        |> List.map (\( field, value_ ) -> field ++ ":" ++ toString value_)
+                        |> List.map (\( field, value_ ) -> field ++ ":" ++ toShowString value_)
                         |> String.join ","
                    )
                 ++ "}"
@@ -89,7 +90,7 @@ toString value =
                         ""
 
                     else
-                        "(" ++ String.join "," (List.map toString args) ++ ")"
+                        "(" ++ String.join "," (List.map toShowString args) ++ ")"
                    )
 
         VClosure _ ->
@@ -97,7 +98,84 @@ toString value =
 
         VIo val ->
             "<IO: {VAL}>"
-                |> String.replace "{VAL}" (toString val)
+                |> String.replace "{VAL}" (toShowString val)
+
+
+toInspectString : Value -> String
+toInspectString value =
+    case value of
+        VInt int ->
+            String.fromInt int
+
+        VFloat float ->
+            String.fromFloat float
+
+        VString str ->
+            -- TODO escaping?
+            ("\""
+                ++ (if String.length str > 5 then
+                        String.left 5 str ++ "..."
+
+                    else
+                        str
+                   )
+                ++ "\""
+            )
+                |> String.replace "\n" "\\n"
+
+        VChar str ->
+            -- TODO escaping?
+            ("'" ++ str ++ "'")
+                |> String.replace "\n" "\\n"
+
+        VBool bool ->
+            if bool then
+                "True"
+
+            else
+                "False"
+
+        VUnit ->
+            "()"
+
+        VIntrinsic intrinsic ->
+            "<intrinsic {ID}>"
+                |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
+
+        VList values ->
+            "[" ++ String.join "," (List.map toInspectString values) ++ "]"
+
+        VTuple values ->
+            "(" ++ String.join "," (List.map toInspectString values) ++ ")"
+
+        VRecord fields ->
+            "{"
+                ++ (fields
+                        |> Dict.toList
+                        |> List.map (\( field, value_ ) -> field ++ ":" ++ toInspectString value_)
+                        |> String.join ","
+                   )
+                ++ "}"
+
+        VRecordGetter field ->
+            "<record getter .{FIELD}>"
+                |> String.replace "{FIELD}" field
+
+        VConstructor { id, args } ->
+            Id.toString id
+                ++ (if List.isEmpty args then
+                        ""
+
+                    else
+                        "(" ++ String.join "," (List.map toInspectString args) ++ ")"
+                   )
+
+        VClosure _ ->
+            "<closure>"
+
+        VIo val ->
+            "<IO: {VAL}>"
+                |> String.replace "{VAL}" (toInspectString val)
 
 
 isEqualityAllowed : Value -> Bool

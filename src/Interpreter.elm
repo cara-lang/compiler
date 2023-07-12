@@ -399,6 +399,15 @@ interpretIntrinsicCallValues =
                     _ ->
                         Outcome.fail UnexpectedArity
 
+            IoInspect ->
+                case argVals of
+                    [ arg ] ->
+                        interpretInspect env arg
+                            |> Outcome.map (\() -> VIo VUnit)
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
             IoPure ->
                 case argVals of
                     [ arg ] ->
@@ -415,6 +424,22 @@ interpretIntrinsicCallValues =
                                 unwrapIo ioVal
                         in
                         interpretCallVal env ( fn, [ valueInIo ] )
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
+            IoToInspectString ->
+                case argVals of
+                    [ arg ] ->
+                        Outcome.succeed env (VString (Value.toInspectString arg))
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
+            IoToString ->
+                case argVals of
+                    [ arg ] ->
+                        Outcome.succeed env (VString (Value.toShowString arg))
 
                     _ ->
                         Outcome.fail UnexpectedArity
@@ -453,7 +478,7 @@ unwrapIo ioVal =
             valueInIo
 
         _ ->
-            Debug.todo <| "We expected VIo here... is this a bug? " ++ Value.toString ioVal
+            Debug.todo <| "We expected VIo here... is this a bug? " ++ Value.toInspectString ioVal
 
 
 interpretLet :
@@ -560,7 +585,7 @@ interpretPattern =
                         interpretPattern env ( PRecordSpread, VRecord (tupleToNumericRecord values) )
 
                     _ ->
-                        Debug.todo <| "interpret pattern {..} - other: " ++ Value.toString value
+                        Debug.todo <| "interpret pattern {..} - other: " ++ Value.toInspectString value
 
             PRecordFields wantedFields ->
                 let
@@ -586,19 +611,44 @@ interpretPattern =
             PConstructor { id, args } ->
                 case value of
                     VConstructor r ->
-                        if r.id == id then
+                        if r.id.name == id.name then
+                            Interpreter.do (interpretIdentifier env id) <| \env1 found ->
                             let
-                                pairs : List ( Pattern, Value )
-                                pairs =
-                                    List.map2 Tuple.pair args r.args
-                            in
-                            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env1 maybeAdditions ->
-                            case Maybe.combine maybeAdditions of
-                                Nothing ->
-                                    Outcome.succeed env Nothing
+                                handleVConstructor : Interpreter { id : Id, args : List Value } (Maybe PatternAddition)
+                                handleVConstructor =
+                                    \envX vc ->
+                                        if vc == r then
+                                            let
+                                                pairs : List ( Pattern, Value )
+                                                pairs =
+                                                    List.map2 Tuple.pair args r.args
+                                            in
+                                            Interpreter.do (Interpreter.traverse interpretPattern envX pairs) <| \envX1 maybeAdditions ->
+                                            case Maybe.combine maybeAdditions of
+                                                Nothing ->
+                                                    Outcome.succeed envX1 Nothing
 
-                                Just additions ->
-                                    Outcome.succeed env (Just (ManyAdditions additions))
+                                                Just additions ->
+                                                    Outcome.succeed envX1 (Just (ManyAdditions additions))
+
+                                        else
+                                            Outcome.succeed envX Nothing
+                            in
+                            case found of
+                                VConstructor found_ ->
+                                    handleVConstructor env1 found_
+
+                                VClosure c ->
+                                    Interpreter.do (interpretCallVal env1 ( found, r.args )) <| \env2 result ->
+                                    case result of
+                                        VConstructor found_ ->
+                                            handleVConstructor env2 found_
+
+                                        _ ->
+                                            Debug.todo <| "Unexpected result: " ++ Debug.toString result
+
+                                _ ->
+                                    Outcome.succeed env1 Nothing
 
                         else
                             Outcome.succeed env Nothing
@@ -1544,7 +1594,14 @@ interpretModule =
 interpretPrintln : Interpreter Value ()
 interpretPrintln =
     \env value ->
-        NeedsEffect0 (Effect.Println (Value.toString value)) <|
+        NeedsEffect0 (Effect.Println (Value.toShowString value)) <|
+            \() -> Outcome.succeed env ()
+
+
+interpretInspect : Interpreter Value ()
+interpretInspect =
+    \env value ->
+        NeedsEffect0 (Effect.Println (Value.toInspectString value)) <|
             \() -> Outcome.succeed env ()
 
 

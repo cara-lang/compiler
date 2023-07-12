@@ -1,5 +1,5 @@
+// Lazy list, potentially infinite.
 module Seq {
-  /* Lazy list, potentially infinite. */
 
   opaque type Seq[a] =
     | Empty
