@@ -502,8 +502,7 @@ code error =
         InterpreterError interpreterError ->
             case interpreterError of
                 VarNotFound id ->
-                    -- TODO
-                    "EXXXX"
+                    "E0001"
 
                 RootVarNotFound id ->
                     -- TODO
@@ -549,8 +548,7 @@ code error =
                     "EXXXX"
 
                 RecordFieldNotFound field ->
-                    -- TODO
-                    "EXXXX"
+                    "E0007"
 
                 EffectfulStmtInPureBlock_ ->
                     -- TODO
