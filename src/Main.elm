@@ -25,13 +25,21 @@ type alias Flags =
     }
 
 
+type alias K a =
+    a -> ( Model, Cmd Msg )
+
+
+type alias KO a =
+    a -> Interpreter.Outcome ()
+
+
 type Model
     = Done
     | ExitingWithError
-    | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
-    | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
-    | PausedOnEffectMaybeStr EffectMaybeStr (Maybe String -> ( Model, Cmd Msg ))
-    | PausedOnEffectBool EffectBool (Bool -> ( Model, Cmd Msg ))
+    | PausedOnEffect0 Effect0 (K ())
+    | PausedOnEffectStr EffectStr (K String)
+    | PausedOnEffectMaybeStr EffectMaybeStr (K (Maybe String))
+    | PausedOnEffectBool EffectBool (K Bool)
 
 
 type Msg
@@ -98,21 +106,21 @@ finish =
     ( Done, Cmd.none )
 
 
-pauseOnEffect0 : Effect0 -> (() -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
+pauseOnEffect0 : Effect0 -> KO () -> ( Model, Cmd Msg )
 pauseOnEffect0 effect k =
     ( PausedOnEffect0 effect (k >> handleInterpreterOutcome)
     , Effect.handleEffect0 effect
     )
 
 
-pauseOnEffectStr : EffectStr -> (String -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
+pauseOnEffectStr : EffectStr -> KO String -> ( Model, Cmd Msg )
 pauseOnEffectStr effect k =
     ( PausedOnEffectStr effect (k >> handleInterpreterOutcome)
     , Effect.handleEffectStr effect
     )
 
 
-pauseOnEffectMaybeStr : EffectMaybeStr -> (Maybe String -> Interpreter.Outcome ()) -> ( Model, Cmd Msg )
+pauseOnEffectMaybeStr : EffectMaybeStr -> KO (Maybe String) -> ( Model, Cmd Msg )
 pauseOnEffectMaybeStr effect k =
     ( PausedOnEffectMaybeStr effect (k >> handleInterpreterOutcome)
     , Effect.handleEffectMaybeStr effect
@@ -121,7 +129,7 @@ pauseOnEffectMaybeStr effect k =
 
 pauseOnEffectBool :
     EffectBool
-    -> (Bool -> Interpreter.Outcome ())
+    -> KO Bool
     -> ( Model, Cmd Msg )
 pauseOnEffectBool effect k =
     ( PausedOnEffectBool effect (k >> handleInterpreterOutcome)

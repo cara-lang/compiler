@@ -26,12 +26,20 @@ type alias Flags =
     }
 
 
+type alias K a =
+    a -> ( Model, Cmd Msg )
+
+
+type alias KO a =
+    a -> Interpreter.Outcome ()
+
+
 type Model
     = Done
-    | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
-    | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
-    | PausedOnEffectMaybeStr EffectMaybeStr (Maybe String -> ( Model, Cmd Msg ))
-    | PausedOnEffectBool EffectBool (Bool -> ( Model, Cmd Msg ))
+    | PausedOnEffect0 Effect0 (K ())
+    | PausedOnEffectStr EffectStr (K String)
+    | PausedOnEffectMaybeStr EffectMaybeStr (K (Maybe String))
+    | PausedOnEffectBool EffectBool (K Bool)
 
 
 type Msg
@@ -47,36 +55,28 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    effect0 (Effect.Println "Running tests") <|
-        \() ->
-            effect0 (Effect.Println "----------------------------") <|
-                \() ->
-                    runTests flags.rootPath flags.dirs
+    effect0 (Effect.Println "Running tests") <| \() ->
+    effect0 (Effect.Println "----------------------------") <| \() ->
+    runTests flags.rootPath flags.dirs
 
 
 runTests : String -> List String -> ( Model, Cmd Msg )
 runTests rootPath testDirs =
     case testDirs of
         [] ->
-            effect0 (Effect.Println "----------------------------") <|
-                \() ->
-                    effect0 (Effect.Println "Done running tests!") <|
-                        \() ->
-                            ( Done, Cmd.none )
+            effect0 (Effect.Println "----------------------------") <| \() ->
+            effect0 (Effect.Println "Done running tests!") <| \() ->
+            ( Done, Cmd.none )
 
         testDir :: rest ->
-            effect0 (Effect.Chdir testDir) <|
-                \() ->
-                    effectStr (Effect.ReadFile { filename = "main.cara" }) <|
-                        \fileContents ->
-                            runTest testDir fileContents <|
-                                \() ->
-                                    effect0 (Effect.Chdir rootPath) <|
-                                        \() ->
-                                            runTests rootPath rest
+            effect0 (Effect.Chdir testDir) <| \() ->
+            effectStr (Effect.ReadFile { filename = "main.cara" }) <| \fileContents ->
+            runTest testDir fileContents <| \() ->
+            effect0 (Effect.Chdir rootPath) <| \() ->
+            runTests rootPath rest
 
 
-runTest : String -> String -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+runTest : String -> String -> K () -> ( Model, Cmd Msg )
 runTest name fileContents k =
     case
         fileContents
@@ -85,36 +85,34 @@ runTest name fileContents k =
     of
         Err err ->
             if String.endsWith "-err" name then
-                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <|
-                    \stderr ->
-                        let
-                            firstLine =
-                                stderr
-                                    |> Maybe.withDefault ""
-                                    |> String.lines
-                                    |> List.head
-                                    |> Maybe.withDefault ""
-                        in
-                        if String.startsWith (Error.code err) firstLine then
-                            k ()
+                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <| \stderr ->
+                let
+                    firstLine =
+                        stderr
+                            |> Maybe.withDefault ""
+                            |> String.lines
+                            |> List.head
+                            |> Maybe.withDefault ""
+                in
+                if String.startsWith (Error.code err) firstLine then
+                    k ()
 
-                        else
-                            effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
+                else
+                    effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
 
             else
                 effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
 
         Ok astTree ->
-            effect0 (Effect.Println <| "interpreting: " ++ name) <|
-                \() ->
-                    astTree
-                        |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
-                        |> handleInterpreterOutcome name k
+            effect0 (Effect.Println <| "interpreting: " ++ name) <| \() ->
+            astTree
+                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                |> handleInterpreterOutcome name k
 
 
 handleInterpreterOutcome :
     String
-    -> (() -> ( Model, Cmd Msg ))
+    -> K ()
     -> Interpreter.Outcome ()
     -> ( Model, Cmd Msg )
 handleInterpreterOutcome testName k outcome =
@@ -125,21 +123,20 @@ handleInterpreterOutcome testName k outcome =
 
         Interpreter.FoundError err ->
             if String.endsWith "-err" testName then
-                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <|
-                    \stderr ->
-                        let
-                            firstLine =
-                                stderr
-                                    |> Maybe.withDefault ""
-                                    |> String.lines
-                                    |> List.head
-                                    |> Maybe.withDefault ""
-                        in
-                        if String.startsWith (Error.code (InterpreterError err)) firstLine then
-                            k ()
+                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <| \stderr ->
+                let
+                    firstLine =
+                        stderr
+                            |> Maybe.withDefault ""
+                            |> String.lines
+                            |> List.head
+                            |> Maybe.withDefault ""
+                in
+                if String.startsWith (Error.code (InterpreterError err)) firstLine then
+                    k ()
 
-                        else
-                            effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
+                else
+                    effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
 
             else
                 effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
@@ -159,9 +156,9 @@ handleInterpreterOutcome testName k outcome =
 
 pauseOnEffect0 :
     Effect0
-    -> (() -> Interpreter.Outcome ())
+    -> KO ()
     -> String
-    -> (() -> ( Model, Cmd Msg ))
+    -> K ()
     -> ( Model, Cmd Msg )
 pauseOnEffect0 effect kOutcome testName k =
     ( PausedOnEffect0 effect (kOutcome >> handleInterpreterOutcome testName k)
@@ -171,9 +168,9 @@ pauseOnEffect0 effect kOutcome testName k =
 
 pauseOnEffectStr :
     EffectStr
-    -> (String -> Interpreter.Outcome ())
+    -> KO String
     -> String
-    -> (() -> ( Model, Cmd Msg ))
+    -> K ()
     -> ( Model, Cmd Msg )
 pauseOnEffectStr effect kOutcome testName k =
     ( PausedOnEffectStr effect (kOutcome >> handleInterpreterOutcome testName k)
@@ -183,9 +180,9 @@ pauseOnEffectStr effect kOutcome testName k =
 
 pauseOnEffectMaybeStr :
     EffectMaybeStr
-    -> (Maybe String -> Interpreter.Outcome ())
+    -> KO (Maybe String)
     -> String
-    -> (() -> ( Model, Cmd Msg ))
+    -> K ()
     -> ( Model, Cmd Msg )
 pauseOnEffectMaybeStr effect kOutcome testName k =
     ( PausedOnEffectMaybeStr effect (kOutcome >> handleInterpreterOutcome testName k)
@@ -195,9 +192,9 @@ pauseOnEffectMaybeStr effect kOutcome testName k =
 
 pauseOnEffectBool :
     EffectBool
-    -> (Bool -> Interpreter.Outcome ())
+    -> KO Bool
     -> String
-    -> (() -> ( Model, Cmd Msg ))
+    -> K ()
     -> ( Model, Cmd Msg )
 pauseOnEffectBool effect kOutcome testName k =
     ( PausedOnEffectBool effect (kOutcome >> handleInterpreterOutcome testName k)
@@ -205,21 +202,21 @@ pauseOnEffectBool effect kOutcome testName k =
     )
 
 
-effect0 : Effect0 -> (() -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+effect0 : Effect0 -> K () -> ( Model, Cmd Msg )
 effect0 eff k =
     ( PausedOnEffect0 eff k
     , Effect.handleEffect0 eff
     )
 
 
-effectStr : EffectStr -> (String -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+effectStr : EffectStr -> K String -> ( Model, Cmd Msg )
 effectStr eff k =
     ( PausedOnEffectStr eff k
     , Effect.handleEffectStr eff
     )
 
 
-effectMaybeStr : EffectMaybeStr -> (Maybe String -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+effectMaybeStr : EffectMaybeStr -> K (Maybe String) -> ( Model, Cmd Msg )
 effectMaybeStr eff k =
     ( PausedOnEffectMaybeStr eff k
     , Effect.handleEffectMaybeStr eff
