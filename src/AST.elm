@@ -18,12 +18,12 @@ module AST exposing
     , TypeAliasModifier(..)
     , TypeModifier(..)
     , UnaryOp(..)
-    , binaryOpName
+    , binaryOp
     , isEffectfulStmt
     , isSpreadPattern
     , lambdaToString
     , patternToString
-    , unaryOpName
+    , unaryOp
     )
 
 import Env exposing (Env)
@@ -324,8 +324,8 @@ isSpreadPattern pattern =
             False
 
 
-binaryOpName : BinaryOp -> String
-binaryOpName op =
+binaryOp : BinaryOp -> String
+binaryOp op =
     case op of
         Plus ->
             "+"
@@ -397,8 +397,8 @@ binaryOpName op =
             "..."
 
 
-unaryOpName : UnaryOp -> String
-unaryOpName op =
+unaryOp : UnaryOp -> String
+unaryOp op =
     case op of
         NegateNum ->
             "-"
@@ -519,13 +519,13 @@ exprToString expr =
             "{" ++ String.join "," (List.map recordExprContentToString contents) ++ "}"
 
         UnaryOp InfiniteRange e ->
-            exprToString e ++ unaryOpName InfiniteRange
+            exprToString e ++ unaryOp InfiniteRange
 
         UnaryOp op e ->
-            unaryOpName op ++ exprToString e
+            unaryOp op ++ exprToString e
 
         BinaryOp left op right ->
-            exprToString left ++ binaryOpName op ++ exprToString right
+            exprToString left ++ binaryOp op ++ exprToString right
 
         Call { fn, args } ->
             exprToString fn

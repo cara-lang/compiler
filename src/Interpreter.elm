@@ -198,7 +198,7 @@ interpretBinaryOpDef =
     \env { op, left, right, body } ->
         let
             newEnv =
-                Env.addBinaryOp (AST.binaryOpName op)
+                Env.addBinaryOp (AST.binaryOp op)
                     (VClosure
                         { args = [ left, right ]
                         , body = body
@@ -324,10 +324,10 @@ addToEnv addition env =
             Env.add name value env
 
         AddBinaryOp op value ->
-            Env.addBinaryOp (AST.binaryOpName op) value env
+            Env.addBinaryOp (AST.binaryOp op) value env
 
         AddUnaryOp op value ->
-            Env.addUnaryOp (AST.unaryOpName op) value env
+            Env.addUnaryOp (AST.unaryOp op) value env
 
         ManyAdditions additions ->
             List.foldl addToEnv env additions
@@ -430,7 +430,7 @@ unwrapIo ioVal =
             valueInIo
 
         _ ->
-            Debug.todo <| "We expected VIo here... is this a bug? " ++ Debug.toString ioVal
+            Debug.todo <| "We expected VIo here... is this a bug? " ++ Value.toString ioVal
 
 
 interpretLet :
@@ -539,7 +539,7 @@ interpretPattern =
                         interpretPattern env ( PRecordSpread, VRecord (tupleToNumericRecord values) )
 
                     _ ->
-                        Debug.todo <| "interpret pattern {..} - other: " ++ Debug.toString value
+                        Debug.todo <| "interpret pattern {..} - other: " ++ Value.toString value
 
             PRecordFields wantedFields ->
                 let
@@ -615,7 +615,7 @@ interpretPattern =
                             Nothing
 
             PSpread spread ->
-                Debug.todo <| "interpret pattern spread: " ++ Debug.toString spread
+                Debug.todo <| "interpret pattern spread: " ++ AST.patternToString pattern
 
             PUnaryOpDef unaryOp ->
                 case value of
@@ -1051,7 +1051,7 @@ interpretUnaryOpCallVal =
                     finishWithUnknown () =
                         Outcome.fail <| UnknownUnaryOpOverload ( op, val )
                 in
-                case Env.getUnaryOp (AST.unaryOpName op) env of
+                case Env.getUnaryOp (AST.unaryOp op) env of
                     Nothing ->
                         finishWithUnknown ()
 
@@ -1246,7 +1246,7 @@ interpretBinaryOpCallVal =
                     finishWithUnknown () =
                         Outcome.fail <| UnknownBinaryOpOverload ( left, op, right )
                 in
-                case Env.getBinaryOp (AST.binaryOpName op) env of
+                case Env.getBinaryOp (AST.binaryOp op) env of
                     Nothing ->
                         finishWithUnknown ()
 

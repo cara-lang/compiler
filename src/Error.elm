@@ -236,7 +236,7 @@ title error =
 
                 ExpectedToken t ->
                     -- TODO error code
-                    Loc.toString loc ++ " - Expected token: " ++ Debug.toString t
+                    Loc.toString loc ++ " - Expected token: " ++ Token.toString t
 
                 AssignmentOfExprToUnderscore ->
                     "E0013: Assignment of expression to underscore"
@@ -326,7 +326,9 @@ title error =
 
                 PatternDidNotMatch ( pattern, value ) ->
                     -- TODO error code
-                    "Pattern did not match: " ++ Debug.toString ( pattern, value )
+                    "Pattern did not match: ({PATTERN}, {VALUE})"
+                        |> String.replace "{PATTERN}" (AST.patternToString pattern)
+                        |> String.replace "{VALUE}" (Value.toString value)
 
                 RecordFieldNotFound field ->
                     -- TODO error code
@@ -361,11 +363,16 @@ title error =
 
                 UnknownBinaryOpOverload ( left, op, right ) ->
                     -- TODO error code
-                    "Unknown binary op: " ++ Debug.toString ( left, op, right )
+                    "Unknown binary op: {LEFT}, {OP}, {RIGHT}"
+                        |> String.replace "{LEFT}" (Value.toString left)
+                        |> String.replace "{OP}" (AST.binaryOp op)
+                        |> String.replace "{RIGHT}" (Value.toString right)
 
                 UnknownUnaryOpOverload ( op, arg ) ->
                     -- TODO error code
-                    "Unknown unary op: " ++ Debug.toString ( op, arg )
+                    "Unknown unary op: {OP}, {ARG}"
+                        |> String.replace "{OP}" (AST.unaryOp op)
+                        |> String.replace "{ARG}" (Value.toString arg)
 
 
 th : Int -> String

@@ -21,6 +21,7 @@ module Token exposing
     , isQualifier
     , isString
     , isUpperName
+    , toString
     )
 
 import Loc exposing (Loc)
@@ -301,3 +302,211 @@ getHole type_ =
 
         _ ->
             Nothing
+
+
+toString : Type -> String
+toString t =
+    case t of
+        Int n ->
+            "Int " ++ String.fromInt n
+
+        Float n ->
+            "Float " ++ String.fromFloat n
+
+        Char c ->
+            "Char " ++ c
+
+        String s ->
+            "String " ++ s
+
+        BacktickString s ->
+            "BacktickString " ++ s
+
+        Getter s ->
+            "Getter " ++ s
+
+        Qualifier s ->
+            "Qualifier " ++ s
+
+        LowerName s ->
+            "LowerName " ++ s
+
+        UpperName s ->
+            "UpperName " ++ s
+
+        Hole n ->
+            "Hole " ++ String.fromInt n
+
+        Plus ->
+            "Plus"
+
+        Minus ->
+            "Minus"
+
+        Times ->
+            "Times"
+
+        Div ->
+            "Div"
+
+        Percent ->
+            "Percent"
+
+        Power ->
+            "Power"
+
+        PlusPlus ->
+            "PlusPlus"
+
+        Shl ->
+            "Shl"
+
+        Shr ->
+            "Shr"
+
+        Shru ->
+            "Shru"
+
+        Caret ->
+            "Caret"
+
+        AndAnd ->
+            "AndAnd"
+
+        And ->
+            "And"
+
+        OrOr ->
+            "OrOr"
+
+        Lte ->
+            "Lte"
+
+        Lt ->
+            "Lt"
+
+        EqEq ->
+            "EqEq"
+
+        Neq ->
+            "Neq"
+
+        Gt ->
+            "Gt"
+
+        Gte ->
+            "Gte"
+
+        Eq ->
+            "Eq"
+
+        DotDot ->
+            "DotDot"
+
+        DotDotDot ->
+            "DotDotDot"
+
+        Tilde ->
+            "Tilde"
+
+        Case ->
+            "Case"
+
+        Of ->
+            "Of"
+
+        If ->
+            "If"
+
+        Then ->
+            "Then"
+
+        Else ->
+            "Else"
+
+        Use ->
+            "Use"
+
+        True_ ->
+            "True_"
+
+        False_ ->
+            "False_"
+
+        Type ->
+            "Type"
+
+        Alias ->
+            "Alias"
+
+        Module ->
+            "Module"
+
+        Private ->
+            "Private"
+
+        Opaque ->
+            "Opaque"
+
+        Extend ->
+            "Extend"
+
+        Backslash ->
+            "Backslash"
+
+        Arrow ->
+            "Arrow"
+
+        Underscore ->
+            "Underscore"
+
+        LHole ->
+            "LHole"
+
+        LParen ->
+            "LParen"
+
+        RParen ->
+            "RParen"
+
+        LBrace ->
+            "LBrace"
+
+        RBrace ->
+            "RBrace"
+
+        LBracket ->
+            "LBracket"
+
+        RBracket ->
+            "RBracket"
+
+        Pipeline ->
+            "Pipeline"
+
+        Comma ->
+            "Comma"
+
+        ColonColon ->
+            "ColonColon"
+
+        Colon ->
+            "Colon"
+
+        Bang ->
+            "Bang"
+
+        Pipe ->
+            "Pipe"
+
+        Test ->
+            "Test"
+
+        With ->
+            "With"
+
+        EOL ->
+            "EOL"
+
+        EOF ->
+            "EOF"
