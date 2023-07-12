@@ -1,0 +1,4 @@
+infiniteLoop(x) = infiniteLoop(x+1)
+y = False && infiniteLoop(1)
+IO.println!(y)
+
