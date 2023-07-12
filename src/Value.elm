@@ -2,6 +2,8 @@ module Value exposing
     ( Value(..)
     , closureToString
     , isEqualityAllowed
+    , just
+    , nothing
     , toString
     )
 
@@ -152,3 +154,19 @@ closureToString val =
 
         _ ->
             "NOT A CLOSURE"
+
+
+nothing : Value
+nothing =
+    VConstructor
+        { id = Id.global [ "Maybe" ] "Nothing"
+        , args = []
+        }
+
+
+just : Value -> Value
+just val =
+    VConstructor
+        { id = Id.global [ "Maybe" ] "Just"
+        , args = [ val ]
+        }

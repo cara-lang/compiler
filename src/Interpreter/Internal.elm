@@ -104,6 +104,10 @@ andThen interpreter outcome =
             NeedsEffectMaybeStr eff k
                 |> Outcome.andThen interpreter
 
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff k
+                |> Outcome.andThen interpreter
+
 
 do : Outcome b -> Interpreter b c -> Outcome c
 do outcome interpreter =

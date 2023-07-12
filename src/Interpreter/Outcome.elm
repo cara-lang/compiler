@@ -14,7 +14,7 @@ module Interpreter.Outcome exposing
 
 -}
 
-import Effect exposing (Effect0, EffectMaybeStr, EffectStr)
+import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env exposing (Env)
 import Error exposing (InterpreterError)
 import Value exposing (Value)
@@ -25,6 +25,7 @@ type Outcome a
     | NeedsEffect0 Effect0 (() -> Outcome a)
     | NeedsEffectStr EffectStr (String -> Outcome a)
     | NeedsEffectMaybeStr EffectMaybeStr (Maybe String -> Outcome a)
+    | NeedsEffectBool EffectBool (Bool -> Outcome a)
     | FoundError InterpreterError
 
 
@@ -53,6 +54,9 @@ map fn outcome =
         NeedsEffectMaybeStr eff k ->
             NeedsEffectMaybeStr eff (k >> map fn)
 
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff (k >> map fn)
+
         FoundError err ->
             FoundError err
 
@@ -76,6 +80,9 @@ mapBoth fn outcome =
         NeedsEffectMaybeStr eff k ->
             NeedsEffectMaybeStr eff (k >> mapBoth fn)
 
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff (k >> mapBoth fn)
+
         FoundError err ->
             FoundError err
 
@@ -94,6 +101,9 @@ mapEnv fn outcome =
 
         NeedsEffectMaybeStr eff k ->
             NeedsEffectMaybeStr eff (k >> mapEnv fn)
+
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff (k >> mapEnv fn)
 
         FoundError err ->
             FoundError err
@@ -119,6 +129,9 @@ attemptMapEnv fn error outcome =
         NeedsEffectMaybeStr eff k ->
             NeedsEffectMaybeStr eff (k >> attemptMapEnv fn error)
 
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff (k >> attemptMapEnv fn error)
+
         FoundError err ->
             FoundError err
 
@@ -140,6 +153,9 @@ andThen fn outcome1 =
                 NeedsEffectMaybeStr eff k ->
                     NeedsEffectMaybeStr eff k
 
+                NeedsEffectBool eff k ->
+                    NeedsEffectBool eff k
+
                 FoundError err ->
                     FoundError err
 
@@ -151,6 +167,9 @@ andThen fn outcome1 =
 
         NeedsEffectMaybeStr eff k ->
             NeedsEffectMaybeStr eff (k >> andThen fn)
+
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff (k >> andThen fn)
 
         FoundError err ->
             FoundError err
@@ -173,3 +192,6 @@ onError fn outcome1 =
 
         NeedsEffectMaybeStr eff k ->
             NeedsEffectMaybeStr eff (k >> onError fn)
+
+        NeedsEffectBool eff k ->
+            NeedsEffectBool eff (k >> onError fn)

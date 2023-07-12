@@ -374,19 +374,16 @@ interpretToplevelBangValue =
 interpretToplevelBangCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretToplevelBangCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr env fn) <|
-            \env1 fnVal ->
-                Interpreter.do (Interpreter.traverse interpretExpr env1 args) <|
-                    \env2 argVals ->
-                        interpretCallVal env2 ( fnVal, argVals )
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        Interpreter.do (Interpreter.traverse interpretExpr env1 args) <| \env2 argVals ->
+        interpretCallVal env2 ( fnVal, argVals )
 
 
 interpretIntrinsicCall : Interpreter ( Intrinsic, List Expr ) Value
 interpretIntrinsicCall =
     \env ( intrinsic, args ) ->
-        Interpreter.do (Interpreter.traverse interpretExpr env args) <|
-            \env1 argVals ->
-                interpretIntrinsicCallValues env1 ( intrinsic, argVals )
+        Interpreter.do (Interpreter.traverse interpretExpr env args) <| \env1 argVals ->
+        interpretIntrinsicCallValues env1 ( intrinsic, argVals )
 
 
 interpretIntrinsicCallValues : Interpreter ( Intrinsic, List Value ) Value
@@ -422,6 +419,32 @@ interpretIntrinsicCallValues =
                     _ ->
                         Outcome.fail UnexpectedArity
 
+            IoReadFile ->
+                case argVals of
+                    [ arg ] ->
+                        interpretReadFile env arg
+                            |> Outcome.map
+                                (\maybeStr ->
+                                    case maybeStr of
+                                        Nothing ->
+                                            VIo Value.nothing
+
+                                        Just str ->
+                                            VIo (Value.just (VString str))
+                                )
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
+            IoWriteFile ->
+                case argVals of
+                    [ recordArg ] ->
+                        interpretWriteFile env recordArg
+                            |> Outcome.map (VIo << VBool)
+
+                    _ ->
+                        Outcome.fail UnexpectedArity
+
 
 unwrapIo : Value -> Value
 unwrapIo ioVal =
@@ -445,18 +468,16 @@ interpretLet =
     \env { lhs, expr } ->
         -- TODO interpret the modifier
         -- TODO interpret the type
-        Interpreter.do (interpretExpr env expr) <|
-            \env1 value ->
-                Interpreter.do (interpretPattern env1 ( lhs, value )) <|
-                    \env2 envAdditions ->
-                        case envAdditions of
-                            Nothing ->
-                                Outcome.fail <| PatternDidNotMatch ( lhs, value )
+        Interpreter.do (interpretExpr env expr) <| \env1 value ->
+        Interpreter.do (interpretPattern env1 ( lhs, value )) <| \env2 envAdditions ->
+        case envAdditions of
+            Nothing ->
+                Outcome.fail <| PatternDidNotMatch ( lhs, value )
 
-                            Just additions ->
-                                Outcome.succeed
-                                    (addToEnv additions env2)
-                                    ()
+            Just additions ->
+                Outcome.succeed
+                    (addToEnv additions env2)
+                    ()
 
 
 interpretToplevelLetBang :
@@ -571,14 +592,13 @@ interpretPattern =
                                 pairs =
                                     List.map2 Tuple.pair args r.args
                             in
-                            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <|
-                                \env1 maybeAdditions ->
-                                    case Maybe.combine maybeAdditions of
-                                        Nothing ->
-                                            Outcome.succeed env Nothing
+                            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env1 maybeAdditions ->
+                            case Maybe.combine maybeAdditions of
+                                Nothing ->
+                                    Outcome.succeed env Nothing
 
-                                        Just additions ->
-                                            Outcome.succeed env (Just (ManyAdditions additions))
+                                Just additions ->
+                                    Outcome.succeed env (Just (ManyAdditions additions))
 
                         else
                             Outcome.succeed env Nothing
@@ -645,14 +665,13 @@ interpretPatternTuple =
                 pairs =
                     List.map2 Tuple.pair ps vs
             in
-            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <|
-                \env1 maybeAdditions ->
-                    case Maybe.combine maybeAdditions of
-                        Nothing ->
-                            Outcome.succeed env1 Nothing
+            Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env1 maybeAdditions ->
+            case Maybe.combine maybeAdditions of
+                Nothing ->
+                    Outcome.succeed env1 Nothing
 
-                        Just additions ->
-                            Outcome.succeed env1 (Just (ManyAdditions additions))
+                Just additions ->
+                    Outcome.succeed env1 (Just (ManyAdditions additions))
 
 
 interpretPatternList : Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
@@ -757,11 +776,9 @@ interpretExpr =
 interpretCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr env fn) <|
-            \env1 fnVal ->
-                Interpreter.do (Interpreter.traverse interpretExpr env1 args) <|
-                    \env2 argVals ->
-                        interpretCallVal env2 ( fnVal, argVals )
+        Interpreter.do (interpretExpr env fn) <| \env1 fnVal ->
+        Interpreter.do (Interpreter.traverse interpretExpr env1 args) <| \env2 argVals ->
+        interpretCallVal env2 ( fnVal, argVals )
 
 
 interpretCallVal : Interpreter ( Value, List Value ) Value
@@ -806,9 +823,8 @@ interpretCallVal =
                                 ( doableVals, valsRest ) =
                                     List.splitAt argsLength argVals
                             in
-                            Interpreter.do (interpretCallVal env ( fnVal, doableVals )) <|
-                                \env2 resultVal ->
-                                    interpretCallVal env2 ( resultVal, valsRest )
+                            Interpreter.do (interpretCallVal env ( fnVal, doableVals )) <| \env2 resultVal ->
+                            interpretCallVal env2 ( resultVal, valsRest )
 
                     GT ->
                         -- More args than values
@@ -823,19 +839,18 @@ interpretCallVal =
                                 r.args
                                     |> List.drop valsLength
                         in
-                        Interpreter.do (Interpreter.traverse interpretPattern env availablePairs) <|
-                            \env2 maybeAdditions ->
-                                case Maybe.combine maybeAdditions of
-                                    Nothing ->
-                                        Outcome.fail PatternMismatch
+                        Interpreter.do (Interpreter.traverse interpretPattern env availablePairs) <| \env2 maybeAdditions ->
+                        case Maybe.combine maybeAdditions of
+                            Nothing ->
+                                Outcome.fail PatternMismatch
 
-                                    Just additions ->
-                                        Outcome.succeed env2 <|
-                                            VClosure
-                                                { args = argsRest
-                                                , body = r.body
-                                                , env = List.foldl addToEnv r.env additions
-                                                }
+                            Just additions ->
+                                Outcome.succeed env2 <|
+                                    VClosure
+                                        { args = argsRest
+                                        , body = r.body
+                                        , env = List.foldl addToEnv r.env additions
+                                        }
 
                     EQ ->
                         let
@@ -843,16 +858,14 @@ interpretCallVal =
                             pairs =
                                 List.map2 Tuple.pair r.args argVals
                         in
-                        Interpreter.do (Interpreter.traverse interpretPattern env pairs) <|
-                            \env2 maybeAdditions ->
-                                case Maybe.combine maybeAdditions of
-                                    Nothing ->
-                                        Outcome.fail PatternMismatch
+                        Interpreter.do (Interpreter.traverse interpretPattern env pairs) <| \env2 maybeAdditions ->
+                        case Maybe.combine maybeAdditions of
+                            Nothing ->
+                                Outcome.fail PatternMismatch
 
-                                    Just additions ->
-                                        Interpreter.do (interpretExpr (List.foldl addToEnv r.env additions) r.body) <|
-                                            \_ callResult ->
-                                                Outcome.succeed env2 callResult
+                            Just additions ->
+                                Interpreter.do (interpretExpr (List.foldl addToEnv r.env additions) r.body) <| \_ callResult ->
+                                Outcome.succeed env2 callResult
 
             VIntrinsic intrinsic ->
                 interpretIntrinsicCallValues env ( intrinsic, argVals )
@@ -875,9 +888,8 @@ type StmtMonad
 interpretBlock : Interpreter { stmts : List Stmt, ret : Expr } Value
 interpretBlock =
     \env { stmts, ret } ->
-        Interpreter.do (Interpreter.traverse (interpretStatement Pure) env stmts) <|
-            \env1 _ ->
-                interpretExpr env1 ret
+        Interpreter.do (Interpreter.traverse (interpretStatement Pure) env stmts) <| \env1 _ ->
+        interpretExpr env1 ret
 
 
 interpretEffectBlock : Interpreter { monadModule : List String, stmts : List Stmt, ret : BangOrExpr } Value
@@ -1023,9 +1035,8 @@ interpretToplevelBangOrExpr =
 interpretUnaryOpCall : Interpreter ( UnaryOp, Expr ) Value
 interpretUnaryOpCall =
     \env ( op, expr ) ->
-        Interpreter.do (interpretExpr env expr) <|
-            \env1 val ->
-                interpretUnaryOpCallVal env1 ( op, val )
+        Interpreter.do (interpretExpr env expr) <| \env1 val ->
+        interpretUnaryOpCallVal env1 ( op, val )
 
 
 interpretUnaryOpCallVal : Interpreter ( UnaryOp, Value ) Value
@@ -1076,11 +1087,9 @@ interpretUnaryOpCallUser finishWithUnknown =
 interpretBinaryOpCall : Interpreter ( Expr, BinaryOp, Expr ) Value
 interpretBinaryOpCall =
     \env ( left, op, right ) ->
-        Interpreter.do (interpretExpr env left) <|
-            \env1 leftVal ->
-                Interpreter.do (interpretExpr env1 right) <|
-                    \env2 rightVal ->
-                        interpretBinaryOpCallVal env2 ( leftVal, op, rightVal )
+        Interpreter.do (interpretExpr env left) <| \env1 leftVal ->
+        Interpreter.do (interpretExpr env1 right) <| \env2 rightVal ->
+        interpretBinaryOpCallVal env2 ( leftVal, op, rightVal )
 
 
 interpretBinaryOpCallVal : Interpreter ( Value, BinaryOp, Value ) Value
@@ -1271,17 +1280,16 @@ interpretBinaryOpCallUser finishWithUnknown =
 interpretRecordGet : Interpreter { record : Expr, field : String } Value
 interpretRecordGet =
     \env { record, field } ->
-        Interpreter.do (interpretExpr env record) <|
-            \env1 recordVal ->
-                case recordVal of
-                    VTuple values ->
-                        interpretRecordGetDict env1 ( field, tupleToNumericAndWordyRecord values )
+        Interpreter.do (interpretExpr env record) <| \env1 recordVal ->
+        case recordVal of
+            VTuple values ->
+                interpretRecordGetDict env1 ( field, tupleToNumericAndWordyRecord values )
 
-                    VRecord fields ->
-                        interpretRecordGetDict env1 ( field, fields )
+            VRecord fields ->
+                interpretRecordGetDict env1 ( field, fields )
 
-                    _ ->
-                        Outcome.fail CallingRecordGetOnNonRecord
+            _ ->
+                Outcome.fail CallingRecordGetOnNonRecord
 
 
 interpretRecordGetDict : Interpreter ( String, Dict String Value ) Value
@@ -1411,35 +1419,33 @@ interpretConstructor =
 interpretIf : Interpreter { cond : Expr, then_ : Expr, else_ : Expr } Value
 interpretIf =
     \env { cond, then_, else_ } ->
-        Interpreter.do (interpretExpr env cond) <|
-            \env1 cond_ ->
-                case cond_ of
-                    VBool True ->
-                        interpretExpr env1 then_
+        Interpreter.do (interpretExpr env cond) <| \env1 cond_ ->
+        case cond_ of
+            VBool True ->
+                interpretExpr env1 then_
 
-                    VBool False ->
-                        interpretExpr env1 else_
+            VBool False ->
+                interpretExpr env1 else_
 
-                    _ ->
-                        Outcome.fail IfConditionNotBool
+            _ ->
+                Outcome.fail IfConditionNotBool
 
 
 interpretCase : Interpreter { subject : Expr, branches : List CaseBranch } Value
 interpretCase =
     \env { subject, branches } ->
-        Interpreter.do (interpretExpr env subject) <|
-            \env1 subject_ ->
-                let
-                    flatBranches : List ( Pattern, Expr )
-                    flatBranches =
-                        branches
-                            |> List.concatMap
-                                (\branch ->
-                                    branch.orPatterns
-                                        |> List.map (\pattern -> ( pattern, branch.body ))
-                                )
-                in
-                interpretCaseBranches env1 ( subject_, flatBranches )
+        Interpreter.do (interpretExpr env subject) <| \env1 subject_ ->
+        let
+            flatBranches : List ( Pattern, Expr )
+            flatBranches =
+                branches
+                    |> List.concatMap
+                        (\branch ->
+                            branch.orPatterns
+                                |> List.map (\pattern -> ( pattern, branch.body ))
+                        )
+        in
+        interpretCaseBranches env1 ( subject_, flatBranches )
 
 
 interpretCaseBranches : Interpreter ( Value, List ( Pattern, Expr ) ) Value
@@ -1450,18 +1456,17 @@ interpretCaseBranches =
                 Outcome.fail NoCaseBranchMatched
 
             ( pattern, body ) :: rest ->
-                Interpreter.do (interpretPattern env ( pattern, subject )) <|
-                    \env1 maybeAdditions ->
-                        case maybeAdditions of
-                            Nothing ->
-                                interpretCaseBranches env ( subject, rest )
+                Interpreter.do (interpretPattern env ( pattern, subject )) <| \env1 maybeAdditions ->
+                case maybeAdditions of
+                    Nothing ->
+                        interpretCaseBranches env ( subject, rest )
 
-                            Just additions ->
-                                let
-                                    newEnv =
-                                        addToEnv additions env1
-                                in
-                                interpretExpr newEnv body
+                    Just additions ->
+                        let
+                            newEnv =
+                                addToEnv additions env1
+                        in
+                        interpretExpr newEnv body
 
 
 interpretList : Interpreter (List Expr) Value
@@ -1503,17 +1508,16 @@ interpretRecordExprContent =
                     |> Outcome.map (\value -> [ ( field, value ) ])
 
             Spread id ->
-                Interpreter.do (interpretExpr env (Identifier id)) <|
-                    \env1 value ->
-                        case value of
-                            VRecord fields ->
-                                Outcome.succeed env1 (Dict.toList fields)
+                Interpreter.do (interpretExpr env (Identifier id)) <| \env1 value ->
+                case value of
+                    VRecord fields ->
+                        Outcome.succeed env1 (Dict.toList fields)
 
-                            VTuple values ->
-                                Outcome.succeed env1 (Dict.toList (tupleToNumericRecord values))
+                    VTuple values ->
+                        Outcome.succeed env1 (Dict.toList (tupleToNumericRecord values))
 
-                            _ ->
-                                Outcome.fail SpreadingNonRecord
+                    _ ->
+                        Outcome.fail SpreadingNonRecord
 
 
 interpretModule : Interpreter { mod : ModuleModifier, name : String, decls : List Decl } ()
@@ -1542,3 +1546,38 @@ interpretPrintln =
     \env value ->
         NeedsEffect0 (Effect.Println (Value.toString value)) <|
             \() -> Outcome.succeed env ()
+
+
+interpretReadFile : Interpreter Value (Maybe String)
+interpretReadFile =
+    \env arg ->
+        case arg of
+            VString filename ->
+                NeedsEffectMaybeStr (Effect.ReadFileMaybe { filename = filename }) <| \maybeStr ->
+                Outcome.succeed env maybeStr
+
+            _ ->
+                Outcome.fail <| UnexpectedArgument arg
+
+
+interpretWriteFile : Interpreter Value Bool
+interpretWriteFile =
+    \env arg ->
+        case arg of
+            VRecord dict ->
+                Maybe.map2
+                    (\filename content ->
+                        case ( filename, content ) of
+                            ( VString filename_, VString content_ ) ->
+                                NeedsEffectBool (Effect.WriteFileMaybe { filename = filename_, content = content_ }) <| \bool ->
+                                Outcome.succeed env bool
+
+                            _ ->
+                                Outcome.fail <| UnexpectedArgument arg
+                    )
+                    (Dict.get "filename" dict)
+                    (Dict.get "content" dict)
+                    |> Maybe.withDefault (Outcome.fail <| UnexpectedArgument arg)
+
+            _ ->
+                Outcome.fail <| UnexpectedArgument arg

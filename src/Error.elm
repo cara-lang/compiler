@@ -96,6 +96,7 @@ type InterpreterError
     | EquatingNonequatable
     | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
     | UnknownUnaryOpOverload ( UnaryOp, Value )
+    | UnexpectedArgument Value
 
 
 title : Error -> String
@@ -373,6 +374,10 @@ title error =
                     "Unknown unary op: {OP}, {ARG}"
                         |> String.replace "{OP}" (AST.unaryOp op)
                         |> String.replace "{ARG}" (Value.toString arg)
+
+                UnexpectedArgument value ->
+                    -- TODO error code
+                    "Unexpected argument: " ++ Value.toString value
 
 
 th : Int -> String

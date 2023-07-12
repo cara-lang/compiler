@@ -11,6 +11,8 @@ type Intrinsic
     = IoPrintln
     | IoPure
     | IoBind
+    | IoReadFile
+    | IoWriteFile
 
 
 all : List Intrinsic
@@ -18,6 +20,8 @@ all =
     [ IoPrintln
     , IoPure
     , IoBind
+    , IoReadFile
+    , IoWriteFile
     ]
 
 
@@ -32,6 +36,12 @@ id intrinsic =
 
         IoBind ->
             ioBind
+
+        IoReadFile ->
+            ioReadFile
+
+        IoWriteFile ->
+            ioWriteFile
 
 
 ioPrintln : Id
@@ -52,4 +62,18 @@ ioBind : Id
 ioBind =
     { qualifiers = [ "IO" ]
     , name = "bind"
+    }
+
+
+ioReadFile : Id
+ioReadFile =
+    { qualifiers = [ "IO" ]
+    , name = "readFile"
+    }
+
+
+ioWriteFile : Id
+ioWriteFile =
+    { qualifiers = [ "IO" ]
+    , name = "writeFile"
     }

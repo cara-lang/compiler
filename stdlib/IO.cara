@@ -1,0 +1,9 @@
+module IO {
+
+  toString : a -> IO[String]
+  println : a -> IO[()]
+  ask : String -> IO[String]
+  readFile : String -> IO[Maybe[String]]
+  writeFile : {filename: String, content: String} -> IO[()]
+  
+}

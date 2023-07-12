@@ -1,7 +1,7 @@
 module Main exposing (Flags, Model, Msg, main)
 
 import AST
-import Effect exposing (Effect0, EffectMaybeStr, EffectStr)
+import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env
 import Error exposing (Error(..))
 import Interpreter
@@ -31,6 +31,7 @@ type Model
     | PausedOnEffect0 Effect0 (() -> ( Model, Cmd Msg ))
     | PausedOnEffectStr EffectStr (String -> ( Model, Cmd Msg ))
     | PausedOnEffectMaybeStr EffectMaybeStr (Maybe String -> ( Model, Cmd Msg ))
+    | PausedOnEffectBool EffectBool (Bool -> ( Model, Cmd Msg ))
 
 
 type Msg
@@ -41,6 +42,7 @@ type Msg
     | CompletedReadFile String
     | CompletedReadFileMaybe (Maybe String)
     | CompletedWriteFile
+    | CompletedWriteFileMaybe Bool
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -81,6 +83,9 @@ handleInterpreterOutcome outcome =
         Interpreter.NeedsEffectMaybeStr effect k ->
             pauseOnEffectMaybeStr effect k
 
+        Interpreter.NeedsEffectBool effect k ->
+            pauseOnEffectBool effect k
+
 
 finishWithError : Error -> ( Model, Cmd Msg )
 finishWithError err =
@@ -111,6 +116,16 @@ pauseOnEffectMaybeStr : EffectMaybeStr -> (Maybe String -> Interpreter.Outcome (
 pauseOnEffectMaybeStr effect k =
     ( PausedOnEffectMaybeStr effect (k >> handleInterpreterOutcome)
     , Effect.handleEffectMaybeStr effect
+    )
+
+
+pauseOnEffectBool :
+    EffectBool
+    -> (Bool -> Interpreter.Outcome ())
+    -> ( Model, Cmd Msg )
+pauseOnEffectBool effect k =
+    ( PausedOnEffectBool effect (k >> handleInterpreterOutcome)
+    , Effect.handleEffectBool effect
     )
 
 
@@ -181,6 +196,14 @@ update msg model =
                 ( Effect.ReadFileMaybe _, _ ) ->
                     Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
 
+        PausedOnEffectBool effect k ->
+            case ( effect, msg ) of
+                ( Effect.WriteFileMaybe _, CompletedWriteFileMaybe result ) ->
+                    k result
+
+                ( Effect.WriteFileMaybe _, _ ) ->
+                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -192,4 +215,5 @@ subscriptions _ =
         , Effect.completedReadFile CompletedReadFile
         , Effect.completedReadFileMaybe CompletedReadFileMaybe
         , Effect.completedWriteFile (\_ -> CompletedWriteFile)
+        , Effect.completedWriteFileMaybe CompletedWriteFileMaybe
         ]

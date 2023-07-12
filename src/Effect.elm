@@ -1,17 +1,16 @@
 port module Effect exposing
-    ( Effect0(..), EffectStr(..)
-    , handleEffect0, handleEffectStr, handleEffectMaybeStr
-    , chdir, print, println, eprintln, writeFile, readFile, readFileMaybe
-    , completedChdir, completedPrint, completedPrintln, completedEprintln, completedReadFile, completedWriteFile, completedReadFileMaybe
-    , EffectMaybeStr(..)
+    ( Effect0(..), EffectStr(..), EffectMaybeStr(..), EffectBool(..)
+    , handleEffect0, handleEffectStr, handleEffectMaybeStr, handleEffectBool
+    , chdir, print, println, eprintln, writeFile, writeFileMaybe, readFile, readFileMaybe
+    , completedChdir, completedPrint, completedPrintln, completedEprintln, completedWriteFile, completedWriteFileMaybe, completedReadFile, completedReadFileMaybe
     )
 
 {-|
 
-@docs Effect0, EffectStr
-@docs handleEffect0, handleEffectStr, handleEffectMaybeStr
-@docs chdir, print, println, eprintln, writeFile, readFile, readFileMaybe
-@docs completedChdir, completedPrint, completedPrintln, completedEprintln, completedReadFile, completedWriteFile, completedReadFileMaybe
+@docs Effect0, EffectStr, EffectMaybeStr, EffectBool
+@docs handleEffect0, handleEffectStr, handleEffectMaybeStr, handleEffectBool
+@docs chdir, print, println, eprintln, writeFile, writeFileMaybe, readFile, readFileMaybe
+@docs completedChdir, completedPrint, completedPrintln, completedEprintln, completedWriteFile, completedWriteFileMaybe, completedReadFile, completedReadFileMaybe
 
 -}
 
@@ -30,6 +29,10 @@ type EffectStr
 
 type EffectMaybeStr
     = ReadFileMaybe { filename : String }
+
+
+type EffectBool
+    = WriteFileMaybe { filename : String, content : String }
 
 
 port chdir : String -> Cmd msg
@@ -53,6 +56,9 @@ port readFileMaybe : { filename : String } -> Cmd msg
 port writeFile : { filename : String, content : String } -> Cmd msg
 
 
+port writeFileMaybe : { filename : String, content : String } -> Cmd msg
+
+
 port completedChdir : (() -> msg) -> Sub msg
 
 
@@ -72,6 +78,9 @@ port completedReadFileMaybe : (Maybe String -> msg) -> Sub msg
 
 
 port completedWriteFile : (() -> msg) -> Sub msg
+
+
+port completedWriteFileMaybe : (Bool -> msg) -> Sub msg
 
 
 handleEffect0 : Effect0 -> Cmd msg
@@ -105,3 +114,10 @@ handleEffectMaybeStr effect =
     case effect of
         ReadFileMaybe r ->
             readFileMaybe r
+
+
+handleEffectBool : EffectBool -> Cmd msg
+handleEffectBool effect =
+    case effect of
+        WriteFileMaybe r ->
+            writeFileMaybe r
