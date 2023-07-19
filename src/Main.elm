@@ -2,8 +2,11 @@ module Main exposing (Flags, Model, Msg, main)
 
 import AST
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
+import Emit
 import Env
 import Error exposing (Error(..))
+import HVM.AST
+import HVM.ToString
 import Interpreter
 import Interpreter.Outcome as Interpreter
 import Lexer
@@ -68,9 +71,29 @@ init flags =
             finishWithError err
 
         Ok astTree ->
-            astTree
-                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
-                |> handleInterpreterOutcome
+            {-
+               astTree
+                   |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                   |> handleInterpreterOutcome
+            -}
+            let
+                hvmProgram : HVM.AST.File
+                hvmProgram =
+                    Emit.emitProgram astTree
+
+                hvmString : String
+                hvmString =
+                    HVM.ToString.file hvmProgram
+            in
+            effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <| \() ->
+            finish
+
+
+effect0 : Effect0 -> K () -> ( Model, Cmd Msg )
+effect0 eff k =
+    ( PausedOnEffect0 eff k
+    , Effect.handleEffect0 eff
+    )
 
 
 handleInterpreterOutcome : Interpreter.Outcome () -> ( Model, Cmd Msg )
