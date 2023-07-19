@@ -104,22 +104,42 @@ term t =
                 |> String.replace "{ARG}" (term arg)
 
         Ctr { name, args } ->
-            "({NAME} {ARGS})"
-                |> String.replace "{NAME}" name
-                |> String.replace "{ARGS}"
-                    (args
-                        |> List.map term
-                        |> String.join " "
-                    )
+            if List.isEmpty args then
+                "({NAME})"
+                    |> String.replace "{NAME}" name
 
-        U6O numb ->
-            String.fromInt numb
+            else
+                "({NAME} {ARGS})"
+                    |> String.replace "{NAME}" name
+                    |> String.replace "{ARGS}"
+                        (args
+                            |> List.map term
+                            |> String.join " "
+                        )
 
-        F6O numb ->
-            String.fromFloat numb
+        U60 n ->
+            String.fromInt n
+
+        F60 n ->
+            String.fromFloat n
 
         Op2 { op, left, right } ->
             "({OP} {LEFT} {RIGHT})"
                 |> String.replace "{OP}" (binOp op)
                 |> String.replace "{LEFT}" (term left)
                 |> String.replace "{RIGHT}" (term right)
+
+        Str string ->
+            "\"{STRING}\""
+                |> String.replace "{STRING}"
+                    (string
+                        |> String.replace "\"" "'"
+                    )
+
+        Lst list ->
+            "[{ITEMS}]"
+                |> String.replace "{ITEMS}"
+                    (list
+                        |> List.map term
+                        |> String.join ", "
+                    )

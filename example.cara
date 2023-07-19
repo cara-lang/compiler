@@ -1,0 +1,10 @@
+type X = Y | Z(Int)
+f(x) = 1
+x = 1
+module Foo {
+  y = 1 + x
+}
+IO.println!("x")
+IO.println!(x)
+IO.println!("y")
+IO.println!(Foo.y)

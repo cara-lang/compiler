@@ -78,6 +78,8 @@ type Type
 
 type Pattern
     = -- TODO what about the "as" renaming pattern?
+      -- TODO PChar
+      -- TODO PString
       PUnit -- ()
     | PVar String -- a
     | PConstructor { id : Id, args : List Pattern } -- Foo, Bar.Foo, Foo(a), Foo(_), Foo([])

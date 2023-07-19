@@ -1,0 +1,8 @@
+(Main) = "TODO main rule"
+(f x) = 1
+(Todo "SLet") = "{ expr = Int 1, lhs = PVar 'x', mod = LetNoModifier, type_ = Nothing }"
+(Todo "SLet") = "{ expr = BinaryOp (Int 1) Plus (Identifier { name = 'x', qualifiers = [] }), lhs = PVar 'y', mod = LetNoModifier, type_ = Nothing }"
+(Todo "SBang") = "BCall { args = [String 'x'], fn = Identifier { name = 'println', qualifiers = ['IO'] } }"
+(Todo "SBang") = "BCall { args = [Identifier { name = 'x', qualifiers = [] }], fn = Identifier { name = 'println', qualifiers = ['IO'] } }"
+(Todo "SBang") = "BCall { args = [String 'y'], fn = Identifier { name = 'println', qualifiers = ['IO'] } }"
+(Todo "SBang") = "BCall { args = [Identifier { name = 'y', qualifiers = ['Foo'] }], fn = Identifier { name = 'println', qualifiers = ['IO'] } }"
