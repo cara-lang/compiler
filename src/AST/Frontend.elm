@@ -1,4 +1,4 @@
-module AST exposing
+module AST.Frontend exposing
     ( Bang(..)
     , BangOrExpr(..)
     , BinaryOp(..)
