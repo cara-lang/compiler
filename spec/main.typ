@@ -1569,6 +1569,47 @@ For overloading unary operators see @binary-op-decl.
 
 == TODO Patterns <pattern>
 
+Patterns are syntax that simplifies extracting data from expressions and making conditions over expressions.
+
+They are used on the "left hand sides" of function arguments, let statements and `case..of` expressions.
+
+Patterns have two "powers":
+
+1. A pattern can fail matching an expression.
+
+#example[The pattern `(a,b)` will not match the expression `123`.]
+
+2. If a pattern matches an expression, it has the opportunity to introduce new local bindings.
+
+#example[
+```rs
+type X = Foo(Int)
+myFoo = Foo(123)
+Foo(n) = myFoo // <- matching pattern Foo(n) with the value myFoo
+```
+The above puts the number `123` into a variable `n`.
+]
+
+Multiple function equations with pattern matches do get combined into a single function with a `case..of` consisting of those equations:
+
+#example[
+```rs
+fib(0) = 0
+fib(1) = 1
+fib(n) = fib(n-1) + fib(n-2)
+```
+lowers into:
+```rs
+fib(x) =
+  case x of
+    0 -> 0
+    1 -> 1
+    n -> fib(n-1) + fib(n-2)
+```
+]
+
+Patterns need to be exhaustive; the compiler should raise an error when it finds a non-exhaustive set of patterns.
+
 === TODO Unit <unit-pattern>
 === TODO Variable <var-pattern>
 
