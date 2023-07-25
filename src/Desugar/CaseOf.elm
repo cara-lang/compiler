@@ -61,18 +61,24 @@ Which suggests we should first decompose the case..of into two nested ones?
 
 import AST.Backend as B
 import AST.Frontend as F
-import Id exposing (Id)
+import Id.Qualified exposing (QualifiedId)
 
 
 {-| Convert the case..of to a `MyType.match` function call.
 -}
-desugarCaseOf : { subject : Expr, branches : List CaseBranch } -> B.Expr
+desugarCaseOf : { subject : F.Expr, branches : List F.CaseBranch } -> F.Expr
 desugarCaseOf r =
     Debug.todo "desugar case..of"
 
 
-{-| type My.Stuff.Foo --> function My.Stuff.Foo.match
+{-| My.Stuff.Foo --> My.Stuff.Foo.match
 -}
-matchFn : List String -> String -> Id
-matchFn modules typeName =
-    Id.global (modules ++ [ typeName ]) "match"
+matchFn : QualifiedId -> QualifiedId
+matchFn id =
+    let
+        ( fst, rst ) =
+            id.qualifiers
+    in
+    { qualifiers = ( fst, rst ++ [ id.name ] )
+    , name = "match"
+    }

@@ -1,6 +1,6 @@
 module Interpreter exposing (interpretProgram)
 
-import AST exposing (..)
+import AST.Frontend as AST exposing (..)
 import Basics.Extra as Basics
 import Bitwise
 import Debug.Extra as Debug
@@ -571,6 +571,32 @@ interpretPattern =
                         _ ->
                             Nothing
 
+            PChar c ->
+                Outcome.succeed env <|
+                    case value of
+                        VChar v ->
+                            if c == v then
+                                Just AddNothing
+
+                            else
+                                Nothing
+
+                        _ ->
+                            Nothing
+
+            PString s ->
+                Outcome.succeed env <|
+                    case value of
+                        VString v ->
+                            if s == v then
+                                Just AddNothing
+
+                            else
+                                Nothing
+
+                        _ ->
+                            Nothing
+
             PRecordSpread ->
                 case value of
                     VRecord fields ->
@@ -702,6 +728,9 @@ interpretPattern =
 
                     _ ->
                         Outcome.succeed env Nothing
+
+            PAs _ _ ->
+                Debug.todo <| "interpret as-pattern: " ++ AST.patternToString pattern
 
 
 interpretPatternTuple : Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)

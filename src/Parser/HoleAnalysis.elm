@@ -3,7 +3,7 @@ module Parser.HoleAnalysis exposing
     , analyzeHoles
     )
 
-import AST
+import AST.Frontend as AST
     exposing
         ( Bang(..)
         , BangOrExpr(..)

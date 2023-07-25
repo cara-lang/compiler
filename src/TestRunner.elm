@@ -2,7 +2,7 @@ module TestRunner exposing (Flags, Model, Msg, main)
 
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env
-import Error exposing (Error(..))
+import Error exposing (Details(..), Error)
 import Interpreter
 import Interpreter.Outcome as Interpreter
 import Lexer
@@ -80,8 +80,8 @@ runTest : String -> String -> K () -> ( Model, Cmd Msg )
 runTest name fileContents k =
     case
         fileContents
-            |> (Lexer.lex >> Result.mapError LexerError)
-            |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+            |> (Lexer.lex >> Result.mapError (\( loc, lexerErr ) -> { loc = loc, details = LexerError lexerErr }))
+            |> Result.andThen (Parser.parse >> Result.mapError (\( loc, parserErr ) -> { loc = loc, details = ParserError parserErr }))
     of
         Err err ->
             if String.endsWith "-err" name then
@@ -94,14 +94,14 @@ runTest name fileContents k =
                             |> List.head
                             |> Maybe.withDefault ""
                 in
-                if String.startsWith (Error.code err) firstLine then
+                if String.startsWith (Error.code err.details) firstLine then
                     k ()
 
                 else
-                    effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
+                    effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err.details) k
 
             else
-                effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
+                effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err.details) k
 
         Ok astTree ->
             effect0 (Effect.Println <| "interpreting: " ++ name) <| \() ->
@@ -121,7 +121,8 @@ handleInterpreterOutcome testName k outcome =
             -- TODO check stdout against stdout.txt
             k ()
 
-        Interpreter.FoundError err ->
+        Interpreter.FoundError _ err ->
+            -- TODO show the loc somewhere?
             if String.endsWith "-err" testName then
                 effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <| \stderr ->
                 let

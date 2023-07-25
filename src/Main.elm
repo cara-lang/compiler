@@ -1,15 +1,17 @@
 module Main exposing (Flags, Model, Msg, main)
 
-import AST
+import AST.Frontend as AST
 import Codegen.HVM
+import Desugar
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env
-import Error exposing (Error(..))
+import Error exposing (Details(..), Error)
 import HVM.AST
 import HVM.ToString
 import Interpreter
 import Interpreter.Outcome as Interpreter
 import Lexer
+import Loc
 import Parser
 import Value exposing (Value(..))
 
@@ -62,31 +64,32 @@ init flags =
         astResult : Result Error AST.Program
         astResult =
             flags.sourceCode
-                |> (Lexer.lex >> Result.mapError LexerError)
+                |> (Lexer.lex >> Result.mapError (\( loc, lexerErr ) -> { loc = loc, details = LexerError lexerErr }))
                 --|> Result.map (\ts -> let _ = ts |> List.reverse |> List.map (.type_ >> Debug.log "lexed") in ts)
-                |> Result.andThen (Parser.parse >> Result.mapError ParserError)
+                |> Result.andThen (Parser.parse >> Result.mapError (\( loc, parserErr ) -> { loc = loc, details = ParserError parserErr }))
     in
     case astResult of
         Err err ->
             finishWithError err
 
-        Ok astTree ->
+        Ok frontendProgram ->
             {-
-               astTree
+               frontendProgram
                    |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                    |> handleInterpreterOutcome
             -}
-            let
-                hvmProgram : HVM.AST.File
-                hvmProgram =
-                    Codegen.HVM.codegenProgram astTree
+            case
+                frontendProgram
+                    |> Desugar.desugarProgram
+                    |> Result.map Codegen.HVM.codegenProgram
+                    |> Result.map HVM.ToString.file
+            of
+                Err _ ->
+                    Debug.todo "handle desugar error"
 
-                hvmString : String
-                hvmString =
-                    HVM.ToString.file hvmProgram
-            in
-            effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <| \() ->
-            finish
+                Ok hvmString ->
+                    effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <| \() ->
+                    finish
 
 
 effect0 : Effect0 -> K () -> ( Model, Cmd Msg )
@@ -102,8 +105,11 @@ handleInterpreterOutcome outcome =
         Interpreter.DoneInterpreting _ _ ->
             finish
 
-        Interpreter.FoundError error ->
-            finishWithError (InterpreterError error)
+        Interpreter.FoundError loc error ->
+            finishWithError
+                { loc = loc
+                , details = InterpreterError error
+                }
 
         Interpreter.NeedsEffect0 effect k ->
             pauseOnEffect0 effect k
@@ -120,7 +126,6 @@ handleInterpreterOutcome outcome =
 
 finishWithError : Error -> ( Model, Cmd Msg )
 finishWithError err =
-    -- TODO show the location of the error (in Lexer, in Parser, in Interpreter)
     ( ExitingWithError, printError err )
 
 
@@ -162,7 +167,10 @@ pauseOnEffectBool effect k =
 
 printError : Error -> Cmd msg
 printError error =
-    Effect.eprintln (Error.title error)
+    "{LOC} - {TITLE}"
+        |> String.replace "{LOC}" (Loc.toString error.loc)
+        |> String.replace "{TITLE}" (Error.title error.details)
+        |> Effect.eprintln
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

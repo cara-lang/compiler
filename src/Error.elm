@@ -1,5 +1,7 @@
 module Error exposing
-    ( Error(..)
+    ( DesugarError(..)
+    , Details(..)
+    , Error
     , InterpreterError(..)
     , LexerError(..)
     , ParserError(..)
@@ -7,17 +9,24 @@ module Error exposing
     , title
     )
 
-import AST exposing (BinaryOp, Pattern, UnaryOp)
+import AST.Frontend as AST exposing (BinaryOp, Pattern, UnaryOp)
 import Id exposing (Id)
 import Loc exposing (Loc)
 import Token
 import Value exposing (Value)
 
 
-type Error
-    = LexerError ( Loc, LexerError )
-    | ParserError ( Loc, ParserError )
+type alias Error =
+    { details : Details
+    , loc : Loc
+    }
+
+
+type Details
+    = LexerError LexerError
+    | ParserError ParserError
     | InterpreterError InterpreterError
+    | DesugarError DesugarError
 
 
 type LexerError
@@ -100,10 +109,14 @@ type InterpreterError
     | UnexpectedArgument Value
 
 
-title : Error -> String
-title error =
-    case error of
-        LexerError ( loc, lexerError ) ->
+type DesugarError
+    = TodoDesugarError
+
+
+title : Details -> String
+title details =
+    case details of
+        LexerError lexerError ->
             case lexerError of
                 NonterminatedChar ->
                     "Non-terminated character"
@@ -199,7 +212,7 @@ title error =
                 InvalidHexInt ->
                     "Invalid hexadecimal integer"
 
-        ParserError ( loc, parserError ) ->
+        ParserError parserError ->
             case parserError of
                 ExpectedNonemptyTokens ->
                     -- Shouldn't happen
@@ -215,7 +228,7 @@ title error =
                     "Couldn't get token data"
 
                 ExpectedToken t ->
-                    Loc.toString loc ++ " - Expected token: " ++ Token.toString t
+                    "Expected token: " ++ Token.toString t
 
                 AssignmentOfExprToUnderscore ->
                     "Assignment of expression to underscore"
@@ -328,11 +341,16 @@ title error =
                 UnexpectedArgument value ->
                     "Unexpected argument: " ++ Value.toInspectString value
 
+        DesugarError desugarError ->
+            case desugarError of
+                TodoDesugarError ->
+                    "TODO desugar error"
 
-code : Error -> String
-code error =
-    case error of
-        LexerError ( loc, lexerError ) ->
+
+code : Details -> String
+code details =
+    case details of
+        LexerError lexerError ->
             case lexerError of
                 NonterminatedChar ->
                     "E0033"
@@ -439,7 +457,7 @@ code error =
                     -- TODO
                     "EXXXX"
 
-        ParserError ( loc, parserError ) ->
+        ParserError parserError ->
             case parserError of
                 ExpectedNonemptyTokens ->
                     -- TODO
@@ -586,6 +604,12 @@ code error =
                     "EXXXX"
 
                 UnexpectedArgument value ->
+                    -- TODO
+                    "EXXXX"
+
+        DesugarError desugarError ->
+            case desugarError of
+                TodoDesugarError ->
                     -- TODO
                     "EXXXX"
 

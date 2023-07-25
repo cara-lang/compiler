@@ -1,6 +1,6 @@
 module Parser exposing (parse)
 
-import AST exposing (..)
+import AST.Frontend as AST exposing (..)
 import Error exposing (ParserError(..))
 import Id exposing (Id)
 import List.Zipper as Zipper

@@ -17,6 +17,7 @@ module Interpreter.Outcome exposing
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env exposing (Env)
 import Error exposing (InterpreterError)
+import Loc exposing (Loc)
 import Value exposing (Value)
 
 
@@ -26,7 +27,7 @@ type Outcome a
     | NeedsEffectStr EffectStr (String -> Outcome a)
     | NeedsEffectMaybeStr EffectMaybeStr (Maybe String -> Outcome a)
     | NeedsEffectBool EffectBool (Bool -> Outcome a)
-    | FoundError InterpreterError
+    | FoundError Loc InterpreterError
 
 
 succeed : Env Value -> a -> Outcome a
@@ -36,7 +37,7 @@ succeed env a =
 
 fail : InterpreterError -> Outcome a
 fail err =
-    FoundError err
+    FoundError (Debug.todo "loc") err
 
 
 map : (a -> b) -> Outcome a -> Outcome b
@@ -57,8 +58,8 @@ map fn outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> map fn)
 
-        FoundError err ->
-            FoundError err
+        FoundError loc err ->
+            FoundError loc err
 
 
 mapBoth : (Env Value -> a -> ( Env Value, b )) -> Outcome a -> Outcome b
@@ -83,8 +84,8 @@ mapBoth fn outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> mapBoth fn)
 
-        FoundError err ->
-            FoundError err
+        FoundError loc err ->
+            FoundError loc err
 
 
 mapEnv : (Env Value -> Env Value) -> Outcome a -> Outcome a
@@ -105,8 +106,8 @@ mapEnv fn outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> mapEnv fn)
 
-        FoundError err ->
-            FoundError err
+        FoundError loc err ->
+            FoundError loc err
 
 
 attemptMapEnv : (Env Value -> Maybe (Env Value)) -> InterpreterError -> Outcome a -> Outcome a
@@ -115,7 +116,7 @@ attemptMapEnv fn error outcome =
         DoneInterpreting env a ->
             case fn env of
                 Nothing ->
-                    FoundError error
+                    FoundError (Debug.todo "loc") error
 
                 Just env_ ->
                     DoneInterpreting env_ a
@@ -132,8 +133,8 @@ attemptMapEnv fn error outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> attemptMapEnv fn error)
 
-        FoundError err ->
-            FoundError err
+        FoundError loc err ->
+            FoundError loc err
 
 
 andThen : (Env Value -> a -> Outcome b) -> Outcome a -> Outcome b
@@ -156,8 +157,8 @@ andThen fn outcome1 =
                 NeedsEffectBool eff k ->
                     NeedsEffectBool eff k
 
-                FoundError err ->
-                    FoundError err
+                FoundError loc err ->
+                    FoundError loc err
 
         NeedsEffect0 eff k ->
             NeedsEffect0 eff (k >> andThen fn)
@@ -171,14 +172,14 @@ andThen fn outcome1 =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> andThen fn)
 
-        FoundError err ->
-            FoundError err
+        FoundError loc err ->
+            FoundError loc err
 
 
 onError : (InterpreterError -> Outcome a) -> Outcome a -> Outcome a
 onError fn outcome1 =
     case outcome1 of
-        FoundError err ->
+        FoundError _ err ->
             fn err
 
         DoneInterpreting env1 a ->

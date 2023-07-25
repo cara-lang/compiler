@@ -17,6 +17,7 @@ module Interpreter.Internal exposing
 import Env exposing (Env)
 import Error exposing (InterpreterError)
 import Interpreter.Outcome as Outcome exposing (Outcome(..))
+import Loc exposing (Loc)
 import Value exposing (Value)
 
 
@@ -31,7 +32,7 @@ succeed b =
 
 fail : InterpreterError -> Interpreter a b
 fail err =
-    \_ _ -> FoundError err
+    \_ _ -> FoundError (Debug.todo "loc") err
 
 
 map : (b -> bb) -> Interpreter a b -> Interpreter a bb
@@ -89,8 +90,8 @@ andThen interpreter outcome =
         DoneInterpreting env b ->
             interpreter env b
 
-        FoundError err ->
-            FoundError err
+        FoundError loc err ->
+            FoundError loc err
 
         NeedsEffect0 eff k ->
             NeedsEffect0 eff k

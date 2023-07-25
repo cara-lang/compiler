@@ -8,7 +8,7 @@ module Value exposing
     , toShowString
     )
 
-import AST exposing (Expr, Pattern)
+import AST.Frontend as AST exposing (Expr, Pattern)
 import Dict exposing (Dict)
 import Env exposing (Env)
 import Id exposing (Id)

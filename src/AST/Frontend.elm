@@ -77,20 +77,20 @@ type Type
 
 
 type Pattern
-    = -- TODO what about the "as" renaming pattern?
-      -- TODO PChar
-      -- TODO PString
-      PUnit -- ()
+    = PUnit -- ()
     | PVar String -- a
     | PConstructor { id : Id, args : List Pattern } -- Foo, Bar.Foo, Foo(a), Foo(_), Foo([])
     | PInt Int -- 1
     | PFloat Float -- 1.2345
+    | PChar String -- 'a'
+    | PString String -- "abc"
     | PList (List Pattern) -- [1,a]
     | PTuple (List Pattern) -- (1,a)
     | PWildcard -- _
     | PSpread (Maybe String) -- ...a, ..._
     | PRecordSpread -- {..}
     | PRecordFields (List String) -- {a}, {a,b}
+    | PAs String Pattern
       {- These aren't ever parsed, but they're a way for interpretEffectBlock
          to create an expression out of SUnaryOperatorDef and
          SBinaryOperatorDef statements.
@@ -289,6 +289,9 @@ isSpreadPattern pattern =
         PSpread _ ->
             True
 
+        PAs _ inner ->
+            isSpreadPattern inner
+
         PUnit ->
             False
 
@@ -302,6 +305,12 @@ isSpreadPattern pattern =
             False
 
         PFloat _ ->
+            False
+
+        PChar _ ->
+            False
+
+        PString _ ->
             False
 
         PList _ ->
@@ -448,11 +457,28 @@ patternToString pattern =
         PFloat n ->
             String.fromFloat n
 
+        PChar s ->
+            "'{CHAR}'"
+                -- TODO escaping?
+                |> String.replace "{CHAR}" s
+
+        PString s ->
+            "\"{STR}\""
+                -- TODO escaping?
+                |> String.replace "{STR}" s
+
+        PAs name inner ->
+            "({INNER}) as {NAME}"
+                |> String.replace "{NAME}" name
+                |> String.replace "{INNER}" (patternToString inner)
+
         PList xs ->
-            "[" ++ String.join "," (List.map patternToString xs) ++ "]"
+            "[{LIST}]"
+                |> String.replace "{LIST}" (String.join "," (List.map patternToString xs))
 
         PTuple xs ->
-            "(" ++ String.join "," (List.map patternToString xs) ++ ")"
+            "({TUPLE})"
+                |> String.replace "{TUPLE}" (String.join "," (List.map patternToString xs))
 
         PWildcard ->
             "_"
@@ -464,7 +490,8 @@ patternToString pattern =
             "{..}"
 
         PRecordFields fields ->
-            "{" ++ String.join "," fields ++ "}"
+            "{|RECORD|}"
+                |> String.replace "|RECORD|" (String.join "," fields)
 
         PUnaryOpDef _ ->
             "<UNARY OP DEF>"

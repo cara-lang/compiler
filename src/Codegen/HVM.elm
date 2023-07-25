@@ -1,22 +1,22 @@
 module Codegen.HVM exposing (codegenProgram)
 
-import AST.Backend as B
-import AST.Frontend as F
+import AST.Backend as AST
+import Desugar.CaseOf
 import HVM.AST as HVM exposing (Rule, Term(..))
-import Id
+import Id.Qualified exposing (QualifiedId)
 
 
 codegenProgram : AST.Program -> HVM.File
 codegenProgram program =
     { rules =
         mainRule program
-            :: List.concatMap (declToRules "") program
+            :: List.concatMap declToRules program
     }
 
 
 mainRule : AST.Program -> Rule
 mainRule program =
-    { lhs = Ctr { name = "Main", args = [] }
+    { lhs = ctr "Main" []
     , rhs = Str "TODO main rule"
     }
 
@@ -31,7 +31,7 @@ todoRule message thing =
 
 todoTerm : String -> Term
 todoTerm message =
-    Ctr { name = "Todo", args = [ Str message ] }
+    ctr "Todo" [ Str message ]
 
 
 ctr : String -> List Term -> Term
@@ -50,67 +50,63 @@ tuple terms =
         terms
 
 
-declToRules : String -> Decl -> List Rule
-declToRules modulePath decl =
+declToRules : AST.Decl -> List Rule
+declToRules decl =
     case decl of
-        DTypeAlias _ ->
-            []
-
-        DType r ->
+        AST.DType r ->
             {- For HVM, we don't need to create any constructor functions:
                we can pull constructors out of thin air.
 
                We will need a `Foo.match` function for the Scott encoding of
                `case..of` expressions though. (See Desugar.CaseOf)
             -}
-            [ typeToMatchFnRule modulePath r ]
+            typeToMatchFnRules r
 
-        DModule m ->
-            moduleToRules modulePath m
+        AST.DLetStmt r ->
+            todoRule "DLetStmt" r
 
-        DExtendModule r ->
-            todoRule "DExtendModule" r
-
-        DStatement stmt ->
-            stmtToRules modulePath stmt
-
-        DUnitTest r ->
-            todoRule "DUnitTest" r
-
-        DParameterizedTest r ->
-            todoRule "DParameterizedTest" r
-
-        DPropertyTypeTest r ->
-            todoRule "DPropertyTypeTest" r
-
-        DPropertyGenTest r ->
-            todoRule "DPropertyGenTest" r
+        AST.DIoStmt r ->
+            todoRule "DIoStmt" r
 
 
-typeToMatchFnRule :
-    String
-    ->
-        { mod : TypeModifier
-        , name : String
-        , vars : List String
-        , constructors : List Constructor
-        }
-    -> Rule
-typeToMatchFnRule : 
-
-
-moduleToRules :
-    String
-    ->
-        { mod : ModuleModifier
-        , name : String
-        , decls : List Decl
-        }
+typeToMatchFnRules :
+    { id : QualifiedId
+    , vars : List String
+    , constructors : List AST.Constructor
+    }
     -> List Rule
-moduleToRules modulePath newModule =
-    -- TODO mod
-    newModule.decls
-        |> List.concatMap (declToRules (addModule newModule.name modulePath))
+typeToMatchFnRules r =
+    let
+        -- My.Nested.Module.Foo.match
+        fnName : String
+        fnName =
+            Desugar.CaseOf.matchFn r.id
+                |> Id.Qualified.toString
+
+        -- onBar
+        toHandlerName : String -> String
+        toHandlerName ctrName =
+            "on" ++ ctrName
+
+        handlerNames : List Term
+        handlerNames =
+            List.map (.id >> .name >> toHandlerName >> Var) r.constructors
+    in
+    List.map2
+        (\ctr_ handlerName ->
+            -- (Foo.match (Bar a0 a1) onBar onBaz onQuux) = (onBar a0 a1)
+            let
+                -- [a0, a1, a2]
+                argNames =
+                    List.range 0 (ctr_.argsCount - 1)
+                        |> List.map (\i -> Var ("a" ++ String.fromInt i))
+            in
+            { lhs = ctr fnName (ctr ctr_.id.name argNames :: handlerNames)
+            , rhs = functionTerm handlerName argNames
+            }
+        )
+        r.constructors
+        handlerNames
 
 
 qualified : String -> String -> String
@@ -130,61 +126,6 @@ addModule newModule oldModules =
             |> String.join "."
 
 
-stmtToRules : String -> Stmt -> List Rule
-stmtToRules modulePath stmt =
-    case stmt of
-        SLet r ->
-            todoRule "SLet" r
-
-        SLetBang r ->
-            todoRule "SLetBang" r
-
-        SBang r ->
-            todoRule "SBang" r
-
-        SFunctionDef r ->
-            [ functionDefToRule modulePath r ]
-
-        SBinaryOperatorDef r ->
-            todoRule "SBinaryOperatorDef" r
-
-        SUnaryOperatorDef r ->
-            todoRule "SUnaryOperatorDef" r
-
-        SValueAnnotation r ->
-            todoRule "SValueAnnotation" r
-
-        SBinaryOperatorAnnotation r ->
-            todoRule "SBinaryOperatorAnnotation" r
-
-        SUnaryOperatorAnnotation r ->
-            todoRule "SUnaryOperatorAnnotation" r
-
-        SUseModule r ->
-            todoRule "SUseModule" r
-
-
-functionDefToRule :
-    String
-    ->
-        { name : String
-        , args : List Pattern
-        , body : Expr
-        }
-    -> Rule
-functionDefToRule modulePath ({ name, args, body } as r) =
-    let
-        _ =
-            Debug.log "function def to rule" r
-    in
-    { lhs =
-        functionTerm
-            (Var (qualified modulePath name))
-            (List.map patternToTerm args)
-    , rhs = exprToTerm body
-    }
-
-
 functionTerm : Term -> List Term -> Term
 functionTerm function args =
     let
@@ -198,78 +139,62 @@ functionTerm function args =
     List.foldl oneArgApplication function args
 
 
-exprToTerm : Expr -> Term
+exprToTerm : AST.Expr -> Term
 exprToTerm expr =
     case expr of
-        Int n ->
+        AST.Int n ->
             U60 n
 
-        Float f ->
+        AST.Float f ->
             F60 f
 
-        Char str ->
+        AST.Char str ->
             ctr "Data.Cara.char" [ Str str ]
 
-        String str ->
+        AST.String str ->
             Str str
 
-        Bool bool ->
+        AST.Bool bool ->
             if bool then
                 U60 0
 
             else
                 U60 1
 
-        Unit ->
+        AST.Unit ->
             ctr "Data.Cara.unit" []
 
-        Tuple xs ->
+        AST.Tuple xs ->
             tuple (List.map exprToTerm xs)
 
-        List xs ->
+        AST.List xs ->
             Lst (List.map exprToTerm xs)
 
-        Record contents ->
-            todoTerm "exprToTerm record"
+        AST.FnCall1 { fn, arg } ->
+            App
+                { function = exprToTerm fn
+                , arg = exprToTerm arg
+                }
 
-        UnaryOp op e ->
-            todoTerm "exprToTerm unaryOp"
+        AST.Let1 { name, value, body } ->
+            Let
+                { name = name
+                , expr = exprToTerm value
+                , body = exprToTerm body
+                }
 
-        BinaryOp left op right ->
-            todoTerm "exprToTerm binaryOp"
-
-        Call { fn, args } ->
-            functionTerm
-                (exprToTerm fn)
-                (List.map exprToTerm args)
-
-        RecordGet { record, field } ->
-            todoTerm "exprToTerm recordGet"
-
-        Block { stmts, ret } ->
-            todoTerm "exprToTerm block"
-
-        EffectBlock { monadModule, stmts, ret } ->
-            todoTerm "exprToTerm effect block"
-
-        Constructor_ { id, args } ->
+        AST.Constructor_ { id, args } ->
             ctr
-                (Id.toString id)
+                (Id.Qualified.toString id)
                 (List.map exprToTerm args)
 
-        Identifier id ->
-            Var (Id.toString id)
-
-        RootIdentifier id ->
+        AST.RootIdentifier qid ->
             todoTerm "exprToTerm rootIdentifier"
 
-        Lambda { args, body } ->
+        AST.Lambda1 { arg, body } ->
             todoTerm "exprToTerm lambda"
 
-        RecordGetter getter ->
-            todoTerm "exprToTerm record getter"
-
-        If { cond, then_, else_ } ->
+        AST.If { cond, then_, else_ } ->
             ctr "Data.U60.if"
                 (List.map exprToTerm
                     [ cond
@@ -278,51 +203,50 @@ exprToTerm expr =
                     ]
                 )
 
-        Case { subject, branches } ->
-            todoTerm "exprToTerm case"
 
-
-patternToTerm : Pattern -> Term
+patternToTerm : AST.Pattern -> Term
 patternToTerm pattern =
     case pattern of
-        PUnit ->
+        AST.PUnit ->
             ctr "Data.Cara.unit" []
 
-        PVar var ->
+        AST.PVar var ->
             Var var
 
-        PConstructor { id, args } ->
+        AST.PConstructor { id, args } ->
             ctr
-                (Id.toString id)
+                (Id.Qualified.toString id)
                 (List.map patternToTerm args)
 
-        PInt int ->
+        AST.PInt int ->
             U60 int
 
-        PFloat float ->
+        AST.PFloat float ->
             F60 float
 
-        PList ps ->
+        AST.PChar c ->
+            ctr "Data.Cara.char" [ Str c ]
+
+        AST.PString s ->
+            Str s
+
+        AST.PAs _ _ ->
+            Debug.todo "pattern to term - as"
+
+        AST.PList ps ->
             Lst (List.map patternToTerm ps)
 
-        PTuple ps ->
+        AST.PTuple ps ->
             tuple (List.map patternToTerm ps)
 
-        PWildcard ->
+        AST.PWildcard ->
             Var "_"
 
-        PSpread maybeVar ->
+        AST.PSpread maybeVar ->
             Debug.todo "pattern to term - spread"
 
-        PRecordSpread ->
+        AST.PRecordSpread ->
             Debug.todo "pattern to term - record spread"
 
-        PRecordFields recordFields ->
+        AST.PRecordFields recordFields ->
             Debug.todo "pattern to term - record fields"
-
-        -- Shouldn't happen:
-        PUnaryOpDef _ ->
-            Debug.todo "pattern to term - unary op def"
-
-        PBinaryOpDef _ ->
-            Debug.todo "pattern to term - binary op def"
