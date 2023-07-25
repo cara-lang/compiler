@@ -37,7 +37,8 @@ succeed env a =
 
 fail : InterpreterError -> Outcome a
 fail err =
-    FoundError (Debug.todo "loc") err
+    -- TODO somehow thread the correct location here?
+    FoundError { row = -1, col = -1 } err
 
 
 map : (a -> b) -> Outcome a -> Outcome b
