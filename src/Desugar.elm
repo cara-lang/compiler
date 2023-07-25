@@ -48,7 +48,7 @@ desugarStmt : F.Stmt -> Result DesugarError (List B.Decl)
 desugarStmt stmt =
     case stmt of
         F.SLet r ->
-            Debug.todo "desugar slet"
+            desugarLet r
 
         F.SLetBang r ->
             Debug.todo "desugar sletbang"
@@ -76,6 +76,17 @@ desugarStmt stmt =
 
         F.SUseModule r ->
             Debug.todo "desugar susemodule"
+
+
+desugarLet :
+    { mod : F.LetModifier
+    , lhs : F.Pattern
+    , type_ : Maybe F.Type
+    , expr : F.Expr
+    }
+    -> Result DesugarError (List B.Decl)
+desugarLet bang =
+    Debug.todo "desugar let"
 
 
 desugarBang : F.Bang -> Result DesugarError (List B.Decl)

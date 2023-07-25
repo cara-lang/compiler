@@ -9,4 +9,8 @@ num(val) =
     Baz(n) -> n
     Quux(_,_) -> 2
 
-IO.println!(num(Baz(123)))
+main = IO {
+  foo = Baz(123)
+  n = num(foo)
+  IO.println!(n)
+}
