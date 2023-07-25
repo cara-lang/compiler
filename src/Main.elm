@@ -1,8 +1,8 @@
 module Main exposing (Flags, Model, Msg, main)
 
 import AST
+import Codegen.HVM
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
-import Emit
 import Env
 import Error exposing (Error(..))
 import HVM.AST
@@ -79,7 +79,7 @@ init flags =
             let
                 hvmProgram : HVM.AST.File
                 hvmProgram =
-                    Emit.emitProgram astTree
+                    Codegen.HVM.codegenProgram astTree
 
                 hvmString : String
                 hvmString =

@@ -1,12 +1,13 @@
-module Emit exposing (emitProgram)
+module Codegen.HVM exposing (codegenProgram)
 
-import AST exposing (..)
+import AST.Backend as B
+import AST.Frontend as F
 import HVM.AST as HVM exposing (Rule, Term(..))
 import Id
 
 
-emitProgram : AST.Program -> HVM.File
-emitProgram program =
+codegenProgram : AST.Program -> HVM.File
+codegenProgram program =
     { rules =
         mainRule program
             :: List.concatMap (declToRules "") program
@@ -56,9 +57,13 @@ declToRules modulePath decl =
             []
 
         DType r ->
-            -- We'll just create the constructors as needed.
-            -- All we need is that they're fully qualified.
-            []
+            {- For HVM, we don't need to create any constructor functions:
+               we can pull constructors out of thin air.
+
+               We will need a `Foo.match` function for the Scott encoding of
+               `case..of` expressions though. (See Desugar.CaseOf)
+            -}
+            [ typeToMatchFnRule modulePath r ]
 
         DModule m ->
             moduleToRules modulePath m
@@ -80,6 +85,18 @@ declToRules modulePath decl =
 
         DPropertyGenTest r ->
             todoRule "DPropertyGenTest" r
+
+
+typeToMatchFnRule :
+    String
+    ->
+        { mod : TypeModifier
+        , name : String
+        , vars : List String
+        , constructors : List Constructor
+        }
+    -> Rule
+typeToMatchFnRule : 
 
 
 moduleToRules :

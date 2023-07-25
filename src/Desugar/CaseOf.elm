@@ -1,4 +1,4 @@
-module Desugar.CaseOf exposing (desugarCaseOf, desugarTypeDecl)
+module Desugar.CaseOf exposing (desugarCaseOf, matchFn)
 
 {-| Use [Scott encoding](https://crypto.stanford.edu/~blynn/compiler/scott.html)
 to convert `case..of` expressions to a `Foo.match` function call.
@@ -17,6 +17,7 @@ should desugar into:
      Foo.match(Baz(a),   onBar,onBaz,onQuux) = onBaz(a)
      Foo.match(Quux(a,b),onBar,onBaz,onQuux) = onQuux(a,b)
 
+(we'll do this in the Codegen.HVM phase, see `typeToMatchFnRule`)
 and this usage of case..of:
 
      num val =
@@ -39,41 +40,28 @@ The only wrinkle in this plan is with nested pattern matching:
      type Maybe[a] = Nothing | Just(a)
 
      case nestedMaybe of
-         Nothing -> 1
-         Just(Nothing) -> 2
-         Just(Just(n)) -> n
+       Nothing -> 1
+       Just(Nothing) -> 2
+       Just(Just(n)) -> n
 
 This should get desugared into:
 
-     Maybe.match(nestedMaybe, 1, \x -> Maybe.match(x, 2, \n -> n))
+     Maybe.match(nestedMaybe, 1, \\x -> Maybe.match(x, 2, \\n -> n))
 
 Which suggests we should first decompose the case..of into two nested ones?
 
      case nestedMaybe of
-         Nothing -> 1
-         Just(x) ->
-            case x of
-                Nothing -> 2
-                Just(n) -> n
+       Nothing -> 1
+       Just(x) ->
+         case x of
+           Nothing -> 2
+           Just(n) -> n
 
 -}
 
 import AST.Backend as B
 import AST.Frontend as F
-
-
-{-| Generate the Scott encoding function.
-TODO: use the TypeModifier?
--}
-desugarTypeDecl :
-    { mod : TypeModifier
-    , name : String
-    , vars : List String
-    , constructors : List Constructor
-    }
-    -> B.Expr
-desugarTypeDecl r =
-    Debug.todo "desugar type decl"
+import Id exposing (Id)
 
 
 {-| Convert the case..of to a `MyType.match` function call.
@@ -81,3 +69,10 @@ desugarTypeDecl r =
 desugarCaseOf : { subject : Expr, branches : List CaseBranch } -> B.Expr
 desugarCaseOf r =
     Debug.todo "desugar case..of"
+
+
+{-| type My.Stuff.Foo --> function My.Stuff.Foo.match
+-}
+matchFn : List String -> String -> Id
+matchFn modules typeName =
+    Id.global (modules ++ [ typeName ]) "match"
