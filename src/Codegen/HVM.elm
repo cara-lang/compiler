@@ -8,17 +8,7 @@ import Id.Qualified exposing (QualifiedId)
 
 codegenProgram : AST.Program -> HVM.File
 codegenProgram program =
-    { rules =
-        mainRule program
-            :: List.concatMap declToRules program
-    }
-
-
-mainRule : AST.Program -> Rule
-mainRule program =
-    { lhs = ctr "Main" []
-    , rhs = Str "TODO main rule"
-    }
+    { rules = List.concatMap declToRules program }
 
 
 todoRule : String -> a -> List Rule
@@ -65,9 +55,6 @@ declToRules decl =
         AST.DLetStmt r ->
             todoRule "DLetStmt" r
 
-        AST.DIoStmt r ->
-            todoRule "DIoStmt" r
-
 
 typeToMatchFnRules :
     { id : QualifiedId
@@ -107,23 +94,6 @@ typeToMatchFnRules r =
         )
         r.constructors
         handlerNames
-
-
-qualified : String -> String -> String
-qualified modules var =
-    -- Hacky?
-    modules
-        |> addModule var
-
-
-addModule : String -> String -> String
-addModule newModule oldModules =
-    if String.isEmpty oldModules then
-        newModule
-
-    else
-        [ oldModules, newModule ]
-            |> String.join "."
 
 
 functionTerm : Term -> List Term -> Term
@@ -230,8 +200,12 @@ patternToTerm pattern =
         AST.PString s ->
             Str s
 
-        AST.PAs _ _ ->
-            Debug.todo "pattern to term - as"
+        AST.PAs name inner ->
+            Let
+                { name = name
+                , expr = patternToTerm inner
+                , body = patternToTerm inner
+                }
 
         AST.PList ps ->
             Lst (List.map patternToTerm ps)

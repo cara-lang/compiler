@@ -33,7 +33,6 @@ type Expr
 type Decl
     = DType { id : QualifiedId, vars : List String, constructors : List Constructor }
     | DLetStmt { lhs : Pattern, expr : Expr }
-    | DIoStmt Expr
 
 
 type Pattern

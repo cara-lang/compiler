@@ -88,8 +88,9 @@ init flags =
                     Debug.todo "handle desugar error"
 
                 Ok hvmString ->
-                    effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <| \() ->
-                    finish
+                    effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <|
+                        \() ->
+                            finish
 
 
 effect0 : Effect0 -> K () -> ( Model, Cmd Msg )

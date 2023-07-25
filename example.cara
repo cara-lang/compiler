@@ -1,10 +1,12 @@
-type X = Y | Z(Int)
-f(x) = 1
-x = 1
-module Foo {
-  y = 1 + x
-}
-IO.println!("x")
-IO.println!(x)
-IO.println!("y")
-IO.println!(Foo.y)
+type Foo =
+    | Bar
+    | Baz(Int)
+    | Quux(Bool,String)
+
+num(val) =
+  case val of
+    Bar -> 1
+    Baz(n) -> n
+    Quux(_,_) -> 2
+
+IO.println!(num(Baz(123)))

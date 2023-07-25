@@ -20,7 +20,7 @@ should desugar into:
 (we'll do this in the Codegen.HVM phase, see `typeToMatchFnRule`)
 and this usage of case..of:
 
-     num val =
+     num(val) =
        case val of
          Bar -> 1
          Baz(n) -> n
