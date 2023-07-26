@@ -73,24 +73,27 @@ init flags =
             finishWithError err
 
         Ok frontendProgram ->
-            {-
-               frontendProgram
-                   |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
-                   |> handleInterpreterOutcome
-            -}
-            case
-                frontendProgram
-                    |> Desugar.desugarProgram
-                    |> Result.map Codegen.HVM.codegenProgram
-                    |> Result.map HVM.ToString.file
-            of
-                Err _ ->
-                    Debug.todo "handle desugar error"
+            frontendProgram
+                |> Debug.log "frontend program"
+                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                |> handleInterpreterOutcome
 
-                Ok hvmString ->
-                    effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <|
-                        \() ->
-                            finish
+
+
+{-
+   case
+       frontendProgram
+           |> Desugar.desugarProgram
+           |> Result.map Codegen.HVM.codegenProgram
+           |> Result.map HVM.ToString.file
+   of
+       Err _ ->
+           Debug.todo "handle desugar error"
+
+       Ok hvmString ->
+           effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <| \() ->
+           finish
+-}
 
 
 effect0 : Effect0 -> K () -> ( Model, Cmd Msg )

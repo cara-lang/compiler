@@ -1831,9 +1831,22 @@ parseStringInterpolation str =
                     -- impossible
                     Parser.succeed (AST.String str)
 
-                [ _ ] ->
+                [ chunk ] ->
                     -- ${ not found
-                    Parser.succeed (AST.String str)
+                    case acc of
+                        Nothing ->
+                            Parser.succeed (AST.String chunk)
+
+                        Just acc_ ->
+                            if String.isEmpty chunk then
+                                Parser.succeed acc_
+
+                            else
+                                Parser.succeed
+                                    (AST.BinaryOp acc_
+                                        AST.Append
+                                        (AST.String chunk)
+                                    )
 
                 beforeOpening :: afterOpening :: rest ->
                     case String.split "}" afterOpening of

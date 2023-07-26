@@ -1311,6 +1311,9 @@ interpretBinaryOpCallVal =
                 Outcome.succeed env <| VBool (a && b)
 
             -- Append: Strings, Lists
+            ( VString a, Append, VString b ) ->
+                Outcome.succeed env <| VString (a ++ b)
+
             ( VList a, Append, VList b ) ->
                 Outcome.succeed env <| VList (a ++ b)
 
