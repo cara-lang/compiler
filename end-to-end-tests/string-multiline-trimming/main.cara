@@ -2,33 +2,49 @@
 // https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
 // https://docs.swift.org/swift-book/_images/multilineStringWhitespace_2x.png
 
+nl = IO.println("----------------")
+
 IO.println!(`abcdef`)
+
+nl!
 
 IO.println!(`
 abcdef`)
 
+nl!
+
 IO.println!(`abcdef
 `)
 
+nl!
+
 IO.println!(`
 abcdef
 `)
 
+nl!
+
 IO.println!(`
 
 abcdef
 `)
 
+nl!
+
 IO.println!(`
 abcdef
 
 `)
 
+nl!
+
 IO.println!(`
 
 abcdef
 
 `)
+
+nl!
 
 IO.println!(`
              Hello there
@@ -36,3 +52,14 @@ IO.println!(`
                Cruel
                  World
              `)
+
+nl!
+
+IO.println!(`
+             Hello there
+             World
+               Cruel
+                 World
+            `)
+
+nl!

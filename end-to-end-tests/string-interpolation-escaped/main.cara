@@ -1,0 +1,2 @@
+x = "The \${abc} is $\{def}"
+IO.println!(x)
