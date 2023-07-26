@@ -2,7 +2,7 @@ module TestRunner exposing (Flags, Model, Msg, main)
 
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env
-import Error exposing (Details(..), Error)
+import Error exposing (Error(..))
 import Interpreter
 import Interpreter.Outcome as Interpreter
 import Lexer
@@ -55,59 +55,69 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    effect0 (Effect.Println "Running tests") <| \() ->
-    effect0 (Effect.Println "----------------------------") <| \() ->
-    runTests flags.rootPath flags.dirs
+    effect0 (Effect.Println "Running tests") <|
+        \() ->
+            effect0 (Effect.Println "----------------------------") <|
+                \() ->
+                    runTests flags.rootPath flags.dirs
 
 
 runTests : String -> List String -> ( Model, Cmd Msg )
 runTests rootPath testDirs =
     case testDirs of
         [] ->
-            effect0 (Effect.Println "----------------------------") <| \() ->
-            effect0 (Effect.Println "Done running tests!") <| \() ->
-            ( Done, Cmd.none )
+            effect0 (Effect.Println "----------------------------") <|
+                \() ->
+                    effect0 (Effect.Println "Done running tests!") <|
+                        \() ->
+                            ( Done, Cmd.none )
 
         testDir :: rest ->
-            effect0 (Effect.Chdir testDir) <| \() ->
-            effectStr (Effect.ReadFile { filename = "main.cara" }) <| \fileContents ->
-            runTest testDir fileContents <| \() ->
-            effect0 (Effect.Chdir rootPath) <| \() ->
-            runTests rootPath rest
+            effect0 (Effect.Chdir testDir) <|
+                \() ->
+                    effectStr (Effect.ReadFile { filename = "main.cara" }) <|
+                        \fileContents ->
+                            runTest testDir fileContents <|
+                                \() ->
+                                    effect0 (Effect.Chdir rootPath) <|
+                                        \() ->
+                                            runTests rootPath rest
 
 
 runTest : String -> String -> K () -> ( Model, Cmd Msg )
 runTest name fileContents k =
     case
         fileContents
-            |> (Lexer.lex >> Result.mapError (\( loc, lexerErr ) -> { loc = loc, details = LexerError lexerErr }))
-            |> Result.andThen (Parser.parse >> Result.mapError (\( loc, parserErr ) -> { loc = loc, details = ParserError parserErr }))
+            |> (Lexer.lex >> Result.mapError LexerError)
+            |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     of
         Err err ->
             if String.endsWith "-err" name then
-                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <| \stderr ->
-                let
-                    firstLine =
-                        stderr
-                            |> Maybe.withDefault ""
-                            |> String.lines
-                            |> List.head
-                            |> Maybe.withDefault ""
-                in
-                if String.startsWith (Error.code err.details) firstLine then
-                    k ()
+                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <|
+                    \stderr ->
+                        let
+                            firstLine =
+                                stderr
+                                    |> Maybe.withDefault ""
+                                    |> String.lines
+                                    |> List.head
+                                    |> Maybe.withDefault ""
+                        in
+                        if String.startsWith (Error.code err) firstLine then
+                            k ()
 
-                else
-                    effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err.details) k
+                        else
+                            effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
 
             else
-                effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err.details) k
+                effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
 
         Ok astTree ->
-            effect0 (Effect.Println <| "interpreting: " ++ name) <| \() ->
-            astTree
-                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
-                |> handleInterpreterOutcome name k
+            effect0 (Effect.Println <| "interpreting: " ++ name) <|
+                \() ->
+                    astTree
+                        |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                        |> handleInterpreterOutcome name k
 
 
 handleInterpreterOutcome :
@@ -121,23 +131,24 @@ handleInterpreterOutcome testName k outcome =
             -- TODO check stdout against stdout.txt
             k ()
 
-        Interpreter.FoundError _ err ->
+        Interpreter.FoundError err ->
             -- TODO show the loc somewhere?
             if String.endsWith "-err" testName then
-                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <| \stderr ->
-                let
-                    firstLine =
-                        stderr
-                            |> Maybe.withDefault ""
-                            |> String.lines
-                            |> List.head
-                            |> Maybe.withDefault ""
-                in
-                if String.startsWith (Error.code (InterpreterError err)) firstLine then
-                    k ()
+                effectMaybeStr (Effect.ReadFileMaybe { filename = "stderr.txt" }) <|
+                    \stderr ->
+                        let
+                            firstLine =
+                                stderr
+                                    |> Maybe.withDefault ""
+                                    |> String.lines
+                                    |> List.head
+                                    |> Maybe.withDefault ""
+                        in
+                        if String.startsWith (Error.code (InterpreterError err)) firstLine then
+                            k ()
 
-                else
-                    effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
+                        else
+                            effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k
 
             else
                 effect0 (Effect.Eprintln <| ": " ++ testName ++ " | " ++ Error.title (InterpreterError err)) k

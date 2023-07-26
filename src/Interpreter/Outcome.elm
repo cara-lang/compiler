@@ -27,7 +27,7 @@ type Outcome a
     | NeedsEffectStr EffectStr (String -> Outcome a)
     | NeedsEffectMaybeStr EffectMaybeStr (Maybe String -> Outcome a)
     | NeedsEffectBool EffectBool (Bool -> Outcome a)
-    | FoundError Loc InterpreterError
+    | FoundError ( Loc, InterpreterError )
 
 
 succeed : Env Value -> a -> Outcome a
@@ -37,8 +37,11 @@ succeed env a =
 
 fail : InterpreterError -> Outcome a
 fail err =
-    -- TODO somehow thread the correct location here?
-    FoundError { row = -1, col = -1 } err
+    -- TODO use a non-dummy Loc
+    FoundError
+        ( { row = -1, col = -1 }
+        , err
+        )
 
 
 map : (a -> b) -> Outcome a -> Outcome b
@@ -59,8 +62,8 @@ map fn outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> map fn)
 
-        FoundError loc err ->
-            FoundError loc err
+        FoundError err ->
+            FoundError err
 
 
 mapBoth : (Env Value -> a -> ( Env Value, b )) -> Outcome a -> Outcome b
@@ -85,8 +88,8 @@ mapBoth fn outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> mapBoth fn)
 
-        FoundError loc err ->
-            FoundError loc err
+        FoundError err ->
+            FoundError err
 
 
 mapEnv : (Env Value -> Env Value) -> Outcome a -> Outcome a
@@ -107,8 +110,8 @@ mapEnv fn outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> mapEnv fn)
 
-        FoundError loc err ->
-            FoundError loc err
+        FoundError err ->
+            FoundError err
 
 
 attemptMapEnv : (Env Value -> Maybe (Env Value)) -> InterpreterError -> Outcome a -> Outcome a
@@ -117,7 +120,7 @@ attemptMapEnv fn error outcome =
         DoneInterpreting env a ->
             case fn env of
                 Nothing ->
-                    FoundError (Debug.todo "loc") error
+                    FoundError ( Debug.todo "interpreter outcome - attempt map env - loc", error )
 
                 Just env_ ->
                     DoneInterpreting env_ a
@@ -134,8 +137,8 @@ attemptMapEnv fn error outcome =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> attemptMapEnv fn error)
 
-        FoundError loc err ->
-            FoundError loc err
+        FoundError err ->
+            FoundError err
 
 
 andThen : (Env Value -> a -> Outcome b) -> Outcome a -> Outcome b
@@ -158,8 +161,8 @@ andThen fn outcome1 =
                 NeedsEffectBool eff k ->
                     NeedsEffectBool eff k
 
-                FoundError loc err ->
-                    FoundError loc err
+                FoundError err ->
+                    FoundError err
 
         NeedsEffect0 eff k ->
             NeedsEffect0 eff (k >> andThen fn)
@@ -173,14 +176,14 @@ andThen fn outcome1 =
         NeedsEffectBool eff k ->
             NeedsEffectBool eff (k >> andThen fn)
 
-        FoundError loc err ->
-            FoundError loc err
+        FoundError err ->
+            FoundError err
 
 
 onError : (InterpreterError -> Outcome a) -> Outcome a -> Outcome a
 onError fn outcome1 =
     case outcome1 of
-        FoundError _ err ->
+        FoundError ( _, err ) ->
             fn err
 
         DoneInterpreting env1 a ->

@@ -1,11 +1,11 @@
 module Error exposing
     ( DesugarError(..)
-    , Details(..)
-    , Error
+    , Error(..)
     , InterpreterError(..)
     , LexerError(..)
     , ParserError(..)
     , code
+    , loc
     , title
     )
 
@@ -16,17 +16,11 @@ import Token
 import Value exposing (Value)
 
 
-type alias Error =
-    { details : Details
-    , loc : Loc
-    }
-
-
-type Details
-    = LexerError LexerError
-    | ParserError ParserError
-    | InterpreterError InterpreterError
-    | DesugarError DesugarError
+type Error
+    = LexerError ( Loc, LexerError )
+    | ParserError ( Loc, ParserError )
+    | InterpreterError ( Loc, InterpreterError )
+    | DesugarError ( Loc, DesugarError )
 
 
 type LexerError
@@ -78,6 +72,8 @@ type ParserError
     | EffectfulStmtInPureBlock
     | BinaryOpAnnotationNotFn2
     | UnaryOpAnnotationNotFn1
+    | UnfinishedStringInterpolation
+    | CouldntLexInsideStringInterpolation ( Loc, LexerError )
 
 
 type InterpreterError
@@ -113,10 +109,10 @@ type DesugarError
     = TodoDesugarError
 
 
-title : Details -> String
-title details =
-    case details of
-        LexerError lexerError ->
+title : Error -> String
+title error =
+    case error of
+        LexerError ( _, lexerError ) ->
             case lexerError of
                 NonterminatedChar ->
                     "Non-terminated character"
@@ -212,7 +208,7 @@ title details =
                 InvalidHexInt ->
                     "Invalid hexadecimal integer"
 
-        ParserError parserError ->
+        ParserError ( _, parserError ) ->
             case parserError of
                 ExpectedNonemptyTokens ->
                     -- Shouldn't happen
@@ -260,7 +256,13 @@ title details =
                 UnaryOpAnnotationNotFn1 ->
                     "Unary operation annotation was not a 1-arg function"
 
-        InterpreterError interpreterError ->
+                UnfinishedStringInterpolation ->
+                    "Unfinished string interpolation"
+
+                CouldntLexInsideStringInterpolation _ ->
+                    "Couldn't lex inside string interpolation"
+
+        InterpreterError ( _, interpreterError ) ->
             case interpreterError of
                 VarNotFound id ->
                     "Var not found: " ++ Id.toString id
@@ -341,16 +343,16 @@ title details =
                 UnexpectedArgument value ->
                     "Unexpected argument: " ++ Value.toInspectString value
 
-        DesugarError desugarError ->
+        DesugarError ( _, desugarError ) ->
             case desugarError of
                 TodoDesugarError ->
                     "TODO desugar error"
 
 
-code : Details -> String
-code details =
-    case details of
-        LexerError lexerError ->
+code : Error -> String
+code error =
+    case error of
+        LexerError ( _, lexerError ) ->
             case lexerError of
                 NonterminatedChar ->
                     "E0033"
@@ -457,7 +459,7 @@ code details =
                     -- TODO
                     "EXXXX"
 
-        ParserError parserError ->
+        ParserError ( _, parserError ) ->
             case parserError of
                 ExpectedNonemptyTokens ->
                     -- TODO
@@ -517,7 +519,15 @@ code details =
                     -- TODO
                     "EXXXX"
 
-        InterpreterError interpreterError ->
+                UnfinishedStringInterpolation ->
+                    -- TODO
+                    "EXXXX"
+
+                CouldntLexInsideStringInterpolation _ ->
+                    -- TODO
+                    "EXXXX"
+
+        InterpreterError ( _, interpreterError ) ->
             case interpreterError of
                 VarNotFound id ->
                     "E0001"
@@ -607,7 +617,7 @@ code details =
                     -- TODO
                     "EXXXX"
 
-        DesugarError desugarError ->
+        DesugarError ( _, desugarError ) ->
             case desugarError of
                 TodoDesugarError ->
                     -- TODO
@@ -628,3 +638,19 @@ th n =
 
         _ ->
             "th"
+
+
+loc : Error -> Loc
+loc error =
+    case error of
+        LexerError ( loc_, _ ) ->
+            loc_
+
+        ParserError ( loc_, _ ) ->
+            loc_
+
+        InterpreterError ( loc_, _ ) ->
+            loc_
+
+        DesugarError ( loc_, _ ) ->
+            loc_

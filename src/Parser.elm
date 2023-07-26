@@ -1,8 +1,10 @@
 module Parser exposing (parse)
 
 import AST.Frontend as AST exposing (..)
-import Error exposing (ParserError(..))
+import Error exposing (Error(..), ParserError(..))
 import Id exposing (Id)
+import Intrinsic
+import Lexer
 import List.Zipper as Zipper
 import Loc exposing (Loc)
 import Parser.HoleAnalysis as HoleAnalysis
@@ -12,12 +14,17 @@ import Token exposing (Token, Type(..))
 
 parse : List Token -> Result ( Loc, ParserError ) AST.Program
 parse tokensList =
+    parseWith program tokensList
+
+
+parseWith : Parser a -> List Token -> Result ( Loc, ParserError ) a
+parseWith parser tokensList =
     case Zipper.fromList tokensList of
         Nothing ->
             Err ( Loc.zero, ExpectedNonemptyTokens )
 
         Just tokens ->
-            program tokens
+            parser tokens
                 |> Result.map Tuple.first
 
 
@@ -1789,13 +1796,15 @@ charExpr =
 {-|
 
     = "abc"
+    = "abc$def-123"
+    = "abc${def}ghi"
     : STRING
 
 -}
 stringExpr : Parser Expr
 stringExpr =
     Parser.tokenData Token.getString
-        |> Parser.map AST.String
+        |> Parser.andThen parseStringInterpolation
 
 
 {-|
@@ -1807,7 +1816,117 @@ stringExpr =
 backtickStringExpr : Parser Expr
 backtickStringExpr =
     Parser.tokenData Token.getBacktickString
+        -- TODO remove the indentation based on last line
+        -- TODO interpolation
         |> Parser.map AST.String
+
+
+parseStringInterpolation : String -> Parser Expr
+parseStringInterpolation str =
+    let
+        go : Maybe Expr -> List String -> Parser Expr
+        go acc chunks =
+            case chunks of
+                [] ->
+                    -- impossible
+                    Parser.succeed (AST.String str)
+
+                [ _ ] ->
+                    -- ${ not found
+                    Parser.succeed (AST.String str)
+
+                beforeOpening :: afterOpening :: rest ->
+                    case String.split "}" afterOpening of
+                        [] ->
+                            -- impossible
+                            Parser.succeed (AST.String str)
+
+                        [ _ ] ->
+                            -- } not found, the ${... is unterminated
+                            Parser.fail UnfinishedStringInterpolation
+
+                        insideOpening :: afterClosing :: newChunks ->
+                            let
+                                ( debugModeEnabled, exprToParse ) =
+                                    if String.endsWith "=" insideOpening then
+                                        ( True, String.dropRight 1 insideOpening )
+
+                                    else
+                                        ( False, insideOpening )
+
+                                parseResult : Result ( Loc, ParserError ) Expr
+                                parseResult =
+                                    exprToParse
+                                        |> (Lexer.lex >> Result.mapError (\( loc, lexerError ) -> ( loc, CouldntLexInsideStringInterpolation ( loc, lexerError ) )))
+                                        |> Result.andThen (parseWith expr)
+                            in
+                            case parseResult of
+                                Err ( _, err ) ->
+                                    Parser.fail err
+
+                                Ok interpolatedExpr ->
+                                    let
+                                        added : Expr
+                                        added =
+                                            if debugModeEnabled then
+                                                {- beforeOpening
+                                                   ++ exprToParse
+                                                   ++ "="
+                                                   ++ toString interpolatedExpr
+                                                   ++ afterClosing
+                                                -}
+                                                AST.BinaryOp
+                                                    (AST.String beforeOpening)
+                                                    AST.Append
+                                                    (AST.BinaryOp
+                                                        (AST.String (exprToParse ++ "="))
+                                                        AST.Append
+                                                        (AST.BinaryOp
+                                                            (AST.Call
+                                                                { fn = AST.Identifier (Intrinsic.id Intrinsic.IoToString)
+                                                                , args = [ interpolatedExpr ]
+                                                                }
+                                                            )
+                                                            AST.Append
+                                                            (AST.String afterClosing)
+                                                        )
+                                                    )
+
+                                            else
+                                                {- beforeOpening
+                                                   ++ toString interpolatedExpr
+                                                   ++ afterClosing
+                                                -}
+                                                AST.BinaryOp
+                                                    (AST.String beforeOpening)
+                                                    AST.Append
+                                                    (AST.BinaryOp
+                                                        (AST.Call
+                                                            { fn = AST.Identifier (Intrinsic.id Intrinsic.IoToString)
+                                                            , args = [ interpolatedExpr ]
+                                                            }
+                                                        )
+                                                        AST.Append
+                                                        (AST.String afterClosing)
+                                                    )
+
+                                        newAcc : Expr
+                                        newAcc =
+                                            case acc of
+                                                Nothing ->
+                                                    added
+
+                                                Just acc_ ->
+                                                    AST.BinaryOp
+                                                        acc_
+                                                        AST.Append
+                                                        added
+                                    in
+                                    go
+                                        (Just newAcc)
+                                        (String.join "}" (afterClosing :: newChunks) :: rest)
+    in
+    go Nothing (String.split "${" str)
 
 
 {-|
