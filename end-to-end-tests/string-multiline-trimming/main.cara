@@ -1,6 +1,6 @@
 // Similar to how Swift does things:
-// https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
-// https://docs.swift.org/swift-book/_images/multilineStringWhitespace_2x.png
+// https://docs.swift.org/swift-book/documentation/the-swift-programming-language/stringsandcharacters/
+// https://docs.swift.org/swift-book/images/multilineStringWhitespace@2x.png
 
 nl = IO.println("----------------")
 
