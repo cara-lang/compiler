@@ -1816,9 +1816,84 @@ stringExpr =
 backtickStringExpr : Parser Expr
 backtickStringExpr =
     Parser.tokenData Token.getBacktickString
-        -- TODO remove the indentation based on last line
-        -- TODO interpolation
-        |> Parser.map AST.String
+        |> Parser.map removeBacktickStringIndentation
+        |> Parser.andThen parseStringInterpolation
+
+
+removeBacktickStringIndentation : String -> String
+removeBacktickStringIndentation str =
+    let
+        lastIndentation : Int
+        lastIndentation =
+            countLastIndentation str
+                |> Debug.log "last indentation"
+
+        removeIndentationFromLine : String -> Maybe String
+        removeIndentationFromLine s =
+            let
+                prefix =
+                    String.left lastIndentation s
+            in
+            if String.any (\c -> c != ' ') prefix then
+                Nothing
+
+            else
+                Just (String.dropLeft lastIndentation s)
+    in
+    str
+        |> String.lines
+        |> Maybe.traverse removeIndentationFromLine
+            st
+            Debug.todo
+            "remove backtick string indentation"
+
+
+countLastIndentation : String -> Int
+countLastIndentation str =
+    let
+        go : Int -> List Char -> Int
+        go acc chars =
+            case chars of
+                [] ->
+                    0
+
+                '\n' :: rest ->
+                    {-
+                       The last newline! This tells us how much to trim.
+
+                       x =
+                           `
+                           abcde
+                           `    ^
+                    -}
+                    acc
+
+                ' ' :: rest ->
+                    {-
+                       Whitespace before the last newline! So far so good. Inc the counter.
+
+                       x =
+                           `
+                           abcde
+                           `
+                       ^^^^
+                    -}
+                    go (acc + 1) rest
+
+                _ :: rest ->
+                    {-
+                       Strings with stuff on the last line besides the whitespace. Nothing will get trimmed.
+
+                       `abcde
+                       x `
+                       ^
+                    -}
+                    0
+    in
+    str
+        |> String.reverse
+        |> String.toList
+        |> go 0
 
 
 parseStringInterpolation : String -> Parser Expr
