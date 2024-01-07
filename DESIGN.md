@@ -1,4 +1,5 @@
 WANTED (but doesn't yet have tests):
+* nested or-patterns ([twitter](https://twitter.com/ChShersh/status/1744005962178953365?t=aKI-P4XUy48rZqizJ6oByw&s=19))
 * functions can have multiple arities with different implementations (and return types)
   * (Seq.sum(lambda, seq) vs Seq.sum(seq))
   * can have the same arity multiple times, dispatching on the input types
