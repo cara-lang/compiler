@@ -47,6 +47,7 @@ WANTED:
       | Y def -> 123
       | Z ghi -> 234
   as "or-patterns"
+* arrows in names? questionmarks in names? bangs in names? (perhaps not bangs, IDK)
 
 * if ... then ... without else implicitly returns () from the else, which means the then... also needs to return ().
   * automatic monad-wrapping of the ()? That's probably the only place where this would make sense.
