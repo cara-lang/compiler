@@ -1818,7 +1818,27 @@ backtickStringExpr : Parser Expr
 backtickStringExpr =
     Parser.tokenData Token.getBacktickString
         |> Parser.map removeBacktickStringIndentation
+        |> Parser.map removeBacktickStringLeftNewline
+        |> Parser.map removeBacktickStringRightNewline
         |> Parser.andThen parseStringInterpolation
+
+
+removeBacktickStringLeftNewline : String -> String
+removeBacktickStringLeftNewline str =
+    if String.startsWith "\n" str then
+        String.dropLeft 1 str
+
+    else
+        str
+
+
+removeBacktickStringRightNewline : String -> String
+removeBacktickStringRightNewline str =
+    if String.endsWith "\n" str then
+        String.dropRight 1 str
+
+    else
+        str
 
 
 removeBacktickStringIndentation : String -> String
