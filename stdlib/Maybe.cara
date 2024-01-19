@@ -4,7 +4,12 @@ module Maybe {
     | Nothing
     | Just(a)
 
-  // TODO withDefault
+  // TODO withDefault : a -> Maybe[a] -> a
+  // TODO withDefault: we're promising a thunk-aware version in the docs:
+  // https://cara-lang.com/reference/anonymous-fns-and-holes/
+  // (-> a) -> Maybe[a] -> a
+  // Can we even overload in this way? (Same number of arguments)
+
   // TODO map
   // TODO map2
   // TODO map3
