@@ -19,6 +19,7 @@ module AST.Frontend exposing
     , TypeModifier(..)
     , UnaryOp(..)
     , binaryOp
+    , inspect
     , isEffectfulStmt
     , isSpreadPattern
     , lambdaToString
@@ -26,6 +27,7 @@ module AST.Frontend exposing
     , unaryOp
     )
 
+import Debug.Extra
 import Env exposing (Env)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
@@ -110,15 +112,53 @@ type BangOrExpr
 
 
 type Stmt
-    = SLet { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, expr : Expr }
-    | SLetBang { mod : LetModifier, lhs : Pattern, type_ : Maybe Type, bang : Bang }
+    = SLet
+        { mod : LetModifier
+        , lhs : Pattern
+        , type_ : Maybe Type
+        , expr : Expr
+        }
+    | SLetBang
+        { mod : LetModifier
+        , lhs : Pattern
+        , type_ : Maybe Type
+        , bang : Bang
+        }
     | SBang Bang
-    | SFunctionDef { name : String, args : List Pattern, body : Expr }
-    | SBinaryOperatorDef { op : BinaryOp, left : Pattern, right : Pattern, body : Expr }
-    | SUnaryOperatorDef { op : UnaryOp, arg : Pattern, body : Expr }
-    | SValueAnnotation { mod : LetModifier, name : String, type_ : Type }
-    | SBinaryOperatorAnnotation { mod : LetModifier, op : BinaryOp, left : Type, right : Type, ret : Type }
-    | SUnaryOperatorAnnotation { mod : LetModifier, op : UnaryOp, arg : Type, ret : Type }
+    | SFunctionDef
+        { name : String
+        , args : List Pattern
+        , body : Expr
+        }
+    | SBinaryOperatorDef
+        { op : BinaryOp
+        , left : Pattern
+        , right : Pattern
+        , body : Expr
+        }
+    | SUnaryOperatorDef
+        { op : UnaryOp
+        , arg : Pattern
+        , body : Expr
+        }
+    | SValueAnnotation
+        { mod : LetModifier
+        , name : String
+        , type_ : Type
+        }
+    | SBinaryOperatorAnnotation
+        { mod : LetModifier
+        , op : BinaryOp
+        , left : Type
+        , right : Type
+        , ret : Type
+        }
+    | SUnaryOperatorAnnotation
+        { mod : LetModifier
+        , op : UnaryOp
+        , arg : Type
+        , ret : Type
+        }
     | SUseModule Id
 
 
@@ -139,12 +179,32 @@ type LetModifier
 
 
 type Decl
-    = DTypeAlias { mod : TypeAliasModifier, name : String, vars : List String, body : Type }
-    | DType { mod : TypeModifier, name : String, vars : List String, constructors : List Constructor }
-    | DModule { mod : ModuleModifier, name : String, decls : List Decl }
-    | DExtendModule { module_ : List String, decls : List Decl }
+    = DTypeAlias
+        { mod : TypeAliasModifier
+        , name : String
+        , vars : List String
+        , body : Type
+        }
+    | DType
+        { mod : TypeModifier
+        , name : String
+        , vars : List String
+        , constructors : List Constructor
+        }
+    | DModule
+        { mod : ModuleModifier
+        , name : String
+        , decls : List Decl
+        }
+    | DExtendModule
+        { module_ : List String
+        , decls : List Decl
+        }
     | DStatement Stmt
-    | DUnitTest { name : Maybe String, expr : Expr }
+    | DUnitTest
+        { name : Maybe String
+        , expr : Expr
+        }
     | DParameterizedTest
         { name : Maybe String
         , table : List Expr
@@ -566,7 +626,7 @@ exprToString expr =
             exprToString record ++ "." ++ field
 
         Block { stmts, ret } ->
-            "{\n" ++ String.join "\n" (List.map (stmtToString >> indent) stmts) ++ "\n}"
+            "{\n" ++ String.join "\n" (List.map (stmtToString >> indent4) stmts) ++ "\n}"
 
         EffectBlock _ ->
             Debug.todo "expr to string - effect block"
@@ -606,6 +666,21 @@ stmtToString stmt =
     Debug.todo "stmt to string"
 
 
-indent : String -> String
-indent str =
-    "    " ++ str
+indent4 : String -> String
+indent4 str =
+    spaces 4 ++ str
+
+
+indent2 : String -> String
+indent2 str =
+    spaces 2 ++ str
+
+
+spaces : Int -> String
+spaces n =
+    String.repeat n " "
+
+
+inspect : Program -> String
+inspect decls =
+    Debug.Extra.prettyPrint decls

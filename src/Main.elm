@@ -71,6 +71,15 @@ logLexed =
         )
 
 
+logParsed : AST.Program -> AST.Program
+logParsed ast =
+    let
+        _ =
+            Debug.log (AST.inspect ast) "frontend program"
+    in
+    ast
+
+
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
@@ -87,7 +96,7 @@ init flags =
 
         Ok frontendProgram ->
             frontendProgram
-                --|> Debug.log "frontend program"
+                |> logParsed
                 |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                 |> handleInterpreterOutcome
 
