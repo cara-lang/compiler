@@ -8,6 +8,7 @@ import Lexer
 import List.Zipper as Zipper
 import Loc exposing (Loc)
 import Maybe.Extra
+import Operator
 import Parser.HoleAnalysis as HoleAnalysis
 import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
@@ -1336,6 +1337,7 @@ prefixExpr =
             , ( [ P Token.isGetter ], recordGetterExpr )
             , ( [ T True_ ], boolExpr )
             , ( [ T False_ ], boolExpr )
+            , ( [ T LParen, P Token.isOperator, T RParen ], operatorFnExpr )
             , ( [ T LParen, T RParen ], unitExpr )
             , ( [ T LParen ], tupleOrParenthesizedExpr )
             , ( [ T LBracket ], listExpr )
@@ -1358,6 +1360,14 @@ prefixExpr =
             , recordExpr
             ]
         }
+
+
+operatorFnExpr : Parser Expr
+operatorFnExpr =
+    Parser.succeed (\op -> Identifier (Operator.id op))
+        |> Parser.skip (Parser.token LParen)
+        |> Parser.keep (Parser.tokenData Token.getOperator)
+        |> Parser.skip (Parser.token RParen)
 
 
 {-|

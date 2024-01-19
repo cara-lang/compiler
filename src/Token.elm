@@ -8,6 +8,7 @@ module Token exposing
     , getHole
     , getInt
     , getLowerName
+    , getOperator
     , getQualifier
     , getString
     , getUpperName
@@ -18,6 +19,7 @@ module Token exposing
     , isHole
     , isInt
     , isLowerName
+    , isOperator
     , isQualifier
     , isString
     , isUpperName
@@ -25,6 +27,7 @@ module Token exposing
     )
 
 import Loc exposing (Loc)
+import Operator exposing (Operator)
 
 
 type alias Token =
@@ -202,6 +205,168 @@ isHole type_ =
 
         _ ->
             False
+
+
+isOperator : Type -> Bool
+isOperator type_ =
+    case type_ of
+        -- unary
+        DotDot ->
+            True
+
+        Minus ->
+            True
+
+        Bang ->
+            True
+
+        -- binary
+        AndAnd ->
+            True
+
+        OrOr ->
+            True
+
+        PlusPlus ->
+            True
+
+        DotDotDot ->
+            True
+
+        Pipe ->
+            True
+
+        Caret ->
+            True
+
+        And ->
+            True
+
+        EqEq ->
+            True
+
+        Neq ->
+            True
+
+        Lte ->
+            True
+
+        Lt ->
+            True
+
+        Gt ->
+            True
+
+        Gte ->
+            True
+
+        Shl ->
+            True
+
+        Shr ->
+            True
+
+        Shru ->
+            True
+
+        Plus ->
+            True
+
+        Times ->
+            True
+
+        Div ->
+            True
+
+        Percent ->
+            True
+
+        Power ->
+            True
+
+        _ ->
+            False
+
+
+getOperator : Type -> Maybe Operator
+getOperator type_ =
+    case type_ of
+        -- unary
+        DotDot ->
+            Just Operator.InclusiveRange
+
+        Minus ->
+            Just Operator.Minus
+
+        Bang ->
+            Just Operator.Negate
+
+        -- binary
+        AndAnd ->
+            Just Operator.LogicalAnd
+
+        OrOr ->
+            Just Operator.LogicalOr
+
+        PlusPlus ->
+            Just Operator.Append
+
+        DotDotDot ->
+            Just Operator.ExclusiveRange
+
+        Pipe ->
+            Just Operator.BinaryOr
+
+        Caret ->
+            Just Operator.BinaryXor
+
+        And ->
+            Just Operator.BinaryAnd
+
+        EqEq ->
+            Just Operator.Eq
+
+        Neq ->
+            Just Operator.Neq
+
+        Lte ->
+            Just Operator.Lte
+
+        Lt ->
+            Just Operator.Lt
+
+        Gt ->
+            Just Operator.Gt
+
+        Gte ->
+            Just Operator.Gte
+
+        Shl ->
+            Just Operator.Shl
+
+        Shr ->
+            Just Operator.Shr
+
+        Shru ->
+            Just Operator.Shru
+
+        Plus ->
+            Just Operator.Plus
+
+        Times ->
+            Just Operator.Times
+
+        Div ->
+            Just Operator.Div
+
+        Percent ->
+            Just Operator.Modulo
+
+        Power ->
+            Just Operator.Power
+
+        _ ->
+            Nothing
 
 
 getInt : Type -> Maybe Int
