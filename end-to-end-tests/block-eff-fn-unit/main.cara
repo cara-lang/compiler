@@ -4,5 +4,5 @@ foo(a) = IO {
   IO.println!(y)
 }
 
-ret = foo(5)
+ret = foo!(5)
 IO.println!(ret)
