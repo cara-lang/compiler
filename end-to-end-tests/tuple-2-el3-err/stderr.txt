@@ -1,4 +1,4 @@
-E0023: Trying to access a missing tuple field
+E0023: Trying to access a missing tuple element
 
 The tuple has 2 elements but the code below tried to access element #3.
 

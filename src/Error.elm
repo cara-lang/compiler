@@ -98,6 +98,7 @@ type InterpreterError
     | CallingNonFunction
     | CallingRecordGetterOnNonRecord
     | CallingRecordGetOnNonRecord
+    | AccessingMissingTupleElement String
     | SpreadingNonRecord
     | EquatingNonequatable
     | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
@@ -322,6 +323,9 @@ title error =
 
                 CallingRecordGetOnNonRecord ->
                     "Trying to access a record field from a non-record"
+
+                AccessingMissingTupleElement _ ->
+                    "Trying to access a missing tuple element"
 
                 SpreadingNonRecord ->
                     "Spreading a non-record"
@@ -596,6 +600,9 @@ code error =
 
                 CallingRecordGetOnNonRecord ->
                     "E0022"
+
+                AccessingMissingTupleElement _ ->
+                    "E0023"
 
                 SpreadingNonRecord ->
                     -- TODO

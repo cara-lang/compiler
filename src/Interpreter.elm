@@ -1433,7 +1433,7 @@ interpretRecordGet stmtMonad =
         Interpreter.do (interpretExpr stmtMonad env record) <| \env1 recordVal ->
         case recordVal of
             VTuple values ->
-                interpretRecordGetDict env1 ( field, tupleToNumericAndWordyRecord values )
+                interpretTupleGetDict env1 ( field, tupleToNumericAndWordyRecord values )
 
             VRecord fields ->
                 interpretRecordGetDict env1 ( field, fields )
@@ -1451,6 +1451,46 @@ interpretRecordGetDict =
 
             Just content ->
                 Outcome.succeed env content
+
+
+interpretTupleGetDict : Interpreter ( String, Dict String Value ) Value
+interpretTupleGetDict =
+    \env ( field, fields ) ->
+        case Dict.get field fields of
+            Nothing ->
+                let
+                    err =
+                        if isTupleGetter field then
+                            AccessingMissingTupleElement field
+
+                        else
+                            TupleUnknownField field
+                in
+                Outcome.fail err
+
+            Just content ->
+                Outcome.succeed env content
+
+
+isTupleGetter : String -> Bool
+isTupleGetter field =
+    let
+        isNumericTupleGetter =
+            String.startsWith "el" field
+                && String.toInt (String.dropLeft 2 field)
+                /= Nothing
+
+        isWordyTupleGetter =
+            Set.member field wordyTupleGetters
+    in
+    isNumericTupleGetter || isWordyTupleGetter
+
+
+wordyTupleGetters : Set String
+wordyTupleGetters =
+    List.range 0 9
+        |> List.filterMap tupleIndexToWordyField
+        |> Set.fromList
 
 
 tupleIndexToWordyField : Int -> Maybe String

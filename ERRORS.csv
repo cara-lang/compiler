@@ -21,7 +21,7 @@ E0019,Empty character
 E0020,Anonymous function shorthand with mixed holes
 E0021,If expression without an else branch
 E0022,Trying to access a record field from a non-record
-E0023,Trying to access a missing tuple field
+E0023,Trying to access a missing tuple element
 E0024,Hexadecimal integer started with 0X
 E0025,If expression with a non-bool condition
 E0026,Integer literal is too large for the declared type
