@@ -467,12 +467,12 @@ interpretIntrinsicCallValues stmtMonad =
 
                     IoBind ->
                         case argVals of
-                            [ ioVal, fn ] ->
-                                let
-                                    valueInIo =
-                                        unwrapIo ioVal
-                                in
-                                interpretCallVal stmtMonad env ( fn, [ valueInIo ] )
+                            [ value, fn ] ->
+                                unwrapIo stmtMonad env value
+                                    |> Outcome.andThen
+                                        (\env2 valueInIo ->
+                                            interpretCallVal stmtMonad env2 ( fn, [ valueInIo ] )
+                                        )
 
                             _ ->
                                 Outcome.fail UnexpectedArity
@@ -520,14 +520,29 @@ interpretIntrinsicCallValues stmtMonad =
                                 Outcome.fail UnexpectedArity
 
 
-unwrapIo : Value -> Value
-unwrapIo ioVal =
-    case ioVal of
-        VIo valueInIo ->
-            valueInIo
+unwrapIo : StmtMonad -> Interpreter Value Value
+unwrapIo stmtMonad =
+    \env value ->
+        case value of
+            VIo valueInIo ->
+                Outcome.succeed env valueInIo
 
-        _ ->
-            Debug.todo <| "We expected VIo here... is this a bug? " ++ Value.toInspectString ioVal
+            VIntrinsicCall intrinsic values ->
+                interpretIntrinsicCallValues stmtMonad env ( intrinsic, values )
+                    |> Outcome.andThen
+                        (\env2 finalValue ->
+                            case finalValue of
+                                VIo valueInIo ->
+                                    Outcome.succeed env2 valueInIo
+
+                                _ ->
+                                    Debug.todo "We expected VIo (only) here... is this a bug?"
+                        )
+
+            _ ->
+                Debug.todo <|
+                    "We expected VIo or VIntrinsicCall here... is this a bug? "
+                        ++ Value.toInspectString value
 
 
 interpretLet :
@@ -568,9 +583,9 @@ interpretToplevelLetBang =
     \env { lhs, bang } ->
         -- TODO interpret the mod
         -- TODO interpret the type_
-        interpretToplevelBang env bang
-            |> Outcome.map (\value -> ( lhs, unwrapIo value ))
-            |> Interpreter.andThen (interpretPattern ToplevelIO)
+        Interpreter.do (interpretToplevelBang env bang) <| \env2 value ->
+        Interpreter.do (unwrapIo ToplevelIO env2 value) <| \env3 valueInIo ->
+        interpretPattern ToplevelIO env3 ( lhs, valueInIo )
             |> Outcome.mapBoth
                 (\env_ envAdditions ->
                     case envAdditions of
