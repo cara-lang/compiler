@@ -7,6 +7,7 @@ import Intrinsic
 import Lexer
 import List.Zipper as Zipper
 import Loc exposing (Loc)
+import Maybe.Extra
 import Parser.HoleAnalysis as HoleAnalysis
 import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
@@ -1826,7 +1827,6 @@ removeBacktickStringIndentation str =
         lastIndentation : Int
         lastIndentation =
             countLastIndentation str
-                |> Debug.log "last indentation"
 
         removeIndentationFromLine : String -> Maybe String
         removeIndentationFromLine s =
@@ -1834,7 +1834,7 @@ removeBacktickStringIndentation str =
                 prefix =
                     String.left lastIndentation s
             in
-            if String.any (\c -> c != ' ') prefix then
+            if String.any (\c -> c /= ' ') prefix then
                 Nothing
 
             else
@@ -1842,10 +1842,9 @@ removeBacktickStringIndentation str =
     in
     str
         |> String.lines
-        |> Maybe.traverse removeIndentationFromLine
-            st
-            Debug.todo
-            "remove backtick string indentation"
+        |> Maybe.Extra.traverse removeIndentationFromLine
+        |> Maybe.map (String.join "\n")
+        |> Maybe.withDefault str
 
 
 countLastIndentation : String -> Int

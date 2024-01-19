@@ -13,6 +13,7 @@ import Interpreter.Outcome as Interpreter
 import Lexer
 import Loc
 import Parser
+import Token exposing (Token)
 import Value exposing (Value(..))
 
 
@@ -58,6 +59,18 @@ type Msg
     | CompletedWriteFileMaybe Bool
 
 
+logLexed : Result Error (List Token) -> Result Error (List Token)
+logLexed =
+    Result.map
+        (\ts ->
+            let
+                _ =
+                    ts |> List.reverse |> List.map (.type_ >> Debug.log "lexed")
+            in
+            ts
+        )
+
+
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
@@ -65,7 +78,7 @@ init flags =
         astResult =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
-                --|> Result.map (\ts -> let _ = ts |> List.reverse |> List.map (.type_ >> Debug.log "lexed") in ts)
+                --|> logLexed
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
     case astResult of
@@ -74,7 +87,7 @@ init flags =
 
         Ok frontendProgram ->
             frontendProgram
-                |> Debug.log "frontend program"
+                --|> Debug.log "frontend program"
                 |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                 |> handleInterpreterOutcome
 
