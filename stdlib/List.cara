@@ -144,6 +144,7 @@ module List {
   test: [1]   == cons(1,[])
   test: [1,2] == cons(1,cons(2,[]))
 
+  // TODO first instead of head?
   head : List[a] -> Maybe[a]
   head([]) = Nothing
   head([x,..._]) = Just(x)
@@ -151,6 +152,7 @@ module List {
   test: head([]) == Nothing
   test: head([1]) == Just(1)
 
+  // TODO butfirst or rest instead of tail?
   tail : List[a] -> Maybe[List[a]]
   tail([]) = Nothing
   tail([_,...xs]) = Just(xs)
@@ -159,6 +161,7 @@ module List {
   test: tail([1]) == Just([])
   test: tail([1,2,3]) == Just([2,3])
 
+  // TODO better name?
   uncons : List[a] -> Maybe[(a,List[a])]
   uncons([]) = Nothing
   uncons([x,...xs]) = Just((x,xs))

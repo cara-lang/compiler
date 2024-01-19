@@ -10,9 +10,10 @@ these random numbers.
 */
 module Gen {
 
-  // TODO
   // TODO pure
   // TODO bind
+
+  // TODO const
 
   char = Gen {
     code = int!(25,83)
