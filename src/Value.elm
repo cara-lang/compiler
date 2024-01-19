@@ -23,12 +23,20 @@ type Value
     | VBool Bool
     | VUnit
     | VIntrinsic Intrinsic
+    | VIntrinsicCall Intrinsic (List Value)
     | VList (List Value)
     | VTuple (List Value)
     | VRecord (Dict String Value)
     | VRecordGetter String
-    | VConstructor { id : Id, args : List Value }
-    | VClosure { args : List Pattern, body : Expr, env : Env Value }
+    | VConstructor
+        { id : Id
+        , args : List Value
+        }
+    | VClosure
+        { args : List Pattern
+        , body : Expr
+        , env : Env Value
+        }
     | VIo Value
 
 
@@ -64,6 +72,11 @@ toShowString value =
         VIntrinsic intrinsic ->
             "<intrinsic {ID}>"
                 |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
+
+        VIntrinsicCall intrinsic values ->
+            "<intrinsic call {ID}({VALUES})>"
+                |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
+                |> String.replace "{VALUES}" (String.join "," (List.map toShowString values))
 
         VList values ->
             "[" ++ String.join "," (List.map toShowString values) ++ "]"
@@ -142,6 +155,11 @@ toInspectString value =
             "<intrinsic {ID}>"
                 |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
 
+        VIntrinsicCall intrinsic values ->
+            "<intrinsic call {ID}({VALUES})>"
+                |> String.replace "{ID}" (Id.toString (Intrinsic.id intrinsic))
+                |> String.replace "{VALUES}" (String.join "," (List.map toInspectString values))
+
         VList values ->
             "[" ++ String.join "," (List.map toInspectString values) ++ "]"
 
@@ -215,6 +233,9 @@ isEqualityAllowed val =
             List.all isEqualityAllowed args
 
         VIntrinsic _ ->
+            False
+
+        VIntrinsicCall _ _ ->
             False
 
         VClosure _ ->

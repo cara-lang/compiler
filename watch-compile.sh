@@ -11,13 +11,15 @@ function compile {
         >(grep -A2 ".*error.*Uncaught" >uncaught.txt) \
         >(grep "^:" | column -t -s\| >table.txt)
 
-  echo
-  echo
-  echo
-  echo "-------------------"
-  echo
-  echo
-  echo
+  if [ -s table.txt -o -s uncaught.txt ]; then
+    echo
+    echo
+    echo
+    echo "-------------------"
+    echo
+    echo
+    echo
+  fi
 
   cat table.txt
   rm table.txt

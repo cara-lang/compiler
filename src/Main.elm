@@ -96,7 +96,7 @@ init flags =
 
         Ok frontendProgram ->
             frontendProgram
-                |> logParsed
+                --|> logParsed
                 |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                 |> handleInterpreterOutcome
 
