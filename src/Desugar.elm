@@ -206,8 +206,8 @@ desugarExpr e =
                 , args = List.map desugarExpr args
                 }
 
-        F.Identifier r ->
-            Debug.Extra.todo1 "desugar identifier to root identifier" r
+        F.Identifier id ->
+            B.RootIdentifier (qualify id)
 
         F.RootIdentifier id ->
             B.RootIdentifier (qualify id)
