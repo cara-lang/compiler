@@ -14,8 +14,7 @@ codegenProgram : AST.Program -> HVM.File
 codegenProgram program =
     program
         |> List.map declToFile
-        |> -- TODO does order matter here? is foldl OK? Let's check this by looking at a compiled file and seeing if the order of definitions agrees
-           List.foldl HVM.concatFiles HVM.emptyFile
+        |> List.foldr HVM.concatFiles HVM.emptyFile
 
 
 todoRule : String -> a -> List Rule
