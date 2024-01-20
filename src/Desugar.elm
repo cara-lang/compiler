@@ -2,8 +2,12 @@ module Desugar exposing (desugarProgram)
 
 import AST.Backend as B
 import AST.Frontend as F
+import Debug.Extra
+import Env
 import Error exposing (DesugarError)
-import Id
+import Id exposing (Id)
+import Id.Qualified exposing (QualifiedId)
+import NonemptyList
 import Result.Extra as Result
 
 
@@ -18,31 +22,31 @@ desugarDecl : F.Decl -> Result DesugarError (List B.Decl)
 desugarDecl decl =
     case decl of
         F.DTypeAlias r ->
-            Debug.todo "desugar type alias"
+            Debug.Extra.todo1 "desugar type alias" r
 
         F.DType r ->
-            Debug.todo "desugar type"
+            Debug.Extra.todo1 "desugar type" r
 
         F.DModule r ->
-            Debug.todo "desugar module"
+            Debug.Extra.todo1 "desugar module" r
 
         F.DExtendModule r ->
-            Debug.todo "desugar extend module"
+            Debug.Extra.todo1 "desugar extend module" r
 
         F.DStatement stmt ->
             desugarStmt stmt
 
         F.DUnitTest r ->
-            Debug.todo "desugar unit test"
+            Debug.Extra.todo1 "desugar unit test" r
 
         F.DParameterizedTest r ->
-            Debug.todo "desugar parameterized test"
+            Debug.Extra.todo1 "desugar parameterized test" r
 
         F.DPropertyTypeTest r ->
-            Debug.todo "desugar property type test"
+            Debug.Extra.todo1 "desugar property type test" r
 
         F.DPropertyGenTest r ->
-            Debug.todo "desugar property gen test"
+            Debug.Extra.todo1 "desugar property gen test" r
 
 
 desugarStmt : F.Stmt -> Result DesugarError (List B.Decl)
@@ -53,31 +57,31 @@ desugarStmt stmt =
                 |> Result.map List.singleton
 
         F.SLetBang r ->
-            Debug.todo "desugar sletbang"
+            Debug.Extra.todo1 "desugar sletbang" r
 
         F.SBang bang ->
             desugarBang bang
 
         F.SFunctionDef r ->
-            Debug.todo "desugar sfunctiondef"
+            Debug.Extra.todo1 "desugar sfunctiondef" r
 
         F.SBinaryOperatorDef r ->
-            Debug.todo "desugar sbinaryoperatordef"
+            Debug.Extra.todo1 "desugar sbinaryoperatordef" r
 
         F.SUnaryOperatorDef r ->
-            Debug.todo "desugar sunaryoperatordef"
+            Debug.Extra.todo1 "desugar sunaryoperatordef" r
 
         F.SValueAnnotation r ->
-            Debug.todo "desugar svalueannotation"
+            Debug.Extra.todo1 "desugar svalueannotation" r
 
         F.SBinaryOperatorAnnotation r ->
-            Debug.todo "desugar sbinaryoperatorannotation"
+            Debug.Extra.todo1 "desugar sbinaryoperatorannotation" r
 
         F.SUnaryOperatorAnnotation r ->
-            Debug.todo "desugar sunaryoperatorannotation"
+            Debug.Extra.todo1 "desugar sunaryoperatorannotation" r
 
         F.SUseModule r ->
-            Debug.todo "desugar susemodule"
+            Debug.Extra.todo1 "desugar susemodule" r
 
 
 desugarLet :
@@ -124,14 +128,14 @@ desugarExpr e =
         F.List list ->
             B.List (List.map desugarExpr list)
 
-        F.Record contents ->
-            Debug.todo "desugar record"
+        F.Record r ->
+            Debug.Extra.todo1 "desugar record" r
 
         F.UnaryOp uop expr ->
-            Debug.todo "desugar unary op"
+            Debug.Extra.todo1 "desugar unary op" ( uop, expr )
 
         F.BinaryOp first bop second ->
-            Debug.todo "desugar binary op"
+            Debug.Extra.todo1 "desugar binary op" ( first, bop, second )
 
         F.Call { fn, args } ->
             case args of
@@ -154,50 +158,50 @@ desugarExpr e =
                         )
                         rest
 
-        F.RecordGet { record, field } ->
-            Debug.todo "desugar record get"
+        F.RecordGet r ->
+            Debug.Extra.todo1 "desugar record get" r
 
-        F.Block { stmts, ret } ->
-            Debug.todo "desugar block"
+        F.Block r ->
+            Debug.Extra.todo1 "desugar block" r
 
-        F.EffectBlock { monadModule, stmts, ret } ->
-            Debug.todo "desugar effect block"
+        F.EffectBlock r ->
+            Debug.Extra.todo1 "desugar effect block" r
 
         F.Constructor_ { id, args } ->
             B.Constructor_
-                { id = Debug.todo <| "desugar constructor: qualify `id`: " ++ Id.toString id
+                { id = qualify id
                 , args = List.map desugarExpr args
                 }
 
-        F.Identifier id ->
-            Debug.todo "desugar identifier to root identifier"
+        F.Identifier r ->
+            Debug.Extra.todo1 "desugar identifier to root identifier" r
 
         F.RootIdentifier id ->
-            B.RootIdentifier (Debug.todo "desugar root identifier: qualify `id`")
+            B.RootIdentifier (qualify id)
 
         F.Lambda { args, body } ->
             case List.reverse args of
                 [] ->
-                    Debug.todo "desugar 0-arg to 1-arg (using unit) B.Lambda1"
+                    Debug.todo "desugar lambda - 0-arg to 1-arg (using unit) B.Lambda1"
 
                 last :: revButLast ->
                     -- TODO check if this order (reversing, foldl) doesn't introduce bugs
                     List.foldl
                         (\earlierArg accExpr ->
                             B.Lambda1
-                                { arg = Debug.todo "earlierArg - desugar from F.Pattern to String or change type of B.Lambda1.arg"
+                                { arg = Debug.Extra.todo1 "desugar lambda - earlierArg - desugar from F.Pattern to String or change type of B.Lambda1.arg" earlierArg
                                 , body = accExpr
                                 }
                         )
                         (B.Lambda1
-                            { arg = Debug.todo "last - desugar from F.Pattern to String or change type of B.Lambda1.arg"
+                            { arg = Debug.Extra.todo1 "last - desugar from F.Pattern to String or change type of B.Lambda1.arg" last
                             , body = desugarExpr body
                             }
                         )
                         revButLast
 
         F.RecordGetter getter ->
-            Debug.todo "desugar record getter"
+            Debug.Extra.todo1 "desugar record getter" getter
 
         F.If { cond, then_, else_ } ->
             B.If
@@ -206,8 +210,30 @@ desugarExpr e =
                 , else_ = desugarExpr else_
                 }
 
-        F.Case { subject, branches } ->
-            Debug.todo "desugar case..of"
+        F.Case r ->
+            Debug.Extra.todo1 "desugar case..of" r
+
+
+qualify : Id -> QualifiedId
+qualify id =
+    {- TODO take some more info as inputs
+
+        - toplevel program
+        - the current stack of modules that you're in
+        - the current set of `use`'d modules in your scope
+
+       and solve this in its most general form.
+
+       (And then there's `import` which I'm totally ignoring for now...)
+
+       TODO TODO TODO Until then, this is very very naive and wrong except for
+       the very simplest programs.
+    -}
+    { qualifiers =
+        NonemptyList.fromList id.qualifiers
+            |> Maybe.withDefault (NonemptyList.singleton Env.rootModule.name)
+    , name = id.name
+    }
 
 
 desugarPattern : F.Pattern -> B.Pattern
@@ -221,7 +247,7 @@ desugarPattern p =
 
         F.PConstructor { id, args } ->
             B.PConstructor
-                { id = Debug.todo "desugarPattern PConstructor - qualify the `id`"
+                { id = qualify id
                 , args = List.map desugarPattern args
                 }
 
@@ -258,18 +284,18 @@ desugarPattern p =
         F.PAs alias_ pattern ->
             B.PAs alias_ (desugarPattern pattern)
 
-        F.PUnaryOpDef _ ->
-            Debug.todo "uh... desugar PUnaryOpDef"
+        F.PUnaryOpDef r ->
+            Debug.Extra.todo1 "uh... desugar PUnaryOpDef" r
 
-        F.PBinaryOpDef _ ->
-            Debug.todo "uh... desugar PBinaryOpDef"
+        F.PBinaryOpDef r ->
+            Debug.Extra.todo1 "uh... desugar PBinaryOpDef" r
 
 
 desugarBang : F.Bang -> Result DesugarError (List B.Decl)
 desugarBang bang =
     case bang of
         F.BValue expr ->
-            Debug.todo "desugar bang value"
+            Debug.Extra.todo1 "desugar bang value" expr
 
-        F.BCall { fn, args } ->
-            Debug.todo "desugar bang call"
+        F.BCall r ->
+            Debug.Extra.todo1 "desugar bang call" r

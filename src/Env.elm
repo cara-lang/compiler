@@ -1,7 +1,7 @@
 module Env exposing
     ( Env, initWithIntrinsics
     , add, addId, addBinaryOp, addUnaryOp
-    , createModule
+    , createModule, rootModule
     , goInto, goUp
     , get, getBinaryOp, getUnaryOp
     , toString
@@ -12,7 +12,7 @@ module Env exposing
 
 @docs Env, initWithIntrinsics
 @docs add, addId, addBinaryOp, addUnaryOp
-@docs createModule
+@docs createModule, rootModule
 @docs goInto, goUp
 @docs get, getBinaryOp, getUnaryOp
 @docs toString

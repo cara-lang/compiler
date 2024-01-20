@@ -2,6 +2,7 @@ module Debug.Extra exposing
     ( logged1
     , logged2
     , prettyPrint
+    , todo1
     )
 
 import DebugParser
@@ -118,3 +119,8 @@ prettyPrintListlike opening closing list =
                 )
             ++ "\n"
             ++ closing
+
+
+todo1 : String -> a -> b
+todo1 msg val =
+    Debug.todo (msg ++ ": " ++ prettyPrint val)

@@ -3,7 +3,7 @@ module Interpreter exposing (interpretProgram)
 import AST.Frontend as AST exposing (..)
 import Basics.Extra as Basics
 import Bitwise
-import Debug.Extra as Debug
+import Debug.Extra
 import Dict exposing (Dict)
 import Effect
 import Env exposing (Env)

@@ -95,28 +95,32 @@ init flags =
             finishWithError err
 
         Ok frontendProgram ->
-            frontendProgram
-                --|> logParsed
-                |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
-                |> handleInterpreterOutcome
+            let
+                isCompilingToHVM =
+                    False
+            in
+            if isCompilingToHVM then
+                case
+                    frontendProgram
+                        |> logParsed
+                        |> Desugar.desugarProgram
+                        |> Result.map Codegen.HVM.codegenProgram
+                        |> Result.map HVM.ToString.file
+                of
+                    Err err ->
+                        Debug.todo ("handle desugar error: " ++ Debug.toString err)
 
+                    Ok hvmString ->
+                        effect0 (Effect.Println hvmString) <|
+                            \() ->
+                                finish
 
-
-{-
-   case
-       frontendProgram
-           |> logParsed
-           |> Desugar.desugarProgram
-           |> Result.map Codegen.HVM.codegenProgram
-           |> Result.map HVM.ToString.file
-   of
-       Err err ->
-           Debug.todo ("handle desugar error: " ++ Debug.toString err)
-
-       Ok hvmString ->
-           effect0 (Effect.Println hvmString) <| \() ->
-           finish
--}
+            else
+                -- interpreting
+                frontendProgram
+                    --|> logParsed
+                    |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                    |> handleInterpreterOutcome
 
 
 effect0 : Effect0 -> K () -> ( Model, Cmd Msg )
