@@ -1,9 +1,9 @@
 module AST.Backend exposing
-    ( Constructor
-    , Decl(..)
+    ( Decl(..)
     , Expr(..)
     , Pattern(..)
     , Program
+    , TypeConstructor
     )
 
 import Id.Qualified exposing (QualifiedId)
@@ -22,23 +22,50 @@ type Expr
     | Unit
     | Tuple (List Expr)
     | List (List Expr)
-    | Constructor_ { id : QualifiedId, args : List Expr }
-    | Lambda1 { arg : String, body : Expr }
+    | Constructor_
+        { id : QualifiedId
+        , args : List Expr
+        }
+    | Lambda1
+        { arg : String
+        , body : Expr
+        }
     | RootIdentifier QualifiedId
-    | If { cond : Expr, then_ : Expr, else_ : Expr }
-    | FnCall1 { fn : Expr, arg : Expr }
-    | Let1 { name : String, value : Expr, body : Expr }
+    | If
+        { cond : Expr
+        , then_ : Expr
+        , else_ : Expr
+        }
+    | FnCall1
+        { fn : Expr
+        , arg : Expr
+        }
+    | Let1
+        { name : String
+        , value : Expr
+        , body : Expr
+        }
 
 
 type Decl
-    = DType { id : QualifiedId, vars : List String, constructors : List Constructor }
-    | DLetStmt { lhs : Pattern, expr : Expr }
+    = DType
+        { id : QualifiedId
+        , vars : List String
+        , constructors : List TypeConstructor
+        }
+    | DLetStmt
+        { lhs : Pattern
+        , expr : Expr
+        }
 
 
 type Pattern
     = PUnit
     | PVar String
-    | PConstructor { id : QualifiedId, args : List Pattern }
+    | PConstructor
+        { id : QualifiedId
+        , args : List Pattern
+        }
     | PInt Int
     | PFloat Float
     | PChar String
@@ -52,7 +79,7 @@ type Pattern
     | PAs String Pattern
 
 
-type alias Constructor =
+type alias TypeConstructor =
     { id : QualifiedId
     , argsCount : Int -- HVM won't use the name/type information
     }

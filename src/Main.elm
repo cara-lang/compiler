@@ -105,15 +105,16 @@ init flags =
 {-
    case
        frontendProgram
+           |> logParsed
            |> Desugar.desugarProgram
            |> Result.map Codegen.HVM.codegenProgram
            |> Result.map HVM.ToString.file
    of
-       Err _ ->
-           Debug.todo "handle desugar error"
+       Err err ->
+           Debug.todo ("handle desugar error: " ++ Debug.toString err)
 
        Ok hvmString ->
-           effect0 (Effect.WriteFile { filename = "example.hvm", content = hvmString }) <| \() ->
+           effect0 (Effect.Println hvmString) <| \() ->
            finish
 -}
 

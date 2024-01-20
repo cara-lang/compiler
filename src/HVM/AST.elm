@@ -1,20 +1,79 @@
 module HVM.AST exposing
-    ( BinOp(..)
+    ( ADT
+    , ADTConstructor
+    , BinOp(..)
     , File
+    , Pattern(..)
     , Rule
     , Term(..)
+    , concatFiles
+    , emptyFile
     )
 
 
 type alias File =
-    -- TODO what about SMaps? Would it be helpful to us to make some things strict?
     { rules : List Rule
+    , adts : List ADT
     }
 
 
+{-|
+
+    (foo a b c) = (+ a (+ b c))
+    -->
+    { functionName = "foo"
+    , args =
+        [ TODO
+        ]
+    , body =
+        Opx
+            { op = Add
+            , left = Var "a"
+            , right =
+                Opx
+                    { op = Add
+                    , left = Var "b"
+                    , right = Var "c"
+                    }
+            }
+
+    }
+
+    (foo a (Baz b) (Quux c d e)) =
+    -->
+        [
+        ]
+
+-}
 type alias Rule =
-    { lhs : Term
-    , rhs : Term
+    { functionName : String
+    , args : List Pattern
+    , body : Term
+    }
+
+
+{-|
+
+    data Foo = Bar | (Baz a) | (Quux a b c)
+    -->
+    { name = "Foo"
+    , constructors =
+        [ { name = "Bar", arity = 0 }
+        , { name = "Baz", arity = 1 }
+        , { name = "Quux", arity = 3 }
+        ]
+    }
+
+-}
+type alias ADT =
+    { name : String
+    , constructors : List ADTConstructor
+    }
+
+
+type alias ADTConstructor =
+    { name : String
+    , arity : Int
     }
 
 
@@ -35,18 +94,80 @@ type BinOp
     | Gte
     | Gtn
     | Neq
+    | Not
 
 
+{-| Omitted: Chn (scopeless lambda)
+Omitted: Lnk (use of a Channel variable)
+-}
 type Term
-    = Var String
-    | Dup { leftName : String, rightName : String, expr : Term, body : Term }
-    | Sup { left : Term, right : Term }
-    | Let { name : String, expr : Term, body : Term }
-    | Lam { name : String, body : Term }
-    | App { function : Term, arg : Term }
-    | Ctr { name : String, args : List Term }
+    = Lam
+        { name : String
+        , body : Term
+
+        -- , tag : Tag
+        }
+    | Var String
+    | Let
+        { pat : Pattern
+        , value : Term
+        , next : Term
+        }
+    | App
+        -- in HVM-Lang, this is a 1-arg application, but we don't care about that, the syntax allows multiple!
+        { function : Term
+        , args : List Term
+
+        -- , tag : Tag
+        }
+    | Tup ( Term, Term )
+      --| Dup
+      --    { leftName : String
+      --    , rightName : String
+      --    , expr : Term
+      --    , body : Term
+      --    }
+      --| Sup
+      --    { left : Term
+      --    , right : Term
+      --    }
     | U60 Int
-    | F60 Float
-    | Op2 { op : BinOp, left : Term, right : Term }
-    | Str String -- this technically lowers to a linked list of Data.String.cons U60 and Data.String.nil
-    | Lst (List Term) -- this technically lowers to a linked list of Data.List.cons U60 and Data.List.nil
+      --| F60 Float
+    | Str String -- this technically lowers to SCons | SNil
+    | Lst (List Term) -- this technically lowers to LCons | LNil
+    | Opx
+        { op : BinOp
+        , left : Term
+        , right : Term
+        }
+    | Match
+        { value : Term
+        , arms : List ( Pattern, Term )
+        }
+      --| Ref
+    | Era
+
+
+type Pattern
+    = PWildcard
+    | PVar String
+    | PCtr String (List Pattern)
+      --| PZero
+      --| PUnnamedSucc
+      --| PNamedSucc String
+    | PTup ( Pattern, Pattern )
+    | PList (List Pattern)
+
+
+emptyFile : File
+emptyFile =
+    { adts = []
+    , rules = []
+    }
+
+
+concatFiles : File -> File -> File
+concatFiles f1 f2 =
+    { adts = f1.adts ++ f2.adts
+    , rules = f1.rules ++ f2.rules
+    }
