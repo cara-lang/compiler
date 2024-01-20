@@ -273,7 +273,7 @@ interpretTypeDecl :
         { mod : TypeModifier
         , name : String
         , vars : List String
-        , constructors : List Constructor
+        , constructors : List TypeConstructor
         }
         ()
 interpretTypeDecl =

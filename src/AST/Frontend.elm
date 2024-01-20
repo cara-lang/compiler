@@ -3,8 +3,6 @@ module AST.Frontend exposing
     , BangOrExpr(..)
     , BinaryOp(..)
     , CaseBranch
-    , Constructor
-    , ConstructorArg
     , Decl(..)
     , Expr(..)
     , LetModifier(..)
@@ -16,6 +14,8 @@ module AST.Frontend exposing
     , Stmt(..)
     , Type(..)
     , TypeAliasModifier(..)
+    , TypeConstructor
+    , TypeConstructorArg
     , TypeModifier(..)
     , UnaryOp(..)
     , binaryOp
@@ -189,7 +189,7 @@ type Decl
         { mod : TypeModifier
         , name : String
         , vars : List String
-        , constructors : List Constructor
+        , constructors : List TypeConstructor
         }
     | DModule
         { mod : ModuleModifier
@@ -253,16 +253,16 @@ type alias RecordTypeField =
     }
 
 
-type alias Constructor =
+type alias TypeConstructor =
     -- Foo
     -- Bar(Int)
     -- Baz(n: Int, verbose: Bool)
     { name : String
-    , args : List ConstructorArg
+    , args : List TypeConstructorArg
     }
 
 
-type alias ConstructorArg =
+type alias TypeConstructorArg =
     -- a:Int
     -- Int
     { name : Maybe String

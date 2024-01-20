@@ -1,6 +1,11 @@
 module Codegen.HVM exposing (codegenProgram)
 
+{-| This module deals with desugaring (lowering) from `AST.Backend`
+to `HVM.AST`.
+-}
+
 import AST.Backend as AST
+import Debug.Extra
 import HVM.AST as HVM exposing (File, Pattern(..), Rule, Term(..))
 import Id.Qualified exposing (QualifiedId)
 
@@ -29,10 +34,14 @@ todoTerm message =
 
 app : String -> List Term -> Term
 app name args =
-    App
-        { function = Var name
-        , args = args
-        }
+    if List.isEmpty args then
+        Var name
+
+    else
+        App
+            { function = Var name
+            , args = args
+            }
 
 
 {-| PERF: would it be better to compile tuples to `data` of the given arity rather than to nested HVM 2-tuples?
@@ -54,18 +63,27 @@ tuple terms =
                 rest
 
 
+idToString : QualifiedId -> String
+idToString id =
+    if id.qualifiers == ( "<root>", [] ) then
+        id.name
+
+    else
+        Id.Qualified.toString id
+
+
 declToFile : AST.Decl -> File
 declToFile decl =
     case decl of
         AST.DType r ->
             { adts =
-                [ { name = Id.Qualified.toString r.id
+                [ { name = idToString r.id
                   , constructors =
                         r.constructors
                             |> List.map
                                 (\c ->
-                                    { name = Id.Qualified.toString c.id
-                                    , arity = c.argsCount
+                                    { name = idToString c.id
+                                    , arity = c.arity
                                     }
                                 )
                   }
@@ -75,7 +93,17 @@ declToFile decl =
 
         AST.DLetStmt r ->
             { adts = []
-            , rules = todoRule "DLetStmt" r
+            , rules =
+                [ case r.lhs of
+                    AST.PVar name ->
+                        { functionName = name
+                        , args = []
+                        , body = exprToTerm r.expr
+                        }
+
+                    _ ->
+                        Debug.Extra.todo1 "declToFile DLetStmt - non-PVar" r
+                ]
             }
 
 
@@ -127,7 +155,7 @@ exprToTerm expr =
 
         AST.Constructor_ { id, args } ->
             app
-                (Id.Qualified.toString id)
+                (idToString id)
                 (List.map exprToTerm args)
 
         AST.RootIdentifier qid ->

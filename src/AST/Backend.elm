@@ -81,5 +81,5 @@ type Pattern
 
 type alias TypeConstructor =
     { id : QualifiedId
-    , argsCount : Int -- HVM won't use the name/type information
+    , arity : Int -- HVM won't use the name/type information
     }

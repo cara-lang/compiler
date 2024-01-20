@@ -25,7 +25,14 @@ desugarDecl decl =
             Debug.Extra.todo1 "desugar type alias" r
 
         F.DType r ->
-            Debug.Extra.todo1 "desugar type" r
+            Ok
+                -- TODO mod
+                [ B.DType
+                    { id = qualify (Id.local r.name)
+                    , vars = r.vars
+                    , constructors = List.map desugarTypeConstructor r.constructors
+                    }
+                ]
 
         F.DModule r ->
             Debug.Extra.todo1 "desugar module" r
@@ -49,6 +56,13 @@ desugarDecl decl =
             Debug.Extra.todo1 "desugar property gen test" r
 
 
+desugarTypeConstructor : F.TypeConstructor -> B.TypeConstructor
+desugarTypeConstructor ctr =
+    { id = qualify (Id.local ctr.name)
+    , arity = List.length ctr.args
+    }
+
+
 desugarStmt : F.Stmt -> Result DesugarError (List B.Decl)
 desugarStmt stmt =
     case stmt of
@@ -57,31 +71,34 @@ desugarStmt stmt =
                 |> Result.map List.singleton
 
         F.SLetBang r ->
-            Debug.Extra.todo1 "desugar sletbang" r
+            Debug.Extra.todo1 "desugar SLetBang" r
 
         F.SBang bang ->
             desugarBang bang
 
         F.SFunctionDef r ->
-            Debug.Extra.todo1 "desugar sfunctiondef" r
+            Debug.Extra.todo1 "desugar SFunctionDef" r
 
         F.SBinaryOperatorDef r ->
-            Debug.Extra.todo1 "desugar sbinaryoperatordef" r
+            Debug.Extra.todo1 "desugar SBinaryOperatorDef" r
 
         F.SUnaryOperatorDef r ->
-            Debug.Extra.todo1 "desugar sunaryoperatordef" r
+            Debug.Extra.todo1 "desugar SUnaryOperatorDef" r
 
         F.SValueAnnotation r ->
-            Debug.Extra.todo1 "desugar svalueannotation" r
+            -- We're throwing away type annotations
+            Ok []
 
         F.SBinaryOperatorAnnotation r ->
-            Debug.Extra.todo1 "desugar sbinaryoperatorannotation" r
+            -- We're throwing away type annotations
+            Ok []
 
         F.SUnaryOperatorAnnotation r ->
-            Debug.Extra.todo1 "desugar sunaryoperatorannotation" r
+            -- We're throwing away type annotations
+            Ok []
 
         F.SUseModule r ->
-            Debug.Extra.todo1 "desugar susemodule" r
+            Debug.Extra.todo1 "desugar SUseModule" r
 
 
 desugarLet :
@@ -285,10 +302,10 @@ desugarPattern p =
             B.PAs alias_ (desugarPattern pattern)
 
         F.PUnaryOpDef r ->
-            Debug.Extra.todo1 "uh... desugar PUnaryOpDef" r
+            Debug.Extra.todo1 "uh... desugar PUnaryOpDef?" r
 
         F.PBinaryOpDef r ->
-            Debug.Extra.todo1 "uh... desugar PBinaryOpDef" r
+            Debug.Extra.todo1 "uh... desugar PBinaryOpDef?" r
 
 
 desugarBang : F.Bang -> Result DesugarError (List B.Decl)

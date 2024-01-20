@@ -87,7 +87,7 @@ init flags =
         astResult =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
-                |> logLexed
+                --|> logLexed
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
     case astResult of
@@ -102,7 +102,7 @@ init flags =
             if isCompilingToHVM then
                 case
                     frontendProgram
-                        |> logParsed
+                        --|> logParsed
                         |> Desugar.desugarProgram
                         |> Result.map Codegen.HVM.codegenProgram
                         |> Result.map HVM.ToString.file

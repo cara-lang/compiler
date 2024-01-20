@@ -258,7 +258,7 @@ typevar =
     = | Foo | Bar(Bool) | Baz(Int,String)
 
 -}
-constructorList : Parser (List Constructor)
+constructorList : Parser (List TypeConstructor)
 constructorList =
     Parser.succeed (::)
         |> Parser.skip
@@ -289,7 +289,7 @@ constructorList =
     = Bar(n: Int, verbose: Bool)
 
 -}
-constructor : Parser Constructor
+constructor : Parser TypeConstructor
 constructor =
     Parser.succeed (\name args -> { name = name, args = args })
         |> Parser.keep upperName
@@ -323,7 +323,7 @@ constructor =
     = n: Int
 
 -}
-constructorArg : Parser ConstructorArg
+constructorArg : Parser TypeConstructorArg
 constructorArg =
     Parser.succeed (\name type__ -> { name = name, type_ = type__ })
         |> Parser.keep

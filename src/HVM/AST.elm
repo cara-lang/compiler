@@ -10,6 +10,11 @@ module HVM.AST exposing
     , emptyFile
     )
 
+{-| This module defines the HVM AST. It's not an exact port of
+<https://github.com/HigherOrderCO/hvm-lang/blob/master/src/term/mod.rs>
+but stays pretty close.
+-}
+
 
 type alias File =
     { rules : List Rule
@@ -23,7 +28,9 @@ type alias File =
     -->
     { functionName = "foo"
     , args =
-        [ TODO
+        [ PVar "a"
+        , PVar "b"
+        , PVar "c"
         ]
     , body =
         Opx
@@ -39,10 +46,22 @@ type alias File =
 
     }
 
-    (foo a (Baz b) (Quux c d e)) =
+    (foo a (Baz b) (Quux c d e)) = (+ a e)
     -->
-        [
+    { functionName = "foo"
+    , args =
+        [ PVar "a"
+        , PCtr "Baz" [PVar "b"]
+        , PCtr "Quux" [PVar "c" "d" "e"]
         ]
+    , body =
+        Opx
+            { op = Add
+            , left = Var "a"
+            , right = Var "e"
+            }
+
+    }
 
 -}
 type alias Rule =

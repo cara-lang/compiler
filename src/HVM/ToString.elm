@@ -103,7 +103,18 @@ adt t =
 
 adtConstructor : ADTConstructor -> String
 adtConstructor ctr =
-    Debug.todo "constructor"
+    if ctr.arity == 0 then
+        ctr.name
+
+    else
+        "({NAME} {ARGS})"
+            |> String.replace "{NAME}" ctr.name
+            |> String.replace "{ARGS}"
+                (String.join " "
+                    (List.range 1 ctr.arity
+                        |> List.map (\i -> "a" ++ String.fromInt i)
+                    )
+                )
 
 
 pattern : Pattern -> String
@@ -138,8 +149,8 @@ pattern p =
 
 file : File -> String
 file f =
-    [ List.map rule f.rules
-    , List.map adt f.adts
+    [ List.map adt f.adts
+    , List.map rule f.rules
     ]
         |> List.concat
         |> String.join "\n"
