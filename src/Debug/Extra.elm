@@ -105,12 +105,16 @@ indentTail str =
 
 prettyPrintListlike : String -> String -> List String -> String
 prettyPrintListlike opening closing list =
-    opening
-        ++ "\n"
-        ++ String.join "\n"
-            (List.map
-                (\s -> "  " ++ indentTail s ++ ",")
-                list
-            )
-        ++ "\n"
-        ++ closing
+    if List.isEmpty list then
+        opening ++ closing
+
+    else
+        opening
+            ++ "\n"
+            ++ String.join "\n"
+                (List.map
+                    (\s -> "  " ++ indentTail s ++ ",")
+                    list
+                )
+            ++ "\n"
+            ++ closing
