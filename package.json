@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "chokidar-cli": "^3.0.0",
     "elm-esm": "^1.1.4"
   }
 }
