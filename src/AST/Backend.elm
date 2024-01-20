@@ -57,6 +57,11 @@ type Decl
         { lhs : Pattern
         , expr : Expr
         }
+    | DFunctionDef
+        { id : QualifiedId
+        , args : List Pattern
+        , body : Expr
+        }
 
 
 type Pattern

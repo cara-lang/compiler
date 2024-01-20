@@ -68,7 +68,8 @@ desugarStmt stmt =
     case stmt of
         F.SLet r ->
             desugarLet r
-                |> Result.map List.singleton
+                |> List.singleton
+                |> Ok
 
         F.SLetBang r ->
             Debug.Extra.todo1 "desugar SLetBang" r
@@ -77,7 +78,9 @@ desugarStmt stmt =
             desugarBang bang
 
         F.SFunctionDef r ->
-            Debug.Extra.todo1 "desugar SFunctionDef" r
+            desugarFunctionDef r
+                |> List.singleton
+                |> Ok
 
         F.SBinaryOperatorDef r ->
             Debug.Extra.todo1 "desugar SBinaryOperatorDef" r
@@ -101,13 +104,27 @@ desugarStmt stmt =
             Debug.Extra.todo1 "desugar SUseModule" r
 
 
+desugarFunctionDef :
+    { name : String
+    , args : List F.Pattern
+    , body : F.Expr
+    }
+    -> B.Decl
+desugarFunctionDef r =
+    B.DFunctionDef
+        { id = qualify (Id.local r.name)
+        , args = List.map desugarPattern r.args
+        , body = desugarExpr r.body
+        }
+
+
 desugarLet :
     { mod : F.LetModifier
     , lhs : F.Pattern
     , type_ : Maybe F.Type
     , expr : F.Expr
     }
-    -> Result DesugarError B.Decl
+    -> B.Decl
 desugarLet letStmt =
     -- TODO mod
     -- TODO type
@@ -115,7 +132,6 @@ desugarLet letStmt =
         { lhs = desugarPattern letStmt.lhs
         , expr = desugarExpr letStmt.expr
         }
-        |> Ok
 
 
 desugarExpr : F.Expr -> B.Expr

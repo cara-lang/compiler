@@ -6,7 +6,7 @@ to `HVM.AST`.
 
 import AST.Backend as AST
 import Debug.Extra
-import HVM.AST as HVM exposing (File, Pattern(..), Rule, Term(..))
+import HVM.AST as HVM
 import Id.Qualified exposing (QualifiedId)
 
 
@@ -17,47 +17,46 @@ codegenProgram program =
         |> List.foldr HVM.concatFiles HVM.emptyFile
 
 
-todoRule : String -> a -> List Rule
+todoRule : String -> a -> List HVM.Rule
 todoRule message thing =
     [ { functionName = message
       , args = []
-      , body = Str <| Debug.toString thing
+      , body = HVM.Str <| Debug.toString thing
       }
     ]
 
 
-todoTerm : String -> Term
+todoTerm : String -> HVM.Term
 todoTerm message =
-    app "Todo" [ Str message ]
+    app "Todo" [ HVM.Str message ]
 
 
-app : String -> List Term -> Term
+app : String -> List HVM.Term -> HVM.Term
 app name args =
     if List.isEmpty args then
-        Var name
+        HVM.Var name
 
     else
-        App
-            { function = Var name
+        HVM.App
+            { function = HVM.Var name
             , args = args
             }
 
 
 {-| PERF: would it be better to compile tuples to `data` of the given arity rather than to nested HVM 2-tuples?
 -}
-tuple : List Term -> Term
+tuple : List HVM.Term -> HVM.Term
 tuple terms =
     case terms of
         [] ->
-            Era
+            HVM.Era
 
         fst :: rest ->
-            {- TODO is foldl the right direction? I guess this only does
-               (((a,b),c),d) vs (a,(b,(c,d))) and so it's fine either way, it
-               just needs to be consistent with the unwrapping later?
+            {- TODO make sure we're unwrapping tuples in the same direction:
+               (((a,b),c),d)
             -}
             List.foldl
-                (\new acc -> Tup ( acc, new ))
+                (\new acc -> HVM.Tup ( acc, new ))
                 fst
                 rest
 
@@ -71,7 +70,7 @@ idToString id =
         Id.Qualified.toString id
 
 
-declToFile : AST.Decl -> File
+declToFile : AST.Decl -> HVM.File
 declToFile decl =
     case decl of
         AST.DType r ->
@@ -105,49 +104,79 @@ declToFile decl =
                 ]
             }
 
+        AST.DFunctionDef r ->
+            { adts = []
+            , rules =
+                [ { functionName = idToString r.id
+                  , args = List.map pattern r.args
+                  , body = exprToTerm r.body
+                  }
+                ]
+            }
 
-exprToTerm : AST.Expr -> Term
+
+pattern : AST.Pattern -> HVM.Pattern
+pattern p =
+    case p of
+        AST.PUnit ->
+            HVM.PCtr intrinsics.unit []
+
+        _ ->
+            Debug.Extra.todo1 "codegen pattern" p
+
+
+intrinsics :
+    { unit : String
+    , char : String
+    }
+intrinsics =
+    { unit = "Cara.unit"
+    , char = "Cara.char"
+    }
+
+
+exprToTerm : AST.Expr -> HVM.Term
 exprToTerm expr =
     case expr of
         AST.Int n ->
-            U60 n
+            HVM.U60 n
 
-        AST.Float _ ->
+        AST.Float n ->
             -- TODO wait for when HVM-Lang supports F60 again
-            Era
+            Debug.Extra.todo1 "codegen exprToTerm" n
 
         AST.Char str ->
             -- We can't use HVM chars as Cara chars are really extended grapheme clusters
-            app "Cara.char" [ Str str ]
+            app intrinsics.char [ HVM.Str str ]
 
         AST.String str ->
-            Str str
+            HVM.Str str
 
         AST.Bool bool ->
             if bool then
-                U60 0
+                HVM.U60 0
 
             else
-                U60 1
+                HVM.U60 1
 
         AST.Unit ->
-            Var "Cara.unit"
+            HVM.Var intrinsics.unit
 
         AST.Tuple xs ->
             tuple (List.map exprToTerm xs)
 
         AST.List xs ->
-            Lst (List.map exprToTerm xs)
+            HVM.Lst (List.map exprToTerm xs)
 
         AST.FnCall1 { fn, arg } ->
-            App
+            HVM.App
                 { function = exprToTerm fn
                 , args = [ exprToTerm arg ]
                 }
 
         AST.Let1 { name, value, body } ->
-            Let
-                { pat = PVar name
+            HVM.Let
+                { pat = HVM.PVar name
                 , value = exprToTerm value
                 , next = exprToTerm body
                 }
