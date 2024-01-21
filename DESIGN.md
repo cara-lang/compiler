@@ -1,23 +1,22 @@
-WANTED (but doesn't yet have tests):
+WANTED:
+
 * nested or-patterns ([twitter](https://twitter.com/ChShersh/status/1744005962178953365?t=aKI-P4XUy48rZqizJ6oByw&s=19))
+  * `case event of KeyDown (Key "q" | Escape) | KeyDown (Up | Key "k") ->`
+
+* arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
+
+* -> arrows in names?
+* ? questionmarks in names?
+* ! bangs in names? (perhaps not, IDK)
+* ' apostrophes in names?
+* _ underscores in names?
+
 * functions can have multiple arities with different implementations (and return types)
   * (Seq.sum(lambda, seq) vs Seq.sum(seq))
   * can have the same arity multiple times, dispatching on the input types
-* strong stdlib
-  * I have a much higher tolerance and need for `elm-community/*-extra`
-  * Closer to Clojure than to Elm!
 * automatic tail recursion (Erlang/Elm style)
   * modulo cons? allowing for `go n = n :: go (n - 1)` to be tail-optimized
     * https://www.microsoft.com/en-us/research/uploads/prod/2022/07/trmc.pdf
-* pattern matching has `A | B | C -> ...`
-* integer types: Int8, Int16, ..., Int64, BigInt
-  * automatic upcasting from i32 to i64 etc
-* float types: Float32, Float64, BigDecimal
-* `|>` pipelines
-  * They put the left side into the last position of right side by default
-    * data |> x(2) --> x(2, data)
-    * Can be overriden with _
-      * data |> #(x(2,_,3)) --> x(2,data,3)
 * ++ for sequence-adding
   * with overloaded operators, it could be arbitrary:
     * A ++ [B,C,D] --> [A,B,C,D]
@@ -33,21 +32,9 @@ WANTED (but doesn't yet have tests):
     * foo(x: Int, y: Int): Int // <- allowed
     * in new syntax: foo : x:Int -> y:Int -> Int
   * return type cannot be omitted
-* Int == Int64
-* Float == Float64
 * allow ' in var names
 
 * Extending others' modules with new functions and constants
-
-
-WANTED:
-* ocaml has
-    match foo with
-      | X abc
-      | Y def -> 123
-      | Z ghi -> 234
-  as "or-patterns"
-* arrows in names? questionmarks in names? bangs in names? (perhaps not bangs, IDK)
 
 * if ... then ... without else implicitly returns () from the else, which means the then... also needs to return ().
   * automatic monad-wrapping of the ()? That's probably the only place where this would make sense.
@@ -62,7 +49,6 @@ WANTED:
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
 * Probably no <| pipelines? << and >> still might have their place. 
 * inline pragmas? for Maybe.map to become tail-safe etc.
-* holes syntax: #(_ + 1)
 * what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
 * GADTs?
   * https://dev.realworldocaml.org/gadts.html
