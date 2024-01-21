@@ -5,16 +5,85 @@ to `HVM.AST`.
 -}
 
 import AST.Backend as AST
+import Basics.Extra
+import BiDict
+import Common
 import Debug.Extra
+import Env
 import HVM.AST as HVM
 import Id.Qualified exposing (QualifiedId)
+import Set
 
 
 codegenProgram : AST.Program -> HVM.File
 codegenProgram program =
+    let
+        maxTupleArity : Maybe Int
+        maxTupleArity =
+            program
+                |> AST.findExprs AST.isTuple
+                |> List.filterMap AST.tupleArity
+                |> List.maximum
+
+        initFile : HVM.File
+        initFile =
+            case maxTupleArity of
+                Nothing ->
+                    HVM.emptyFile
+
+                Just maxArity ->
+                    { adts = []
+                    , rules =
+                        List.range 0 (maxArity - 1)
+                            |> List.concatMap
+                                (\index ->
+                                    [ [ tupleGetterDef index (Common.tupleIndexToNumericField index) ]
+                                    , BiDict.getReverse index Common.namedTupleFields
+                                        |> Set.toList
+                                        |> List.map (tupleGetterDef index)
+                                    ]
+                                        |> List.concat
+                                )
+                    }
+    in
     program
         |> List.map declToFile
-        |> List.foldr HVM.concatFiles HVM.emptyFile
+        |> List.foldr HVM.concatFiles initFile
+
+
+{-|
+
+    (Cara.GetRec.el1    (a,*))     = a
+    (Cara.GetRec.first  (a,*))     = a
+    (Cara.GetRec.el2    (*,(a,*))) = a
+    (Cara.GetRec.second (*,(a,*))) = a
+
+-}
+tupleGetterDef : Int -> String -> HVM.Rule
+tupleGetterDef index field =
+    let
+        extractedVar =
+            "a"
+
+        -- index 0: (a,*)
+        --          PTup (PVar extractedVar, PWildcard)
+        -- index 1: (*,(a,*))
+        --          PTup (PWildcard, PTup (PVar extractedVar, PWildcard))
+        -- index 2: (*,(*,(a,*)))
+        --          PTup (PWildcard, PTup (PWildcard, PTup (PVar extractedVar, PWildcard)))
+        wrap : HVM.Pattern -> HVM.Pattern
+        wrap p =
+            HVM.PTup ( HVM.PWildcard, p )
+    in
+    { functionName = intrinsics.recordGetter field
+    , args =
+        [ Basics.Extra.doNTimes
+            index
+            wrap
+            (HVM.PTup ( HVM.PVar extractedVar, HVM.PWildcard ))
+        ]
+    , body = HVM.Var extractedVar
+    }
 
 
 todoRule : String -> a -> List HVM.Rule
@@ -24,11 +93,6 @@ todoRule message thing =
       , body = HVM.Str <| Debug.toString thing
       }
     ]
-
-
-todoTerm : String -> HVM.Term
-todoTerm message =
-    app "Todo" [ HVM.Str message ]
 
 
 app : String -> List HVM.Term -> HVM.Term
@@ -43,27 +107,23 @@ app name args =
             }
 
 
-{-| PERF: would it be better to compile tuples to `data` of the given arity rather than to nested HVM 2-tuples?
+{-| This should convert `(1,2,3,4)` into `(1,(2,(3,(4,Cara.tupleEnd))))`
+
+PERF: would it be better to compile tuples to `data` of the given arity rather
+than to nested HVM 2-tuples?
+
 -}
 tuple : List HVM.Term -> HVM.Term
 tuple terms =
-    case terms of
-        [] ->
-            HVM.Era
-
-        fst :: rest ->
-            {- TODO make sure we're unwrapping tuples in the same direction:
-               (((a,b),c),d)
-            -}
-            List.foldl
-                (\new acc -> HVM.Tup ( acc, new ))
-                fst
-                rest
+    List.foldr
+        (\new acc -> HVM.Tup ( new, acc ))
+        (HVM.Var intrinsics.tupleEnd)
+        (List.reverse terms)
 
 
 idToString : QualifiedId -> String
 idToString id =
-    if id.qualifiers == ( "<root>", [] ) then
+    if id.qualifiers == ( Env.rootModule.name, [] ) then
         id.name
 
     else
@@ -99,8 +159,20 @@ declToFile decl =
                         , body = exprToTerm r.expr
                         }
 
+                    AST.PConstructor ctr ->
+                        {- Here we blindly assume the constructor is a singleton
+                           one (type Foo = Bar(Int,Int)) and so it should allow
+                           the `Bar(a,b) = someFoo` destructuring.
+
+                           Desugar phase should have caught this if it's not.
+                        -}
+                        { functionName = Debug.Extra.todo1 "declToFile DLetStmt PConstructor" ctr
+                        , args = Debug.Extra.todo1 "declToFile DLetStmt PConstructor" ctr
+                        , body = Debug.Extra.todo1 "declToFile DLetStmt PConstructor" ctr
+                        }
+
                     _ ->
-                        Debug.Extra.todo1 "declToFile DLetStmt - non-PVar" r
+                        Debug.Extra.todo1 "Codegen.HVM.declToFile unhandled DLetStmt" r
                 ]
             }
 
@@ -129,11 +201,13 @@ intrinsics :
     { unit : String
     , char : String
     , recordGetter : String -> String
+    , tupleEnd : String
     }
 intrinsics =
     { unit = "Cara.unit"
     , char = "Cara.char"
-    , recordGetter = \field -> "Cara.Get." ++ field
+    , recordGetter = \field -> "Cara.RecGet." ++ field
+    , tupleEnd = "Cara.tupleEnd"
     }
 
 
@@ -189,14 +263,25 @@ exprToTerm expr =
                 (List.map exprToTerm args)
 
         AST.RootIdentifier qid ->
-            todoTerm "exprToTerm rootIdentifier"
+            HVM.Var (idToString qid)
 
-        AST.Lambda1 { arg, body } ->
-            todoTerm "exprToTerm lambda"
+        AST.Lambda1 r ->
+            Debug.Extra.todo1 "exprToTerm lambda1" r
 
-        AST.If { cond, then_, else_ } ->
-            -- TODO Is there going to be Data.U60.if or do we have to create it ourselves?
-            todoTerm "exprToTerm if-then-else"
+        AST.If r ->
+            -- TODO this one should be easy: Data.U60.if or our own variant of it
+            Debug.Extra.todo1 "exprToTerm if-then-else" r
 
         AST.RecordGetter field ->
-            HVM.Lam (intrinsics.recordGetter field) TODO
+            let
+                argName =
+                    "record"
+            in
+            HVM.Lam
+                { name = argName
+                , body =
+                    HVM.App
+                        { function = HVM.Var (intrinsics.recordGetter field)
+                        , args = [ HVM.Var argName ]
+                        }
+                }

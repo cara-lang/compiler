@@ -3,7 +3,7 @@ E0023: Trying to access a missing tuple element
 The tuple doesn't contain the field `eleventh`.
 
 Note: The named fields `first`, `second` and so on end at `tenth`. You can use
-the fields `el11` etc. to get a field at arbitrary position.
+the fields `el10` etc. to get a field at arbitrary position.
 
 main.cara:2:15
 ━━┓

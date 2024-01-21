@@ -3,6 +3,7 @@ module Interpreter exposing (interpretProgram)
 import AST.Frontend as AST exposing (..)
 import Basics.Extra as Basics
 import Bitwise
+import Common
 import Debug.Extra
 import Dict exposing (Dict)
 import Effect
@@ -1477,8 +1478,7 @@ isTupleGetter field =
     let
         isNumericTupleGetter =
             String.startsWith "el" field
-                && String.toInt (String.dropLeft 2 field)
-                /= Nothing
+                && (String.toInt (String.dropLeft 2 field) /= Nothing)
 
         isWordyTupleGetter =
             Set.member field wordyTupleGetters
@@ -1530,17 +1530,12 @@ tupleIndexToWordyField n =
             Nothing
 
 
-tupleIndexToNumericField : Int -> String
-tupleIndexToNumericField n =
-    "el" ++ String.fromInt (n + 1)
-
-
 {-| Useful for spreads
 -}
 tupleToNumericRecord : List Value -> Dict String Value
 tupleToNumericRecord values =
     values
-        |> List.indexedMap (\i value -> ( tupleIndexToNumericField i, value ))
+        |> List.indexedMap (\i value -> ( Common.tupleIndexToNumericField i, value ))
         |> Dict.fromList
 
 
@@ -1551,7 +1546,7 @@ tupleToNumericAndWordyRecord values =
     values
         |> List.indexedMap
             (\i value ->
-                [ Just ( tupleIndexToNumericField i, value )
+                [ Just ( Common.tupleIndexToNumericField i, value )
                 , tupleIndexToWordyField i |> Maybe.map (\field -> ( field, value ))
                 ]
                     |> List.filterMap identity

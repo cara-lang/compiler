@@ -1,0 +1,25 @@
+(Cara.RecGet.el1   (a,*)) = a
+(Cara.RecGet.first (a,*)) = a
+
+(Cara.RecGet.el2    (*,(a,*))) = a
+(Cara.RecGet.second (*,(a,*))) = a
+
+data A = A1
+
+a1 = A1
+a2 = A1
+
+data B = (B1 a)
+
+data Cara.TupleEnd.T = Cara.TupleEnd
+
+b1 = (B1 (1,(2,(3,(4,Cara.TupleEnd)))))
+b2 = (B1 (4,(5,(6,(7,Cara.TupleEnd)))))
+
+b1Tuple = match b1 {
+  (B1 a): a
+}
+b1a1 = (Cara.RecGet.el1 b1Tuple)
+b1a2 = (Cara.RecGet.el2 b1Tuple)
+
+main = (b1a1, b1a2)

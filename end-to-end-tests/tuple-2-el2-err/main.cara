@@ -1,2 +1,2 @@
 tuple = (123, "Hello")
-IO.println!(tuple.el3)
+IO.println!(tuple.el2)

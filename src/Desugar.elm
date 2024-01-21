@@ -192,8 +192,10 @@ desugarExpr e =
                         rest
 
         F.RecordGet r ->
-            -- TODO
-            Debug.Extra.todo1 "desugar record get" r
+            B.FnCall1
+                { fn = B.RecordGetter r.field
+                , arg = desugarExpr r.record
+                }
 
         F.Block r ->
             Debug.Extra.todo1 "desugar block" r
@@ -280,6 +282,10 @@ desugarPattern p =
             B.PVar name
 
         F.PConstructor { id, args } ->
+            {- TODO if we're in a Let statement, check the constructor is a
+               singleton one (type Foo = Bar(Int,Int)) and so it should allow
+               the `Bar(a,b) = someFoo` destructuring.
+            -}
             B.PConstructor
                 { id = qualify id
                 , args = List.map desugarPattern args

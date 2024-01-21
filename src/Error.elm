@@ -107,7 +107,7 @@ type InterpreterError
 
 
 type DesugarError
-    = TodoDesugarError
+    = DestructuringNonSingletonConstructor
 
 
 title : Error -> String
@@ -349,8 +349,8 @@ title error =
 
         DesugarError ( _, desugarError ) ->
             case desugarError of
-                TodoDesugarError ->
-                    "TODO desugar error"
+                DestructuringNonSingletonConstructor ->
+                    "Destructuring a non-singleton constructor"
 
 
 code : Error -> String
@@ -626,7 +626,7 @@ code error =
 
         DesugarError ( _, desugarError ) ->
             case desugarError of
-                TodoDesugarError ->
+                DestructuringNonSingletonConstructor ->
                     -- TODO
                     "EXXXX"
 

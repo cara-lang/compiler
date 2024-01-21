@@ -1,6 +1,6 @@
 E0023: Trying to access a missing tuple element
 
-The tuple has 2 elements but the code below tried to access element #3.
+The tuple has 2 elements but the code below tried to access the third element.
 
 main.cara:2:19
 ━━┓

@@ -1,0 +1,11 @@
+E0023: Trying to access a missing tuple element
+
+The tuple has 10 elements (indexes 0..9) but the code below tried to access
+an element on index 10.
+
+Note: Tuple getters (.el0, .el1, ...) are 0-indexed.
+
+main.cara:2:15
+━━┓
+2 ┃ IO.println!(x.el10)
+  ┃               ^
