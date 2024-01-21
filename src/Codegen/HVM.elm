@@ -128,10 +128,12 @@ pattern p =
 intrinsics :
     { unit : String
     , char : String
+    , recordGetter : String -> String
     }
 intrinsics =
     { unit = "Cara.unit"
     , char = "Cara.char"
+    , recordGetter = \field -> "Cara.Get." ++ field
     }
 
 
@@ -195,3 +197,6 @@ exprToTerm expr =
         AST.If { cond, then_, else_ } ->
             -- TODO Is there going to be Data.U60.if or do we have to create it ourselves?
             todoTerm "exprToTerm if-then-else"
+
+        AST.RecordGetter field ->
+            HVM.Lam (intrinsics.recordGetter field) TODO

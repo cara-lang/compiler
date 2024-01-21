@@ -44,6 +44,6 @@ function run {
 
 run;
 
-yarn chokidar src | while read WHATEVER; do
+chokidar src | while read WHATEVER; do
   run;
 done;

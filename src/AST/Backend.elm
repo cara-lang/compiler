@@ -45,6 +45,7 @@ type Expr
         , value : Expr
         , body : Expr
         }
+    | RecordGetter String
 
 
 type Decl

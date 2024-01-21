@@ -192,6 +192,7 @@ desugarExpr e =
                         rest
 
         F.RecordGet r ->
+            -- TODO
             Debug.Extra.todo1 "desugar record get" r
 
         F.Block r ->

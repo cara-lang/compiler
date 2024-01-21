@@ -97,7 +97,7 @@ init flags =
         Ok frontendProgram ->
             let
                 isCompilingToHVM =
-                    False
+                    True
             in
             if isCompilingToHVM then
                 case
@@ -111,9 +111,8 @@ init flags =
                         Debug.todo ("handle desugar error: " ++ Debug.toString err)
 
                     Ok hvmString ->
-                        effect0 (Effect.Println hvmString) <|
-                            \() ->
-                                finish
+                        effect0 (Effect.Println hvmString) <| \() ->
+                        finish
 
             else
                 -- interpreting
@@ -133,7 +132,7 @@ effect0 eff k =
 handleInterpreterOutcome : Interpreter.Outcome () -> ( Model, Cmd Msg )
 handleInterpreterOutcome outcome =
     case outcome of
-        Interpreter.DoneInterpreting _ _ ->
+        Interpreter.DoneInterpreting env _ ->
             finish
 
         Interpreter.FoundError error ->
