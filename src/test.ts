@@ -1,11 +1,11 @@
-#!/usr/bin/env deno run --allow-read --allow-write
+#!/usr/bin/env -S deno run --allow-read --allow-write
 
 import fs from 'node:fs/promises';
 import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 import registerPorts from './registerPorts.ts';
 
-const selectedTest = null;
+const selectedTest = 'hvm-example';
 
 ///////////////////////////////////////////
 

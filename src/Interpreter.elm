@@ -709,6 +709,8 @@ interpretPattern stmtMonad =
                                 handleVConstructor : Interpreter { id : Id, args : List Value } (Maybe PatternAddition)
                                 handleVConstructor =
                                     \envX vc ->
+                                        let _ = Debug.log "vc" vc in
+                                        let _ = Debug.log "r" r in
                                         if vc == r then
                                             let
                                                 pairs : List ( Pattern, Value )
@@ -731,6 +733,7 @@ interpretPattern stmtMonad =
                                     handleVConstructor env1 found_
 
                                 VClosure c ->
+                                    let _ = Debug.log (Value.closureToString found) "c" in
                                     Interpreter.do (interpretCallVal stmtMonad env1 ( found, r.args )) <| \env2 result ->
                                     case result of
                                         VConstructor found_ ->

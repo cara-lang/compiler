@@ -245,14 +245,13 @@ isEqualityAllowed val =
             False
 
 
-closureToString : Value -> String
-closureToString val =
-    case val of
-        VClosure { args, body, env } ->
+closureToString :
+        { args : List Pattern
+        , body : Expr
+        , env : Env Value
+        } -> String
+closureToString {args, body} =
             AST.lambdaToString { args = args, body = body }
-
-        _ ->
-            "NOT A CLOSURE"
 
 
 nothing : Value

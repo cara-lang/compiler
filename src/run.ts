@@ -1,4 +1,4 @@
-#!/usr/bin/env deno run --allow-read --allow-write
+#!/usr/bin/env -S deno run --allow-read --allow-write
 
 import registerPorts from './registerPorts.ts';
 import {Elm} from '../dist/elm.js';
