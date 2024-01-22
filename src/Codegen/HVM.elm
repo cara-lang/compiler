@@ -124,7 +124,7 @@ tuple terms =
     List.foldr
         (\new acc -> HVM.Tup ( new, acc ))
         (HVM.Var intrinsics.tupleEnd)
-        (List.reverse terms)
+        terms
 
 
 idToString : QualifiedId -> String
