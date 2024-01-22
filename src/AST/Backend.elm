@@ -50,11 +50,12 @@ type Expr
         }
     | RecordGetter String
     | Record
-        (List
-            { field : String
-            , expr : Expr
-            }
-        )
+        { sortedFields :
+            List
+                { field : String
+                , expr : Expr
+                }
+        }
 
 
 type Decl
@@ -191,8 +192,8 @@ foldExpr fn init expr =
         RecordGetter _ ->
             self ()
 
-        Record fields ->
-            selfAnd (List.map .expr fields)
+        Record r ->
+            selfAnd (List.map .expr r.sortedFields)
 
 
 getTuple : Expr -> Maybe (List Expr)
@@ -205,11 +206,11 @@ getTuple e =
             Nothing
 
 
-getRecord : Expr -> Maybe (List { field : String, expr : Expr })
+getRecord : Expr -> Maybe { sortedFields : List { field : String, expr : Expr } }
 getRecord e =
     case e of
-        Record fields ->
-            Just fields
+        Record r ->
+            Just r
 
         _ ->
             Nothing

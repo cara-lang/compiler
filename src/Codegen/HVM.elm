@@ -51,26 +51,26 @@ codegenProgram program =
             program
                 |> AST.getExprs AST.getRecord
                 |> List.map
-                    (\fields ->
+                    (\{ sortedFields } ->
                         let
                             recordName =
-                                intrinsics.record (List.map .field fields)
+                                intrinsics.record { sortedFields = List.map .field sortedFields }
 
-                            allFields =
-                                List.length fields
+                            fieldsCount =
+                                List.length sortedFields
                         in
                         { adts =
                             [ { name = adtName recordName
                               , constructors =
                                     [ { name = recordName
-                                      , arity = List.length fields
+                                      , arity = fieldsCount
                                       }
                                     ]
                               }
                             ]
                         , rules =
                             -- TODO: only generate those that are used (found across the program)?
-                            fields
+                            sortedFields
                                 |> List.indexedMap
                                     (\i { field } ->
                                         --
@@ -85,7 +85,7 @@ codegenProgram program =
                                                 i
 
                                             after =
-                                                allFields - i - 1
+                                                fieldsCount - i - 1
                                         in
                                         { functionName = intrinsics.recordGetter field
                                         , args =
@@ -444,7 +444,7 @@ pattern p =
 intrinsics :
     { unit : String
     , char : String
-    , record : List String -> String
+    , record : { sortedFields : List String } -> String
     , recordGetter : String -> String
     , tupleEnd : String
     , extractedVar : String
@@ -452,13 +452,7 @@ intrinsics :
 intrinsics =
     { unit = "Cara.unit"
     , char = "Cara.char"
-    , record =
-        \fields ->
-            let
-                sortedFields =
-                    List.sort fields
-            in
-            "Cara.Rec." ++ String.join "." sortedFields
+    , record = \{ sortedFields } -> "Cara.Rec." ++ String.join "." sortedFields
     , recordGetter = \field -> "Cara.RecGet." ++ field
     , tupleEnd = "Cara.TupleEnd"
     , extractedVar =
@@ -566,11 +560,10 @@ exprToTerm expr =
 
            Needs an ADT definition and field getters to be generated elsewhere (see `recordsFile`).
         -}
-        AST.Record fields ->
+        AST.Record { sortedFields } ->
             HVM.App
-                { function = HVM.Var (intrinsics.record (List.map .field fields))
+                { function = HVM.Var (intrinsics.record { sortedFields = List.map .field sortedFields })
                 , args =
-                    fields
-                        |> List.sortBy .field
+                    sortedFields
                         |> List.map (.expr >> exprToTerm)
                 }

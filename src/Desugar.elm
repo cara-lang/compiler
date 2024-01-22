@@ -163,23 +163,25 @@ desugarExpr e =
 
         F.Record contents ->
             B.Record
-                (contents
-                    |> List.concatMap
-                        (\content ->
-                            case content of
-                                F.Field f ->
-                                    [ { field = f.field
-                                      , expr = desugarExpr f.expr
-                                      }
-                                    ]
+                { sortedFields =
+                    contents
+                        |> List.concatMap
+                            (\content ->
+                                case content of
+                                    F.Field f ->
+                                        [ { field = f.field
+                                          , expr = desugarExpr f.expr
+                                          }
+                                        ]
 
-                                F.Pun field ->
-                                    Debug.Extra.todo1 "desugar record content - field" field
+                                    F.Pun field ->
+                                        Debug.Extra.todo1 "desugar record content - field" field
 
-                                F.Spread id ->
-                                    Debug.Extra.todo1 "desugar record content - spread" id
-                        )
-                )
+                                    F.Spread id ->
+                                        Debug.Extra.todo1 "desugar record content - spread" id
+                            )
+                        |> List.sortBy .field
+                }
 
         F.UnaryOp uop expr ->
             Debug.Extra.todo1 "desugar unary op" ( uop, expr )
