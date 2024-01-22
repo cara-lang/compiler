@@ -169,7 +169,7 @@ term t =
                 |> String.replace "{NEXT}" (term next)
 
         Lam { name, body } ->
-            "@{NAME} {BODY}"
+            "(@{NAME} {BODY})"
                 |> String.replace "{NAME}" name
                 |> String.replace "{BODY}" (term body)
 

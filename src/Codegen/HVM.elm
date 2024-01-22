@@ -353,7 +353,7 @@ exprToTerm expr =
         AST.RecordGetter field ->
             let
                 argName =
-                    "record"
+                    "r"
             in
             HVM.Lam
                 { name = argName
