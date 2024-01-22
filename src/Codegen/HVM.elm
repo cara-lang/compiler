@@ -176,7 +176,7 @@ declToFile decl =
 
         AST.DLetStmt r ->
             { adts = []
-            , rules = patternToRules r
+            , rules = toplevelPatternToRules r
             }
 
         AST.DFunctionDef r ->
@@ -190,8 +190,8 @@ declToFile decl =
             }
 
 
-patternToRules : { lhs : AST.Pattern, expr : AST.Expr } -> List HVM.Rule
-patternToRules r =
+toplevelPatternToRules : { lhs : AST.Pattern, expr : AST.Expr } -> List HVM.Rule
+toplevelPatternToRules r =
     let
         rhsTerm =
             exprToTerm r.expr
@@ -229,7 +229,7 @@ patternToRules r =
             -}
             ctr.args
                 |> List.indexedMap
-                    (constructorArgPatternToRules
+                    (toplevelConstructorArgPatternToRules
                         (idToString ctr.id)
                         rhsTerm
                         (List.length ctr.args)
@@ -240,8 +240,8 @@ patternToRules r =
             Debug.Extra.todo1 "Codegen.HVM.patternToRules unhandled DLetStmt" r
 
 
-constructorArgPatternToRules : String -> HVM.Term -> Int -> Int -> AST.Pattern -> List HVM.Rule
-constructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
+toplevelConstructorArgPatternToRules : String -> HVM.Term -> Int -> Int -> AST.Pattern -> List HVM.Rule
+toplevelConstructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
     let
         {-
            Bar(a1,a2,a3,a4,a5,a6) (allArgs: 6)
