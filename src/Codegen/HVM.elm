@@ -12,6 +12,7 @@ import Debug.Extra
 import Env
 import HVM.AST as HVM
 import Id.Qualified exposing (QualifiedId)
+import Maybe.Extra
 import Set
 
 
@@ -21,8 +22,8 @@ codegenProgram program =
         maxTupleArity : Maybe Int
         maxTupleArity =
             program
-                |> AST.findExprs AST.isTuple
-                |> List.filterMap AST.tupleArity
+                |> AST.getExprs AST.getTuple
+                |> List.map List.length
                 |> List.maximum
 
         tupleGettersFile : Maybe HVM.File
@@ -45,11 +46,69 @@ codegenProgram program =
                         }
                     )
 
+        recordsFile : List HVM.File
+        recordsFile =
+            program
+                |> AST.getExprs AST.getRecord
+                |> List.map
+                    (\fields ->
+                        let
+                            recordName =
+                                intrinsics.record (List.map .field fields)
+
+                            allFields =
+                                List.length fields
+                        in
+                        { adts =
+                            [ { name = adtName recordName
+                              , constructors =
+                                    [ { name = recordName
+                                      , arity = List.length fields
+                                      }
+                                    ]
+                              }
+                            ]
+                        , rules =
+                            -- TODO: only generate those that are used (found across the program)?
+                            fields
+                                |> List.indexedMap
+                                    (\i { field } ->
+                                        --
+                                        {-
+                                           (Cara.RecGet.foo (Cara.Rec.bar.foo.quux * x *)) = x
+                                                                                     ^ (i: 1)
+                                           before: 1
+                                           after: 1
+                                        -}
+                                        let
+                                            before =
+                                                i
+
+                                            after =
+                                                allFields - i - 1
+                                        in
+                                        { functionName = intrinsics.recordGetter field
+                                        , args =
+                                            [ HVM.PCtr recordName
+                                                (List.concat
+                                                    [ List.repeat before HVM.PWildcard
+                                                    , [ HVM.PVar intrinsics.extractedVar ]
+                                                    , List.repeat after HVM.PWildcard
+                                                    ]
+                                                )
+                                            ]
+                                        , body = HVM.Var intrinsics.extractedVar
+                                        }
+                                    )
+                        }
+                    )
+
         initFile : HVM.File
         initFile =
-            [ tupleGettersFile
+            [ tupleGettersFile |> Maybe.Extra.toList
+            , recordsFile
             ]
-                |> List.filterMap identity
+                |> List.concat
                 |> List.foldr HVM.concatFiles preambleFile
     in
     program
@@ -60,7 +119,7 @@ codegenProgram program =
 preambleFile : HVM.File
 preambleFile =
     { adts =
-        [ { name = intrinsics.tupleEndType
+        [ { name = adtName intrinsics.tupleEnd
           , constructors =
                 [ { name = intrinsics.tupleEnd
                   , arity = 0
@@ -123,7 +182,14 @@ app name args =
             }
 
 
-{-| This should convert `(1,2,3,4)` into `(1,(2,(3,(4,Cara.TupleEnd))))`
+{-|
+
+     (1,2,3,4)
+     -->
+     (1,(2,(3,(4,Cara.TupleEnd))))
+
+Needs an ADT with the `Cara.TupleEnd` constructor to be generated elsewhere (see `preambleFile`).
+Needs tuple getters to be generated as well (see `tupleGettersFile`).
 
 PERF: would it be better to compile tuples to `data` of the given arity rather
 than to nested HVM 2-tuples?
@@ -226,6 +292,20 @@ toplevelPatternToRules r =
                         (List.length ctr.args)
                     )
                 |> List.concat
+
+        AST.PRecordFields fields ->
+            fields
+                |> List.map
+                    (\field ->
+                        { functionName = field
+                        , args = []
+                        , body =
+                            HVM.App
+                                { function = HVM.Var (intrinsics.recordGetter field)
+                                , args = [ rhsTerm ]
+                                }
+                        }
+                    )
 
         _ ->
             Debug.Extra.todo1 "Codegen.HVM.patternToRules unhandled DLetStmt" r
@@ -364,17 +444,23 @@ pattern p =
 intrinsics :
     { unit : String
     , char : String
+    , record : List String -> String
     , recordGetter : String -> String
     , tupleEnd : String
-    , tupleEndType : String
     , extractedVar : String
     }
 intrinsics =
     { unit = "Cara.unit"
     , char = "Cara.char"
+    , record =
+        \fields ->
+            let
+                sortedFields =
+                    List.sort fields
+            in
+            "Cara.Rec." ++ String.join "." sortedFields
     , recordGetter = \field -> "Cara.RecGet." ++ field
     , tupleEnd = "Cara.TupleEnd"
-    , tupleEndType = "Cara.TupleEnd.T"
     , extractedVar =
         {-
            When converting patterns to top-level rules, we're guaranteed we're
@@ -388,6 +474,20 @@ intrinsics =
         -}
         "x"
     }
+
+
+{-| Cara.TupleEnd
+-->
+Cara.TupleEnd.T
+
+Cara.Rec.foo.bar
+-->
+Cara.Rec.foo.bar.T
+
+-}
+adtName : String -> String
+adtName s =
+    s ++ ".T"
 
 
 exprToTerm : AST.Expr -> HVM.Term
@@ -451,16 +551,23 @@ exprToTerm expr =
             -- TODO this one should be easy: Data.U60.if or our own variant of it
             Debug.Extra.todo1 "exprToTerm if-then-else" r
 
+        {-
+           .foo
+           -->
+           Cara.RecGet.foo
+        -}
         AST.RecordGetter field ->
-            let
-                argName =
-                    "r"
-            in
-            HVM.Lam
-                { name = argName
-                , body =
-                    HVM.App
-                        { function = HVM.Var (intrinsics.recordGetter field)
-                        , args = [ HVM.Var argName ]
-                        }
+            HVM.Var (intrinsics.recordGetter field)
+
+        {-
+           {a:1, b:2}
+           -->
+           (Cara.Rec.a.b 1 2)
+
+           Needs an ADT definition and field getters to be generated elsewhere (see `recordsFile`).
+        -}
+        AST.Record fields ->
+            HVM.App
+                { function = HVM.Var (intrinsics.record (List.map .field fields))
+                , args = List.map (.expr >> exprToTerm) fields
                 }

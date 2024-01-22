@@ -4,9 +4,9 @@ module AST.Backend exposing
     , Pattern(..)
     , Program
     , TypeConstructor
-    , findExprs
-    , isTuple
-    , tupleArity
+    , getExprs
+    , getRecord
+    , getTuple
     )
 
 import Id.Qualified exposing (QualifiedId)
@@ -49,6 +49,12 @@ type Expr
         , body : Expr
         }
     | RecordGetter String
+    | Record
+        (List
+            { field : String
+            , expr : Expr
+            }
+        )
 
 
 type Decl
@@ -94,15 +100,16 @@ type alias TypeConstructor =
     }
 
 
-findExprs : (Expr -> Bool) -> Program -> List Expr
-findExprs pred decls =
+getExprs : (Expr -> Maybe a) -> Program -> List a
+getExprs fn decls =
     foldExprs
         (\expr acc ->
-            if pred expr then
-                expr :: acc
+            case fn expr of
+                Nothing ->
+                    acc
 
-            else
-                acc
+                Just data ->
+                    data :: acc
         )
         []
         decls
@@ -184,22 +191,25 @@ foldExpr fn init expr =
         RecordGetter _ ->
             self ()
 
-
-isTuple : Expr -> Bool
-isTuple e =
-    case e of
-        Tuple _ ->
-            True
-
-        _ ->
-            False
+        Record fields ->
+            selfAnd (List.map .expr fields)
 
 
-tupleArity : Expr -> Maybe Int
-tupleArity e =
+getTuple : Expr -> Maybe (List Expr)
+getTuple e =
     case e of
         Tuple xs ->
-            Just (List.length xs)
+            Just xs
+
+        _ ->
+            Nothing
+
+
+getRecord : Expr -> Maybe (List { field : String, expr : Expr })
+getRecord e =
+    case e of
+        Record fields ->
+            Just fields
 
         _ ->
             Nothing

@@ -1,7 +1,11 @@
-data Cara.TupleEnd.T = Cara.TupleEnd
-b = ((@r (Cara.RecGet.el1 r)) (0,(10,Cara.TupleEnd)))
+data Cara.Rec.b.c.T = (Cara.Rec.b.c a1 a2)
+
+a = (Cara.Rec.b.c 1 2)
+
+c = (Cara.RecGet.c a)
+b = (Cara.RecGet.b a)
+
 main = b
-(Cara.RecGet.el0 (x,*)) = x
-(Cara.RecGet.first (x,*)) = x
-(Cara.RecGet.el1 (*,(x,*))) = x
-(Cara.RecGet.second (*,(x,*))) = x
+
+(Cara.RecGet.c (Cara.Rec.b.c x *)) = x
+(Cara.RecGet.b (Cara.Rec.b.c * x)) = x
