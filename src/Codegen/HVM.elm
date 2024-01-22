@@ -111,15 +111,6 @@ tupleGetterPattern index childPattern =
         (HVM.PTup ( childPattern, HVM.PWildcard ))
 
 
-todoRule : String -> a -> List HVM.Rule
-todoRule message thing =
-    [ { functionName = message
-      , args = []
-      , body = HVM.Str <| Debug.toString thing
-      }
-    ]
-
-
 app : String -> List HVM.Term -> HVM.Term
 app name args =
     if List.isEmpty args then
@@ -240,6 +231,64 @@ toplevelPatternToRules r =
             Debug.Extra.todo1 "Codegen.HVM.patternToRules unhandled DLetStmt" r
 
 
+childPatterns : AST.Pattern -> List ( String, HVM.Pattern )
+childPatterns p =
+    case p of
+        {-
+           PWildcard simply doesn't result in a rule being emitted!
+
+           Bar(a,_,c) = someBar
+           --->
+           a = match someBar { ... }
+           c = match someBar { ... }
+        -}
+        AST.PWildcard ->
+            []
+
+        {-
+           PUnit similarly to PWildcard doesn't result in a rule being emitted!
+
+           It gets typechecked _before_ the codegen phase, and can result in a type error.
+
+           Bar(a,(),c) = someBar
+           --->
+           a = match someBar { ... }
+           c = match someBar { ... }
+        -}
+        AST.PUnit ->
+            []
+
+        {-
+           Bar(a) = someBar
+           -->
+           a = match someFoo {
+               (Bar x): x
+           }
+        -}
+        AST.PVar name ->
+            [ ( name, HVM.PVar intrinsics.extractedVar ) ]
+
+        {-
+           Bar((a,b,c,d)) = someBar
+           -->
+           a = match someBar { (Bar (x,*)): x }
+           b = match someBar { (Bar (*,(x,*))): x }
+           c = match someBar { (Bar (*,(*,(x,*)))): x }
+           d = match someBar { (Bar (*,(*,(*,(x,*))))): x }
+        -}
+        AST.PTuple xs ->
+            xs
+                |> List.indexedMap
+                    (\i x ->
+                        childPatterns x
+                            |> List.map (\( n, p2 ) -> ( n, tupleGetterPattern i p2 ))
+                    )
+                |> List.concat
+
+        _ ->
+            Debug.Extra.todo1 "childPatterns" p
+
+
 toplevelConstructorArgPatternToRules : String -> HVM.Term -> Int -> Int -> AST.Pattern -> List HVM.Rule
 toplevelConstructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
     let
@@ -284,95 +333,22 @@ toplevelConstructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
                     ]
                 )
     in
-    case argPattern of
-        {-
-           Bar(x) = someFoo
-           -->
-           x = match someFoo {
-               (Bar a): a
-           }
-        -}
-        AST.PVar name ->
-            [ { functionName = name
-              , args = []
-              , body =
+    childPatterns argPattern
+        |> List.map
+            (\( name, childPattern ) ->
+                { functionName = name
+                , args = []
+                , body =
                     HVM.Match
                         { value = rhsTerm
                         , arms =
-                            [ ( atCorrectIndex (HVM.PVar intrinsics.extractedVar)
+                            [ ( atCorrectIndex childPattern
                               , HVM.Var intrinsics.extractedVar
                               )
                             ]
                         }
-              }
-            ]
-
-        {-
-           B((b1,b2,b3,b4)) = b
-           -->
-           b1 = match b { (B (a,*)): a }
-           b2 = match b { (B (*,(a,*))): a }
-           b3 = match b { (B (*,(*,(a,*)))): a }
-           b4 = match b { (B (*,(*,(*,(a,*))))): a }
-
-           TODO this needs generalizing with the above - some kind of recursive function
-        -}
-        AST.PTuple elements ->
-            elements
-                |> List.indexedMap
-                    (\elIndex elPattern ->
-                        -- TODO this should get generalized - recurse somehow?
-                        case elPattern of
-                            AST.PVar name ->
-                                { functionName = name
-                                , args = []
-                                , body =
-                                    HVM.Match
-                                        { value = rhsTerm
-                                        , arms =
-                                            [ ( atCorrectIndex
-                                                    (tupleGetterPattern
-                                                        elIndex
-                                                        -- TODO this below should be childPattern, that we get
-                                                        -- from calling `pattern` or something on `elPattern`
-                                                        (HVM.PVar intrinsics.extractedVar)
-                                                    )
-                                              , HVM.Var intrinsics.extractedVar
-                                              )
-                                            ]
-                                        }
-                                }
-
-                            _ ->
-                                Debug.Extra.todo1 "constructorArgPatternToRules PTuple non-PVar" ( argIndex, argPattern )
-                    )
-
-        {-
-           PWildcard simply doesn't result in a rule being emitted!
-
-           Bar(a,_,c) = someBar
-           --->
-           a = match someBar { ... }
-           c = match someBar { ... }
-        -}
-        AST.PWildcard ->
-            []
-
-        {-
-           PUnit similarly to PWildcard doesn't result in a rule being emitted!
-
-           It gets typechecked _before_ the codegen phase, and can result in a type error.
-
-           Bar(a,(),c) = someBar
-           --->
-           a = match someBar { ... }
-           c = match someBar { ... }
-        -}
-        AST.PUnit ->
-            []
-
-        _ ->
-            Debug.Extra.todo1 "constructorArgPatternToRules" ( argIndex, argPattern )
+                }
+            )
 
 
 pattern : AST.Pattern -> HVM.Pattern
@@ -400,8 +376,16 @@ intrinsics =
     , tupleEnd = "Cara.TupleEnd"
     , tupleEndType = "Cara.TupleEnd.T"
     , extractedVar =
-        -- TODO we need to figure out a safe extracted var by looking at the compiled Program
-        -- The hardcoded "x" won't be safe if the user defines a `x` variable
+        {-
+           When converting patterns to top-level rules, we're guaranteed we're
+           only dealing with a single part of the overall pattern.
+
+           Thus we only need a single `x` for the `match term { (... x ...): x }`,
+           the rest are going to be `*`s.
+
+           TODO we need to figure out a safe string by looking at the compiled Program.
+           The hardcoded "x" won't be safe if the user defines a `x` variable.
+        -}
         "x"
     }
 
