@@ -347,6 +347,17 @@ constructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
                                 Debug.Extra.todo1 "constructorArgPatternToRules PTuple non-PVar" ( argIndex, argPattern )
                     )
 
+        {-
+           PWildcard simply doesn't result in a rule being emitted!
+
+           Bar(a,_,c) = someBar
+           --->
+           a = match someBar { ... }
+           c = match someBar { ... }
+        -}
+        AST.PWildcard ->
+            []
+
         _ ->
             Debug.Extra.todo1 "constructorArgPatternToRules" ( argIndex, argPattern )
 

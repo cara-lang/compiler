@@ -1,12 +1,13 @@
-data Cara.TupleEnd.T = Cara.TupleEnd
-
 data A = (A1 a1 a2 a3 a4)
-
+data Cara.TupleEnd.T = Cara.TupleEnd
 a = (A1 1 2 3 4)
-
-a0 = match a { (A1 x * * *): x }
-a1 = match a { (A1 * x * *): x }
-a2 = match a { (A1 * * x *): x }
-a3 = match a { (A1 * * * x): x }
-
-main = (a0,(a1,(a2,(a3,Cara.TupleEnd))))
+a0 = match a {
+    (A1 x * * *): x
+}
+a2 = match a {
+    (A1 * * x *): x
+}
+a3 = match a {
+    (A1 * * * x): x
+}
+main = (a0,(a2,(a3,Cara.TupleEnd)))
