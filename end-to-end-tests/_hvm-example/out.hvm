@@ -1,36 +1,12 @@
-data A = A1
-data B = (B1 a1)
-a1 = A1
-a2 = A1
-b1 = (B1 (1,(2,(3,(4,Cara.tupleEnd)))))
-b2 = (B1 (4,(5,(6,(7,Cara.tupleEnd)))))
-b1Tuple = match b1 {
-    (B1 a): a
-}
-b1a1 = ((@r (Cara.RecGet.el1 r)) b1Tuple)
-b1a2 = ((@r (Cara.RecGet.first r)) b1Tuple)
-b2a = match b2 {
-    (B1 (a,*)): a
-}
-b2b = match b2 {
-    (B1 (*,(a,*))): a
-}
-b2c = match b2 {
-    (B1 (*,(*,(a,*)))): a
-}
-b2d = match b2 {
-    (B1 (*,(*,(*,(a,*))))): a
-}
-main = (b1a1,(b1a2,(b2a,(b2b,(b2c,(b2d,Cara.tupleEnd))))))
-(Cara.RecGet.el0 (a,*)) = a
-(Cara.RecGet.first (a,*)) = a
-(Cara.RecGet.el1 (*,(a,*))) = a
-(Cara.RecGet.second (*,(a,*))) = a
-(Cara.RecGet.el2 (*,(*,(a,*)))) = a
-(Cara.RecGet.third (*,(*,(a,*)))) = a
-(Cara.RecGet.el3 (*,(*,(*,(a,*))))) = a
-(Cara.RecGet.fourth (*,(*,(*,(a,*))))) = a
-(Cara.RecGet.el4 (*,(*,(*,(*,(a,*)))))) = a
-(Cara.RecGet.fifth (*,(*,(*,(*,(a,*)))))) = a
-(Cara.RecGet.el5 (*,(*,(*,(*,(*,(a,*))))))) = a
-(Cara.RecGet.sixth (*,(*,(*,(*,(*,(a,*))))))) = a
+data Cara.TupleEnd.T = Cara.TupleEnd
+
+data A = (A1 a1 a2 a3 a4)
+
+a = (A1 1 2 3 4)
+
+a0 = match a { (A1 x * * *): x }
+a1 = match a { (A1 * x * *): x }
+a2 = match a { (A1 * * x *): x }
+a3 = match a { (A1 * * * x): x }
+
+main = (a0,(a1,(a2,(a3,Cara.TupleEnd))))

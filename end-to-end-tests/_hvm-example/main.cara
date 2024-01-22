@@ -1,17 +1,7 @@
-type A = A1
+type A = A1(Int,Int,Int,Int)
 
-a1 = A1
-a2 = A1
+a = A1(1,2,3,4)
 
-type B = B1((Int,Int,Int,Int))
+A1(a0,a1,a2,a3) = a
 
-b1 = B1((1,2,3,4))
-b2 = B1((4,5,6,7))
-
-B1(b1Tuple) = b1
-b1a1 = b1Tuple.el1
-b1a2 = b1Tuple.first
-
-B1((b2a,b2b,b2c,b2d)) = b2
-
-main = (b1a1,b1a2,b2a,b2b,b2c,b2d)
+main = (a0,a1,a2,a3)
