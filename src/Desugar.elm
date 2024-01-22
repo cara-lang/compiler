@@ -237,7 +237,7 @@ desugarExpr e =
                         revButLast
 
         F.RecordGetter getter ->
-            Debug.Extra.todo1 "desugar record getter" getter
+            B.RecordGetter getter
 
         F.If { cond, then_, else_ } ->
             B.If

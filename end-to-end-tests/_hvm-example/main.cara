@@ -1,7 +1,7 @@
-type A = A1((Int,Int,Int,Int),Int)
+//a = { b: 1, c: 2 }
+//
+//{b,c} = a
 
-a = A1((1,2,3,4),5)
+b = .el1((0,10))
 
-A1((a0,a1,a2,a3),b) = a
-
-main = (a0,a1,a2,a3,b)
+main = b
