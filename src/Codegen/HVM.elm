@@ -231,8 +231,8 @@ toplevelPatternToRules r =
             Debug.Extra.todo1 "Codegen.HVM.patternToRules unhandled DLetStmt" r
 
 
-childPatterns : AST.Pattern -> List ( String, HVM.Pattern )
-childPatterns p =
+extractedValues : AST.Pattern -> List ( String, HVM.Pattern )
+extractedValues p =
     case p of
         {-
            PWildcard simply doesn't result in a rule being emitted!
@@ -280,13 +280,13 @@ childPatterns p =
             xs
                 |> List.indexedMap
                     (\i x ->
-                        childPatterns x
+                        extractedValues x
                             |> List.map (\( n, p2 ) -> ( n, tupleGetterPattern i p2 ))
                     )
                 |> List.concat
 
         _ ->
-            Debug.Extra.todo1 "childPatterns" p
+            Debug.Extra.todo1 "extractedValues" p
 
 
 toplevelConstructorArgPatternToRules : String -> HVM.Term -> Int -> Int -> AST.Pattern -> List HVM.Rule
@@ -333,16 +333,16 @@ toplevelConstructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
                     ]
                 )
     in
-    childPatterns argPattern
+    extractedValues argPattern
         |> List.map
-            (\( name, childPattern ) ->
+            (\( name, extractedValue ) ->
                 { functionName = name
                 , args = []
                 , body =
                     HVM.Match
                         { value = rhsTerm
                         , arms =
-                            [ ( atCorrectIndex childPattern
+                            [ ( atCorrectIndex extractedValue
                               , HVM.Var intrinsics.extractedVar
                               )
                             ]
