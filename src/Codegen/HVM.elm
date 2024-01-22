@@ -358,6 +358,19 @@ constructorArgPatternToRules ctrId rhsTerm allArgs argIndex argPattern =
         AST.PWildcard ->
             []
 
+        {-
+           PUnit similarly to PWildcard doesn't result in a rule being emitted!
+
+           It gets typechecked _before_ the codegen phase, and can result in a type error.
+
+           Bar(a,(),c) = someBar
+           --->
+           a = match someBar { ... }
+           c = match someBar { ... }
+        -}
+        AST.PUnit ->
+            []
+
         _ ->
             Debug.Extra.todo1 "constructorArgPatternToRules" ( argIndex, argPattern )
 
