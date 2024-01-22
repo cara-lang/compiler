@@ -161,15 +161,52 @@ declToFile decl =
 
                     AST.PConstructor ctr ->
                         {- Here we blindly assume the constructor is a singleton
-                           one (type Foo = Bar(Int,Int)) and so it should allow
+                           one (type Foo = Bar(Int)) and so it should allow
                            the `Bar(a,b) = someFoo` destructuring.
 
                            Desugar phase should have caught this if it's not.
+                           If it's not, the HVM file will not compile as HVM
+                           also does exhaustive checking.
                         -}
-                        { functionName = Debug.Extra.todo1 "declToFile DLetStmt PConstructor" ctr
-                        , args = Debug.Extra.todo1 "declToFile DLetStmt PConstructor" ctr
-                        , body = Debug.Extra.todo1 "declToFile DLetStmt PConstructor" ctr
-                        }
+                        case ctr.args of
+                            [ AST.PVar name ] ->
+                                {-
+                                   Bar(x) = someFoo
+                                   -->
+                                   x = match someFoo {
+                                       (Bar a): a
+                                   }
+                                -}
+                                let
+                                    extractedVar =
+                                        "a"
+                                in
+                                { functionName = name
+                                , args = []
+                                , body =
+                                    HVM.Match
+                                        { value = exprToTerm r.expr
+                                        , arms =
+                                            [ ( HVM.PCtr
+                                                    (idToString ctr.id)
+                                                    [ HVM.PVar extractedVar ]
+                                              , HVM.Var extractedVar
+                                              )
+                                            ]
+                                        }
+                                }
+
+                            {- TODO translate:
+
+                               B1((b2a,b2b,b2c,b2d)) = b2
+                               -->
+                               b2a = match b2 { (B1 (a,*)): a }
+                               b2b = match b2 { (B1 (*,(a,*))): a }
+                               b2c = match b2 { (B1 (*,(*,(a,*)))): a }
+                               b2d = match b2 { (B1 (*,(*,(*,(a,*))))): a }
+                            -}
+                            _ ->
+                                Debug.Extra.todo1 "Codegen.HVM.declToFile DLetStmt PConstructor" ctr
 
                     _ ->
                         Debug.Extra.todo1 "Codegen.HVM.declToFile unhandled DLetStmt" r

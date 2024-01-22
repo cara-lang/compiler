@@ -16,10 +16,13 @@ data Cara.TupleEnd.T = Cara.TupleEnd
 b1 = (B1 (1,(2,(3,(4,Cara.TupleEnd)))))
 b2 = (B1 (4,(5,(6,(7,Cara.TupleEnd)))))
 
-b1Tuple = match b1 {
-  (B1 a): a
-}
+b1Tuple = match b1 { (B1 a): a }
 b1a1 = (Cara.RecGet.el1 b1Tuple)
 b1a2 = (Cara.RecGet.el2 b1Tuple)
 
-main = (b1a1, b1a2)
+b2a = match b2 { (B1 (a,*)): a }
+b2b = match b2 { (B1 (*,(a,*))): a }
+b2c = match b2 { (B1 (*,(*,(a,*)))): a }
+b2d = match b2 { (B1 (*,(*,(*,(a,*))))): a }
+
+main = (b1a1,(b1a2,(b2a,(b2b,(b2c,b2d)))))
