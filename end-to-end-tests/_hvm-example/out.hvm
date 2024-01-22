@@ -5,7 +5,9 @@ a = (Cara.Rec.b.c 1 2)
 c = (Cara.RecGet.c a)
 b = (Cara.RecGet.b a)
 
-main = b
+getter = Cara.RecGet.c
+
+main = (getter a)
 
 (Cara.RecGet.c (Cara.Rec.b.c x *)) = x
 (Cara.RecGet.b (Cara.Rec.b.c * x)) = x

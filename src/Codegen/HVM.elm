@@ -569,5 +569,8 @@ exprToTerm expr =
         AST.Record fields ->
             HVM.App
                 { function = HVM.Var (intrinsics.record (List.map .field fields))
-                , args = List.map (.expr >> exprToTerm) fields
+                , args =
+                    fields
+                        |> List.sortBy .field
+                        |> List.map (.expr >> exprToTerm)
                 }

@@ -2,4 +2,5 @@ a = { c: 1, b: 2 }
 
 {c,b} = a
 
-main = b
+getter = .c
+main = getter(a)
