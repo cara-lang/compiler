@@ -51,6 +51,11 @@ codegenProgram program =
         |> List.foldr HVM.concatFiles initFile
 
 
+extractedVar : String
+extractedVar =
+    "a"
+
+
 {-|
 
     (Cara.GetRec.el1    (a,*))     = a
@@ -61,29 +66,30 @@ codegenProgram program =
 -}
 tupleGetterDef : Int -> String -> HVM.Rule
 tupleGetterDef index field =
-    let
-        extractedVar =
-            "a"
+    { functionName = intrinsics.recordGetter field
+    , args = [ tupleGetterPattern index ]
+    , body = HVM.Var extractedVar
+    }
 
-        -- index 0: (a,*)
-        --          PTup (PVar extractedVar, PWildcard)
-        -- index 1: (*,(a,*))
-        --          PTup (PWildcard, PTup (PVar extractedVar, PWildcard))
-        -- index 2: (*,(*,(a,*)))
-        --          PTup (PWildcard, PTup (PWildcard, PTup (PVar extractedVar, PWildcard)))
+
+{-| index 0: (a,_)
+PTup (PVar "a", PWildcard)
+index 1: (_,(a,_))
+PTup (PWildcard, PTup (PVar "a", PWildcard))
+index 2: (_,(_,(a,_)))
+PTup (PWildcard, PTup (PWildcard, PTup (PVar "a", PWildcard)))
+-}
+tupleGetterPattern : Int -> HVM.Pattern
+tupleGetterPattern index =
+    let
         wrap : HVM.Pattern -> HVM.Pattern
         wrap p =
             HVM.PTup ( HVM.PWildcard, p )
     in
-    { functionName = intrinsics.recordGetter field
-    , args =
-        [ Basics.Extra.doNTimes
-            index
-            wrap
-            (HVM.PTup ( HVM.PVar extractedVar, HVM.PWildcard ))
-        ]
-    , body = HVM.Var extractedVar
-    }
+    Basics.Extra.doNTimes
+        index
+        wrap
+        (HVM.PTup ( HVM.PVar extractedVar, HVM.PWildcard ))
 
 
 todoRule : String -> a -> List HVM.Rule
@@ -152,12 +158,13 @@ declToFile decl =
         AST.DLetStmt r ->
             { adts = []
             , rules =
-                [ case r.lhs of
+                case r.lhs of
                     AST.PVar name ->
-                        { functionName = name
-                        , args = []
-                        , body = exprToTerm r.expr
-                        }
+                        [ { functionName = name
+                          , args = []
+                          , body = exprToTerm r.expr
+                          }
+                        ]
 
                     AST.PConstructor ctr ->
                         {- Here we blindly assume the constructor is a singleton
@@ -167,6 +174,14 @@ declToFile decl =
                            Desugar phase should have caught this if it's not.
                            If it's not, the HVM file will not compile as HVM
                            also does exhaustive checking.
+
+                           TODO do something general for the patterns inside the constructor, like:
+
+                               patternsToRules
+                                   { patterns = ctr.args
+                                   , ctrId = ctr.id
+                                   , value = r.expr
+                                   }
                         -}
                         case ctr.args of
                             [ AST.PVar name ] ->
@@ -177,40 +192,66 @@ declToFile decl =
                                        (Bar a): a
                                    }
                                 -}
-                                let
-                                    extractedVar =
-                                        "a"
-                                in
-                                { functionName = name
-                                , args = []
-                                , body =
-                                    HVM.Match
-                                        { value = exprToTerm r.expr
-                                        , arms =
-                                            [ ( HVM.PCtr
-                                                    (idToString ctr.id)
-                                                    [ HVM.PVar extractedVar ]
-                                              , HVM.Var extractedVar
-                                              )
-                                            ]
-                                        }
-                                }
+                                [ { functionName = name
+                                  , args = []
+                                  , body =
+                                        HVM.Match
+                                            { value = exprToTerm r.expr
+                                            , arms =
+                                                [ ( HVM.PCtr
+                                                        (idToString ctr.id)
+                                                        [ HVM.PVar extractedVar ]
+                                                  , HVM.Var extractedVar
+                                                  )
+                                                ]
+                                            }
+                                  }
+                                ]
 
-                            {- TODO translate:
-
+                            {-
                                B1((b2a,b2b,b2c,b2d)) = b2
                                -->
                                b2a = match b2 { (B1 (a,*)): a }
                                b2b = match b2 { (B1 (*,(a,*))): a }
                                b2c = match b2 { (B1 (*,(*,(a,*)))): a }
                                b2d = match b2 { (B1 (*,(*,(*,(a,*))))): a }
+
+                               TODO this needs generalizing with the above - some kind of recursive function
                             -}
+                            [ AST.PTuple ps ] ->
+                                ps
+                                    |> List.indexedMap
+                                        (\index p ->
+                                            case p of
+                                                AST.PVar name ->
+                                                    { functionName = name
+                                                    , args = []
+                                                    , body =
+                                                        HVM.Match
+                                                            { value = exprToTerm r.expr
+                                                            , arms =
+                                                                [ ( HVM.PCtr
+                                                                        (idToString ctr.id)
+                                                                        [ {- TODO this is the part that differs from above - guess if we want to generalize
+                                                                             this, we need to hold this path (PVar vs PTuple>PVar)?
+                                                                          -}
+                                                                          tupleGetterPattern index
+                                                                        ]
+                                                                  , HVM.Var extractedVar
+                                                                  )
+                                                                ]
+                                                            }
+                                                    }
+
+                                                _ ->
+                                                    Debug.Extra.todo1 "Codegen.HVM.declToFile DLetStmt PConstructor PTuple non-PVar" ( ctr, p )
+                                        )
+
                             _ ->
                                 Debug.Extra.todo1 "Codegen.HVM.declToFile DLetStmt PConstructor" ctr
 
                     _ ->
                         Debug.Extra.todo1 "Codegen.HVM.declToFile unhandled DLetStmt" r
-                ]
             }
 
         AST.DFunctionDef r ->
