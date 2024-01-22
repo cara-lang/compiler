@@ -1,0 +1,2 @@
+*.cara linguist-language=haskell
+*.hvm linguist-language=haskell
