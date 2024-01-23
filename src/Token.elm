@@ -23,6 +23,7 @@ module Token exposing
     , isQualifier
     , isString
     , isUpperName
+    , toDebugString
     , toString
     )
 
@@ -467,6 +468,13 @@ getHole type_ =
 
         _ ->
             Nothing
+
+
+toDebugString : Token -> String
+toDebugString t =
+    "({LOC}) {TYPE}"
+        |> String.replace "{LOC}" (Loc.toString t.loc)
+        |> String.replace "{TYPE}" (toString t.type_)
 
 
 toString : Type -> String

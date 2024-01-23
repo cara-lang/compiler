@@ -65,7 +65,7 @@ logLexed =
         (\ts ->
             let
                 _ =
-                    ts |> List.reverse |> List.map (.type_ >> Debug.log "lexed")
+                    ts |> List.reverse |> List.map (Token.toDebugString >> Debug.log "lexed")
             in
             ts
         )
