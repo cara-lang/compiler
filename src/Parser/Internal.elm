@@ -1,10 +1,10 @@
 module Parser.Internal exposing
     ( Parser
-    , succeed, fail
+    , succeed, fail, failUnrecoverably
     , map, map2, andThen, skip, keep
     , many, manyUntilEOF
     , separatedList, separatedNonemptyList
-    , maybe, butNot, butNot_
+    , maybe, butNot, butNot_, disallowed
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
@@ -17,11 +17,11 @@ module Parser.Internal exposing
 {-|
 
 @docs Parser
-@docs succeed, fail
+@docs succeed, fail, failUnrecoverably
 @docs map, map2, andThen, skip, keep
 @docs many, manyUntilEOF
 @docs separatedList, separatedNonemptyList
-@docs maybe, butNot, butNot_
+@docs maybe, butNot, butNot_, disallowed
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
 @docs token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
@@ -38,8 +38,20 @@ import Loc exposing (Loc)
 import Token exposing (Token, Type(..))
 
 
+type ErrorSeverity
+    = RecoverableError
+    | UnrecoverableError
+
+
 type alias Parser a =
-    Zipper Token -> Result ( Loc, ParserError ) ( a, Zipper Token )
+    Zipper Token
+    ->
+        Result
+            ( Loc
+            , ParserError
+            , ErrorSeverity
+            )
+            ( a, Zipper Token )
 
 
 type alias InfixParser a =
@@ -73,9 +85,30 @@ fail err =
     \tokens -> fail_ tokens err
 
 
-fail_ : Zipper Token -> ParserError -> Result ( Loc, ParserError ) a
+fail_ : Zipper Token -> ParserError -> Result ( Loc, ParserError, ErrorSeverity ) a
 fail_ tokens err =
-    Err ( (Zipper.current tokens).loc, err )
+    Err
+        ( (Zipper.current tokens).loc
+        , err
+        , RecoverableError
+        )
+
+
+{-| Bails out of any `oneOf`s.
+Reports error directly to user.
+-}
+failUnrecoverably : ParserError -> Parser a
+failUnrecoverably err =
+    \tokens -> failUnrecoverably_ tokens err
+
+
+failUnrecoverably_ : Zipper Token -> ParserError -> Result ( Loc, ParserError, ErrorSeverity ) a
+failUnrecoverably_ tokens err =
+    Err
+        ( (Zipper.current tokens).loc
+        , err
+        , UnrecoverableError
+        )
 
 
 map : (a -> b) -> Parser a -> Parser b
@@ -397,7 +430,7 @@ oneOfNoncommited : List (Parser a) -> Parser a
 oneOfNoncommited noncommited =
     \tokens ->
         let
-            go : Maybe ( Loc, ParserError ) -> List (Parser a) -> Result ( Loc, ParserError ) ( a, Zipper Token )
+            go : Maybe ( Loc, ParserError ) -> List (Parser a) -> Result ( Loc, ParserError, ErrorSeverity ) ( a, Zipper Token )
             go furthestError parsers =
                 case parsers of
                     [] ->
@@ -410,7 +443,7 @@ oneOfNoncommited noncommited =
 
                     parser :: rest ->
                         case parser tokens of
-                            Err ( newLoc, err ) ->
+                            Err ( newLoc, err, RecoverableError ) ->
                                 let
                                     newFurthestError : ( Loc, ParserError )
                                     newFurthestError =
@@ -427,6 +460,9 @@ oneOfNoncommited noncommited =
                                                     ( oldLoc, oldErr )
                                 in
                                 go (Just newFurthestError) rest
+
+                            (Err ( _, _, UnrecoverableError )) as err ->
+                                err
 
                             Ok ok ->
                                 Ok ok
@@ -631,6 +667,12 @@ butNot_ disallowedPred err parser =
                     else
                         Ok ( value, newTokens )
                 )
+
+
+disallowed : (a -> ParserError) -> Parser a -> Parser b
+disallowed err parser =
+    parser
+        |> andThen (\a -> failUnrecoverably (err a))
 
 
 peekToken : Parser Token.Type

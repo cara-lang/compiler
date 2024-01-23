@@ -9,7 +9,7 @@ module Error exposing
     , title
     )
 
-import AST.Frontend as AST exposing (BinaryOp, Pattern, UnaryOp)
+import AST.Frontend as F
 import Id exposing (Id)
 import Loc exposing (Loc)
 import Token
@@ -74,6 +74,7 @@ type ParserError
     | UnaryOpAnnotationNotFn1
     | UnfinishedStringInterpolation
     | CouldntLexInsideStringInterpolation ( Loc, LexerError )
+    | UnusedExpression F.Expr
 
 
 type InterpreterError
@@ -91,7 +92,7 @@ type InterpreterError
     | PatternMismatch
     | NoCaseBranchMatched
     | MultipleSpreadPatterns
-    | PatternDidNotMatch ( Pattern, Value )
+    | PatternDidNotMatch ( F.Pattern, Value )
     | RecordFieldNotFound String
     | EffectfulStmtInPureBlock_
     | UnnecessaryBang
@@ -101,8 +102,8 @@ type InterpreterError
     | AccessingMissingTupleElement String
     | SpreadingNonRecord
     | EquatingNonequatable
-    | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
-    | UnknownUnaryOpOverload ( UnaryOp, Value )
+    | UnknownBinaryOpOverload ( Value, F.BinaryOp, Value )
+    | UnknownUnaryOpOverload ( F.UnaryOp, Value )
     | UnexpectedArgument Value
 
 
@@ -263,6 +264,9 @@ title error =
                 CouldntLexInsideStringInterpolation _ ->
                     "Couldn't lex inside string interpolation"
 
+                UnusedExpression _ ->
+                    "Unused expression"
+
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of
                 VarNotFound id ->
@@ -303,7 +307,7 @@ title error =
 
                 PatternDidNotMatch ( pattern, value ) ->
                     "Pattern did not match: ({PATTERN}, {VALUE})"
-                        |> String.replace "{PATTERN}" (AST.patternToString pattern)
+                        |> String.replace "{PATTERN}" (F.patternToString pattern)
                         |> String.replace "{VALUE}" (Value.toInspectString value)
 
                 RecordFieldNotFound field ->
@@ -336,12 +340,12 @@ title error =
                 UnknownBinaryOpOverload ( left, op, right ) ->
                     "Unknown binary op: {LEFT}, {OP}, {RIGHT}"
                         |> String.replace "{LEFT}" (Value.toInspectString left)
-                        |> String.replace "{OP}" (AST.binaryOp op)
+                        |> String.replace "{OP}" (F.binaryOp op)
                         |> String.replace "{RIGHT}" (Value.toInspectString right)
 
                 UnknownUnaryOpOverload ( op, arg ) ->
                     "Unknown unary op: {OP}, {ARG}"
-                        |> String.replace "{OP}" (AST.unaryOp op)
+                        |> String.replace "{OP}" (F.unaryOp op)
                         |> String.replace "{ARG}" (Value.toInspectString arg)
 
                 UnexpectedArgument value ->
@@ -530,6 +534,9 @@ code error =
                 CouldntLexInsideStringInterpolation _ ->
                     -- TODO
                     "EXXXX"
+
+                UnusedExpression _ ->
+                    "E0011"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of

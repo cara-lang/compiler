@@ -28,6 +28,7 @@ parseWith parser tokensList =
         Just tokens ->
             parser tokens
                 |> Result.map Tuple.first
+                |> Result.mapError (\( loc, err, _ ) -> ( loc, err ))
 
 
 program : Parser AST.Program
@@ -439,6 +440,22 @@ unaryOperatorAnnotationStmt =
         |> Parser.andThen identity
 
 
+{-|
+
+    : expr
+    = 123
+
+    This will try to eat an expr, and fail if it succeeds in doing that.
+    Stand-alone pure expressions (not being bound to a name) are disallowed.
+    `E0011: Unused expression` should be raised.
+
+-}
+unusedExprStmt : Parser a
+unusedExprStmt =
+    expr
+        |> Parser.disallowed UnusedExpression
+
+
 binaryOperatorName : Parser BinaryOp
 binaryOperatorName =
     Parser.tokenData Token.getBacktickString
@@ -728,6 +745,7 @@ statement =
             , unaryOperatorDefStmt
             , binaryOperatorAnnotationStmt
             , unaryOperatorAnnotationStmt
+            , unusedExprStmt
             ]
         }
 
