@@ -5,7 +5,7 @@ import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 import registerPorts from './registerPorts.ts';
 
-const selectedTest = '_hvm-example';
+const selectedTest = null;
 
 ///////////////////////////////////////////
 

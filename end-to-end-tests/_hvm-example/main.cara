@@ -1,6 +1,0 @@
-a = { c: 1, b: 2 }
-
-{c,b} = a
-
-getter = .c
-main = getter(a)

@@ -375,9 +375,11 @@ interpretToplevelBangValue =
 interpretToplevelBangCall : Interpreter { fn : Expr, args : List Expr } Value
 interpretToplevelBangCall =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr ToplevelIO env fn) <| \env1 fnVal ->
-        Interpreter.do (Interpreter.traverse (interpretExpr ToplevelIO) env1 args) <| \env2 argVals ->
-        interpretCallVal ToplevelIO env2 ( fnVal, argVals )
+        Interpreter.do (interpretExpr ToplevelIO env fn) <|
+            \env1 fnVal ->
+                Interpreter.do (Interpreter.traverse (interpretExpr ToplevelIO) env1 args) <|
+                    \env2 argVals ->
+                        interpretCallVal ToplevelIO env2 ( fnVal, argVals )
 
 
 interpretIntrinsicCallValues : StmtMonad -> Interpreter ( Intrinsic, List Value ) Value
@@ -560,16 +562,18 @@ interpretLet stmtMonad =
     \env { lhs, expr } ->
         -- TODO interpret the modifier
         -- TODO interpret the type
-        Interpreter.do (interpretExpr stmtMonad env expr) <| \env1 value ->
-        Interpreter.do (interpretPattern stmtMonad env1 ( lhs, value )) <| \env2 envAdditions ->
-        case envAdditions of
-            Nothing ->
-                Outcome.fail <| PatternDidNotMatch ( lhs, value )
+        Interpreter.do (interpretExpr stmtMonad env expr) <|
+            \env1 value ->
+                Interpreter.do (interpretPattern stmtMonad env1 ( lhs, value )) <|
+                    \env2 envAdditions ->
+                        case envAdditions of
+                            Nothing ->
+                                Outcome.fail <| PatternDidNotMatch ( lhs, value )
 
-            Just additions ->
-                Outcome.succeed
-                    (addToEnv additions env2)
-                    ()
+                            Just additions ->
+                                Outcome.succeed
+                                    (addToEnv additions env2)
+                                    ()
 
 
 interpretToplevelLetBang :
@@ -584,20 +588,22 @@ interpretToplevelLetBang =
     \env { lhs, bang } ->
         -- TODO interpret the mod
         -- TODO interpret the type_
-        Interpreter.do (interpretToplevelBang env bang) <| \env2 value ->
-        Interpreter.do (unwrapIo ToplevelIO env2 value) <| \env3 valueInIo ->
-        interpretPattern ToplevelIO env3 ( lhs, valueInIo )
-            |> Outcome.mapBoth
-                (\env_ envAdditions ->
-                    case envAdditions of
-                        Nothing ->
-                            Debug.todo "Pattern didn't match the expr. TODO Report this as user error?"
+        Interpreter.do (interpretToplevelBang env bang) <|
+            \env2 value ->
+                Interpreter.do (unwrapIo ToplevelIO env2 value) <|
+                    \env3 valueInIo ->
+                        interpretPattern ToplevelIO env3 ( lhs, valueInIo )
+                            |> Outcome.mapBoth
+                                (\env_ envAdditions ->
+                                    case envAdditions of
+                                        Nothing ->
+                                            Debug.todo "Pattern didn't match the expr. TODO Report this as user error?"
 
-                        Just additions ->
-                            ( addToEnv additions env_
-                            , ()
-                            )
-                )
+                                        Just additions ->
+                                            ( addToEnv additions env_
+                                            , ()
+                                            )
+                                )
 
 
 {-| Returns (NEW) env additions, instead of the whole env.
@@ -705,43 +711,46 @@ interpretPattern stmtMonad =
                 case value of
                     VConstructor r ->
                         if r.id.name == id.name then
-                            Interpreter.do (interpretIdentifier stmtMonad env id) <| \env1 found ->
-                            let
-                                handleVConstructor : Interpreter { id : Id, args : List Value } (Maybe PatternAddition)
-                                handleVConstructor =
-                                    \envX vc ->
-                                        if vc == r then
-                                            let
-                                                pairs : List ( Pattern, Value )
-                                                pairs =
-                                                    List.map2 Tuple.pair args r.args
-                                            in
-                                            Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) envX pairs) <| \envX1 maybeAdditions ->
-                                            case Maybe.combine maybeAdditions of
-                                                Nothing ->
-                                                    Outcome.succeed envX1 Nothing
+                            Interpreter.do (interpretIdentifier stmtMonad env id) <|
+                                \env1 found ->
+                                    let
+                                        handleVConstructor : Interpreter { id : Id, args : List Value } (Maybe PatternAddition)
+                                        handleVConstructor =
+                                            \envX vc ->
+                                                if vc == r then
+                                                    let
+                                                        pairs : List ( Pattern, Value )
+                                                        pairs =
+                                                            List.map2 Tuple.pair args r.args
+                                                    in
+                                                    Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) envX pairs) <|
+                                                        \envX1 maybeAdditions ->
+                                                            case Maybe.combine maybeAdditions of
+                                                                Nothing ->
+                                                                    Outcome.succeed envX1 Nothing
 
-                                                Just additions ->
-                                                    Outcome.succeed envX1 (Just (ManyAdditions additions))
+                                                                Just additions ->
+                                                                    Outcome.succeed envX1 (Just (ManyAdditions additions))
 
-                                        else
-                                            Outcome.succeed envX Nothing
-                            in
-                            case found of
-                                VConstructor found_ ->
-                                    handleVConstructor env1 found_
-
-                                VClosure c ->
-                                    Interpreter.do (interpretCallVal stmtMonad env1 ( found, r.args )) <| \env2 result ->
-                                    case result of
+                                                else
+                                                    Outcome.succeed envX Nothing
+                                    in
+                                    case found of
                                         VConstructor found_ ->
-                                            handleVConstructor env2 found_
+                                            handleVConstructor env1 found_
+
+                                        VClosure c ->
+                                            Interpreter.do (interpretCallVal stmtMonad env1 ( found, r.args )) <|
+                                                \env2 result ->
+                                                    case result of
+                                                        VConstructor found_ ->
+                                                            handleVConstructor env2 found_
+
+                                                        _ ->
+                                                            Debug.todo <| "Unexpected result: " ++ Debug.toString result
 
                                         _ ->
-                                            Debug.todo <| "Unexpected result: " ++ Debug.toString result
-
-                                _ ->
-                                    Outcome.succeed env1 Nothing
+                                            Outcome.succeed env1 Nothing
 
                         else
                             Outcome.succeed env Nothing
@@ -811,13 +820,14 @@ interpretPatternTuple stmtMonad =
                 pairs =
                     List.map2 Tuple.pair ps vs
             in
-            Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env pairs) <| \env1 maybeAdditions ->
-            case Maybe.combine maybeAdditions of
-                Nothing ->
-                    Outcome.succeed env1 Nothing
+            Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env pairs) <|
+                \env1 maybeAdditions ->
+                    case Maybe.combine maybeAdditions of
+                        Nothing ->
+                            Outcome.succeed env1 Nothing
 
-                Just additions ->
-                    Outcome.succeed env1 (Just (ManyAdditions additions))
+                        Just additions ->
+                            Outcome.succeed env1 (Just (ManyAdditions additions))
 
 
 interpretPatternList : Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
@@ -922,9 +932,11 @@ interpretExpr stmtMonad =
 interpretCall : StmtMonad -> Interpreter { fn : Expr, args : List Expr } Value
 interpretCall stmtMonad =
     \env { fn, args } ->
-        Interpreter.do (interpretExpr stmtMonad env fn) <| \env1 fnVal ->
-        Interpreter.do (Interpreter.traverse (interpretExpr stmtMonad) env1 args) <| \env2 argVals ->
-        interpretCallVal stmtMonad env2 ( fnVal, argVals )
+        Interpreter.do (interpretExpr stmtMonad env fn) <|
+            \env1 fnVal ->
+                Interpreter.do (Interpreter.traverse (interpretExpr stmtMonad) env1 args) <|
+                    \env2 argVals ->
+                        interpretCallVal stmtMonad env2 ( fnVal, argVals )
 
 
 interpretCallVal : StmtMonad -> Interpreter ( Value, List Value ) Value
@@ -969,8 +981,9 @@ interpretCallVal stmtMonad =
                                 ( doableVals, valsRest ) =
                                     List.splitAt argsLength argVals
                             in
-                            Interpreter.do (interpretCallVal stmtMonad env ( fnVal, doableVals )) <| \env2 resultVal ->
-                            interpretCallVal stmtMonad env2 ( resultVal, valsRest )
+                            Interpreter.do (interpretCallVal stmtMonad env ( fnVal, doableVals )) <|
+                                \env2 resultVal ->
+                                    interpretCallVal stmtMonad env2 ( resultVal, valsRest )
 
                     GT ->
                         -- More args than values
@@ -985,18 +998,19 @@ interpretCallVal stmtMonad =
                                 r.args
                                     |> List.drop valsLength
                         in
-                        Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env availablePairs) <| \env2 maybeAdditions ->
-                        case Maybe.combine maybeAdditions of
-                            Nothing ->
-                                Outcome.fail PatternMismatch
+                        Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env availablePairs) <|
+                            \env2 maybeAdditions ->
+                                case Maybe.combine maybeAdditions of
+                                    Nothing ->
+                                        Outcome.fail PatternMismatch
 
-                            Just additions ->
-                                Outcome.succeed env2 <|
-                                    VClosure
-                                        { args = argsRest
-                                        , body = r.body
-                                        , env = List.foldl addToEnv r.env additions
-                                        }
+                                    Just additions ->
+                                        Outcome.succeed env2 <|
+                                            VClosure
+                                                { args = argsRest
+                                                , body = r.body
+                                                , env = List.foldl addToEnv r.env additions
+                                                }
 
                     EQ ->
                         let
@@ -1004,14 +1018,16 @@ interpretCallVal stmtMonad =
                             pairs =
                                 List.map2 Tuple.pair r.args argVals
                         in
-                        Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env pairs) <| \env2 maybeAdditions ->
-                        case Maybe.combine maybeAdditions of
-                            Nothing ->
-                                Outcome.fail PatternMismatch
+                        Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env pairs) <|
+                            \env2 maybeAdditions ->
+                                case Maybe.combine maybeAdditions of
+                                    Nothing ->
+                                        Outcome.fail PatternMismatch
 
-                            Just additions ->
-                                Interpreter.do (interpretExpr stmtMonad (List.foldl addToEnv r.env additions) r.body) <| \_ callResult ->
-                                Outcome.succeed env2 callResult
+                                    Just additions ->
+                                        Interpreter.do (interpretExpr stmtMonad (List.foldl addToEnv r.env additions) r.body) <|
+                                            \_ callResult ->
+                                                Outcome.succeed env2 callResult
 
             VIntrinsic intrinsic ->
                 interpretIntrinsicCallValues stmtMonad env ( intrinsic, argVals )
@@ -1035,8 +1051,9 @@ interpretBlock : Interpreter { stmts : List Stmt, ret : Expr } Value
 interpretBlock =
     -- TODO should we do this (enforce Pure), instead of grabbing the StmtMonad from the parent scope?
     \env { stmts, ret } ->
-        Interpreter.do (Interpreter.traverse (interpretStatement Pure) env stmts) <| \env1 _ ->
-        interpretExpr Pure env1 ret
+        Interpreter.do (Interpreter.traverse (interpretStatement Pure) env stmts) <|
+            \env1 _ ->
+                interpretExpr Pure env1 ret
 
 
 interpretEffectBlock : StmtMonad -> Interpreter { monadModule : List String, stmts : List Stmt, ret : BangOrExpr } Value
@@ -1183,8 +1200,9 @@ interpretToplevelBangOrExpr =
 interpretUnaryOpCall : StmtMonad -> Interpreter ( UnaryOp, Expr ) Value
 interpretUnaryOpCall stmtMonad =
     \env ( op, expr ) ->
-        Interpreter.do (interpretExpr stmtMonad env expr) <| \env1 val ->
-        interpretUnaryOpCallVal stmtMonad env1 ( op, val )
+        Interpreter.do (interpretExpr stmtMonad env expr) <|
+            \env1 val ->
+                interpretUnaryOpCallVal stmtMonad env1 ( op, val )
 
 
 interpretUnaryOpCallVal : StmtMonad -> Interpreter ( UnaryOp, Value ) Value
@@ -1235,9 +1253,11 @@ interpretUnaryOpCallUser stmtMonad finishWithUnknown =
 interpretBinaryOpCall : StmtMonad -> Interpreter ( Expr, BinaryOp, Expr ) Value
 interpretBinaryOpCall stmtMonad =
     \env ( left, op, right ) ->
-        Interpreter.do (interpretExpr stmtMonad env left) <| \env1 leftVal ->
-        Interpreter.do (interpretExpr stmtMonad env1 right) <| \env2 rightVal ->
-        interpretBinaryOpCallVal stmtMonad env2 ( leftVal, op, rightVal )
+        Interpreter.do (interpretExpr stmtMonad env left) <|
+            \env1 leftVal ->
+                Interpreter.do (interpretExpr stmtMonad env1 right) <|
+                    \env2 rightVal ->
+                        interpretBinaryOpCallVal stmtMonad env2 ( leftVal, op, rightVal )
 
 
 interpretBinaryOpCallVal : StmtMonad -> Interpreter ( Value, BinaryOp, Value ) Value
@@ -1431,16 +1451,17 @@ interpretBinaryOpCallUser stmtMonad finishWithUnknown =
 interpretRecordGet : StmtMonad -> Interpreter { record : Expr, field : String } Value
 interpretRecordGet stmtMonad =
     \env { record, field } ->
-        Interpreter.do (interpretExpr stmtMonad env record) <| \env1 recordVal ->
-        case recordVal of
-            VTuple values ->
-                interpretTupleGetDict env1 ( field, tupleToNumericAndWordyRecord values )
+        Interpreter.do (interpretExpr stmtMonad env record) <|
+            \env1 recordVal ->
+                case recordVal of
+                    VTuple values ->
+                        interpretTupleGetDict env1 ( field, tupleToNumericAndWordyRecord values )
 
-            VRecord fields ->
-                interpretRecordGetDict env1 ( field, fields )
+                    VRecord fields ->
+                        interpretRecordGetDict env1 ( field, fields )
 
-            _ ->
-                Outcome.fail CallingRecordGetOnNonRecord
+                    _ ->
+                        Outcome.fail CallingRecordGetOnNonRecord
 
 
 interpretRecordGetDict : Interpreter ( String, Dict String Value ) Value
@@ -1482,8 +1503,11 @@ isTupleGetter field =
 
         isWordyTupleGetter =
             Set.member field wordyTupleGetters
+
+        isMissingWordyTupleGetter =
+            Set.member field missingWordyTupleGetters
     in
-    isNumericTupleGetter || isWordyTupleGetter
+    isNumericTupleGetter || isWordyTupleGetter || isMissingWordyTupleGetter
 
 
 wordyTupleGetters : Set String
@@ -1491,6 +1515,22 @@ wordyTupleGetters =
     List.range 0 9
         |> List.filterMap tupleIndexToWordyField
         |> Set.fromList
+
+
+missingWordyTupleGetters : Set String
+missingWordyTupleGetters =
+    Set.fromList
+        [ "eleventh"
+        , "twelth"
+        , "thirteenth"
+        , "fourteenth"
+        , "fifteenth"
+        , "sixteenth"
+        , "seventeenth"
+        , "eighteenth"
+        , "ninteenth"
+        , "twentieth"
+        ]
 
 
 tupleIndexToWordyField : Int -> Maybe String
@@ -1654,33 +1694,35 @@ interpretConstructor stmtMonad =
 interpretIf : StmtMonad -> Interpreter { cond : Expr, then_ : Expr, else_ : Expr } Value
 interpretIf stmtMonad =
     \env { cond, then_, else_ } ->
-        Interpreter.do (interpretExpr stmtMonad env cond) <| \env1 cond_ ->
-        case cond_ of
-            VBool True ->
-                interpretExpr stmtMonad env1 then_
+        Interpreter.do (interpretExpr stmtMonad env cond) <|
+            \env1 cond_ ->
+                case cond_ of
+                    VBool True ->
+                        interpretExpr stmtMonad env1 then_
 
-            VBool False ->
-                interpretExpr stmtMonad env1 else_
+                    VBool False ->
+                        interpretExpr stmtMonad env1 else_
 
-            _ ->
-                Outcome.fail IfConditionNotBool
+                    _ ->
+                        Outcome.fail IfConditionNotBool
 
 
 interpretCase : StmtMonad -> Interpreter { subject : Expr, branches : List CaseBranch } Value
 interpretCase stmtMonad =
     \env { subject, branches } ->
-        Interpreter.do (interpretExpr stmtMonad env subject) <| \env1 subject_ ->
-        let
-            flatBranches : List ( Pattern, Expr )
-            flatBranches =
-                branches
-                    |> List.concatMap
-                        (\branch ->
-                            branch.orPatterns
-                                |> List.map (\pattern -> ( pattern, branch.body ))
-                        )
-        in
-        interpretCaseBranches stmtMonad env1 ( subject_, flatBranches )
+        Interpreter.do (interpretExpr stmtMonad env subject) <|
+            \env1 subject_ ->
+                let
+                    flatBranches : List ( Pattern, Expr )
+                    flatBranches =
+                        branches
+                            |> List.concatMap
+                                (\branch ->
+                                    branch.orPatterns
+                                        |> List.map (\pattern -> ( pattern, branch.body ))
+                                )
+                in
+                interpretCaseBranches stmtMonad env1 ( subject_, flatBranches )
 
 
 interpretCaseBranches : StmtMonad -> Interpreter ( Value, List ( Pattern, Expr ) ) Value
@@ -1691,17 +1733,18 @@ interpretCaseBranches stmtMonad =
                 Outcome.fail NoCaseBranchMatched
 
             ( pattern, body ) :: rest ->
-                Interpreter.do (interpretPattern stmtMonad env ( pattern, subject )) <| \env1 maybeAdditions ->
-                case maybeAdditions of
-                    Nothing ->
-                        interpretCaseBranches stmtMonad env ( subject, rest )
+                Interpreter.do (interpretPattern stmtMonad env ( pattern, subject )) <|
+                    \env1 maybeAdditions ->
+                        case maybeAdditions of
+                            Nothing ->
+                                interpretCaseBranches stmtMonad env ( subject, rest )
 
-                    Just additions ->
-                        let
-                            newEnv =
-                                addToEnv additions env1
-                        in
-                        interpretExpr stmtMonad newEnv body
+                            Just additions ->
+                                let
+                                    newEnv =
+                                        addToEnv additions env1
+                                in
+                                interpretExpr stmtMonad newEnv body
 
 
 interpretList : StmtMonad -> Interpreter (List Expr) Value
@@ -1743,16 +1786,17 @@ interpretRecordExprContent stmtMonad =
                     |> Outcome.map (\value -> [ ( field, value ) ])
 
             Spread id ->
-                Interpreter.do (interpretExpr stmtMonad env (Identifier id)) <| \env1 value ->
-                case value of
-                    VRecord fields ->
-                        Outcome.succeed env1 (Dict.toList fields)
+                Interpreter.do (interpretExpr stmtMonad env (Identifier id)) <|
+                    \env1 value ->
+                        case value of
+                            VRecord fields ->
+                                Outcome.succeed env1 (Dict.toList fields)
 
-                    VTuple values ->
-                        Outcome.succeed env1 (Dict.toList (tupleToNumericRecord values))
+                            VTuple values ->
+                                Outcome.succeed env1 (Dict.toList (tupleToNumericRecord values))
 
-                    _ ->
-                        Outcome.fail SpreadingNonRecord
+                            _ ->
+                                Outcome.fail SpreadingNonRecord
 
 
 interpretModule : Interpreter { mod : ModuleModifier, name : String, decls : List Decl } ()
@@ -1795,8 +1839,9 @@ interpretReadFile =
     \env arg ->
         case arg of
             VString filename ->
-                NeedsEffectMaybeStr (Effect.ReadFileMaybe { filename = filename }) <| \maybeStr ->
-                Outcome.succeed env maybeStr
+                NeedsEffectMaybeStr (Effect.ReadFileMaybe { filename = filename }) <|
+                    \maybeStr ->
+                        Outcome.succeed env maybeStr
 
             _ ->
                 Outcome.fail <| UnexpectedArgument arg
@@ -1811,8 +1856,9 @@ interpretWriteFile =
                     (\filename content ->
                         case ( filename, content ) of
                             ( VString filename_, VString content_ ) ->
-                                NeedsEffectBool (Effect.WriteFileMaybe { filename = filename_, content = content_ }) <| \bool ->
-                                Outcome.succeed env bool
+                                NeedsEffectBool (Effect.WriteFileMaybe { filename = filename_, content = content_ }) <|
+                                    \bool ->
+                                        Outcome.succeed env bool
 
                             _ ->
                                 Outcome.fail <| UnexpectedArgument arg

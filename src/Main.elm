@@ -97,7 +97,7 @@ init flags =
         Ok frontendProgram ->
             let
                 isCompilingToHVM =
-                    True
+                    False
             in
             if isCompilingToHVM then
                 case
