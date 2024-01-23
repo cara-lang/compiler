@@ -346,6 +346,9 @@ separatedNonemptyList config =
 
 
 {-| Doesn't advance the tokens stream.
+
+A more optimized/lazier variant of Parser.maybe?
+
 -}
 ifNextIs : Token.Type -> Parser a -> Parser (Maybe a)
 ifNextIs token_ parser =

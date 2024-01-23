@@ -87,7 +87,7 @@ init flags =
         astResult =
             flags.sourceCode
                 |> (Lexer.lex >> Result.mapError LexerError)
-                --|> logLexed
+                |> logLexed
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
     in
     case astResult of

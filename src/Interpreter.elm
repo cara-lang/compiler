@@ -806,7 +806,14 @@ interpretPattern stmtMonad =
                         Outcome.succeed env Nothing
 
             PAs _ _ ->
-                Debug.todo <| "interpret as-pattern: " ++ AST.patternToString pattern
+                Debug.Extra.todo1 "interpret as-pattern" (AST.patternToString pattern)
+
+            PTyped p _ ->
+                let
+                    _ =
+                        Debug.log "TODO do something about the type in a typed pattern" ()
+                in
+                interpretPattern stmtMonad env ( p, value )
 
 
 interpretPatternTuple : StmtMonad -> Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)

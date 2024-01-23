@@ -349,6 +349,9 @@ desugarPattern p =
         F.PBinaryOpDef r ->
             Debug.Extra.todo1 "uh... desugar PBinaryOpDef?" r
 
+        F.PTyped _ _ ->
+            Debug.Extra.todo1 "desugar typed pattern" p
+
 
 desugarBang : F.Bang -> Result DesugarError (List B.Decl)
 desugarBang bang =

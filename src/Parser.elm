@@ -839,25 +839,43 @@ letStatement =
 
 pattern : Parser Pattern
 pattern =
-    Parser.oneOf
-        { commited =
-            [ ( [ T LParen, T RParen ], unitPattern )
-            , ( [ P Token.isLowerName ], varPattern )
-            , ( [ P Token.isUpperName ], constructorPattern )
-            , ( [ P Token.isQualifier ], constructorPattern )
-            , ( [ P Token.isInt ], intPattern )
-            , ( [ P Token.isFloat ], floatPattern )
-            , ( [ T LParen ], tuplePattern )
-            , ( [ T LBracket ], listPattern )
-            , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
-            , ( [ T Token.Minus, P Token.isFloat ], negatedFloatPattern )
-            , ( [ T Underscore ], wildcardPattern )
-            , ( [ T DotDotDot ], listSpreadPattern )
-            , ( [ T LBrace, T DotDot ], recordSpreadPattern )
-            , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
-            ]
-        , noncommited = []
-        }
+    Parser.succeed
+        (\p mtype ->
+            case mtype of
+                Nothing ->
+                    p
+
+                Just type__ ->
+                    PTyped p type__
+        )
+        |> Parser.keep
+            (Parser.oneOf
+                { commited =
+                    [ ( [ T LParen, T RParen ], unitPattern )
+                    , ( [ P Token.isLowerName ], varPattern )
+                    , ( [ P Token.isUpperName ], constructorPattern )
+                    , ( [ P Token.isQualifier ], constructorPattern )
+                    , ( [ P Token.isInt ], intPattern )
+                    , ( [ P Token.isFloat ], floatPattern )
+                    , ( [ T LParen ], tuplePattern )
+                    , ( [ T LBracket ], listPattern )
+                    , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
+                    , ( [ T Token.Minus, P Token.isFloat ], negatedFloatPattern )
+                    , ( [ T Underscore ], wildcardPattern )
+                    , ( [ T DotDotDot ], listSpreadPattern )
+                    , ( [ T LBrace, T DotDot ], recordSpreadPattern )
+                    , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
+                    ]
+                , noncommited = []
+                }
+            )
+        |> Parser.keep
+            (Parser.ifNextIs Token.Colon
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token Token.Colon)
+                    |> Parser.keep type_
+                )
+            )
 
 
 {-|

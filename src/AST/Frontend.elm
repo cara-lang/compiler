@@ -24,6 +24,7 @@ module AST.Frontend exposing
     , isSpreadPattern
     , lambdaToString
     , patternToString
+    , typeToString
     , unaryOp
     )
 
@@ -99,6 +100,7 @@ type Pattern
       -}
     | PUnaryOpDef UnaryOp
     | PBinaryOpDef BinaryOp
+    | PTyped Pattern Type -- a: Int
 
 
 type Bang
@@ -352,6 +354,9 @@ isSpreadPattern pattern =
         PAs _ inner ->
             isSpreadPattern inner
 
+        PTyped p _ ->
+            isSpreadPattern p
+
         PUnit ->
             False
 
@@ -559,6 +564,11 @@ patternToString pattern =
         PBinaryOpDef _ ->
             "<BINARY OP DEF>"
 
+        PTyped p t ->
+            "({PATTERN} : {TYPE})"
+                |> String.replace "{PATTERN}" (patternToString p)
+                |> String.replace "{TYPE}" (typeToString t)
+
 
 recordExprContentToString : RecordExprContent -> String
 recordExprContentToString content =
@@ -684,3 +694,46 @@ spaces n =
 inspect : Program -> String
 inspect decls =
     Debug.Extra.prettyPrint decls
+
+
+typeToString : Type -> String
+typeToString t =
+    case t of
+        TNamed id ->
+            Id.toString id
+
+        TApplication { type_, args } ->
+            --List[a]
+            "{TYPE}[{ARGS}]"
+                |> String.replace "{TYPE}" (typeToString type_)
+                |> String.replace "{ARGS}" (String.join "," (List.map typeToString args))
+
+        TVar var ->
+            var
+
+        TFn { from, to } ->
+            "{FROM} -> {TO}"
+                |> String.replace "{FROM}" (typeToString from)
+                |> String.replace "{TO}" (typeToString to)
+
+        TThunk { to } ->
+            "-> {TO}"
+                |> String.replace "{TO}" (typeToString to)
+
+        TTuple xs ->
+            "({TYPES})"
+                |> String.replace "{TYPES}" (String.join ", " (List.map typeToString xs))
+
+        TRecord fields ->
+            "{|FIELDS|}"
+                |> String.replace "|FIELDS|" (String.join ", " (List.map recordTypeFieldToString fields))
+
+        TUnit ->
+            "()"
+
+
+recordTypeFieldToString : RecordTypeField -> String
+recordTypeFieldToString field =
+    "{FIELD}:{TYPE}"
+        |> String.replace "{FIELD}" field.field
+        |> String.replace "{TYPE}" (typeToString field.type_)
