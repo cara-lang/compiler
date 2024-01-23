@@ -648,7 +648,7 @@ butNot disallowedValue err parser =
             |> Result.andThen
                 (\( value, newTokens ) ->
                     if value == disallowedValue then
-                        fail_ tokens err
+                        failUnrecoverably_ tokens err
 
                     else
                         Ok ( value, newTokens )
@@ -662,7 +662,7 @@ butNot_ disallowedPred err parser =
             |> Result.andThen
                 (\( value, newTokens ) ->
                     if disallowedPred value then
-                        fail_ tokens err
+                        failUnrecoverably_ tokens err
 
                     else
                         Ok ( value, newTokens )
