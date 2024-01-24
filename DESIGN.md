@@ -5,6 +5,23 @@ WANTED:
 
 * arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
 
+* `[]`(): the postfix "array-access" operator
+    * [n], [-n], [m..n], [m...n], [str] 
+    * examples: 
+        * list[2]
+        * list[-1]
+        * list[2..3]
+        * array[0]
+        * array[-2]
+        * tuple[2]
+        * tuple[-n] probably not useful?
+        * tuple[2..3] - dropping first 2 elements? is that doable?
+        * string[0]
+        * string[2]
+        * string[0..2]
+        * dict["xyz"]
+        * record["abc"] ?? unsure if we can do that type-safely. probably not or only with literals
+
 * -> arrows in names?
 * ? questionmarks in names?
 * ! bangs in names? (perhaps not, IDK)
