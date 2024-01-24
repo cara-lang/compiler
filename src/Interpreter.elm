@@ -14,8 +14,8 @@ import Id exposing (Id)
 import Interpreter.Internal as Interpreter exposing (Interpreter)
 import Interpreter.Outcome as Outcome exposing (Outcome(..))
 import Intrinsic exposing (Intrinsic(..))
-import List.Extra as List
-import Maybe.Extra as Maybe
+import List.Extra
+import Maybe.Extra
 import Set exposing (Set)
 import Tree.Zipper as Zipper
 import Value exposing (Value(..))
@@ -186,7 +186,14 @@ interpretStatement monad =
                 interpretUseModule env r
 
 
-interpretFunctionDef : Interpreter { mod : LetModifier, name : String, args : List Pattern, body : Expr } ()
+interpretFunctionDef :
+    Interpreter
+        { mod : LetModifier
+        , name : String
+        , args : List ( Pattern, Maybe Type )
+        , body : Expr
+        }
+        ()
 interpretFunctionDef =
     \env { mod, name, args, body } ->
         -- TODO interpret the modifier
@@ -197,7 +204,8 @@ interpretFunctionDef =
                 env
                     |> Env.add name
                         (VClosure
-                            { args = args
+                            -- TODO we're throwing away the fndef types here. Have we processed them elsewhere?
+                            { args = List.map Tuple.first args
                             , body = body
                             , env = env
                             }
@@ -206,14 +214,22 @@ interpretFunctionDef =
         Outcome.succeed envWithFn ()
 
 
-interpretBinaryOpDef : Interpreter { op : BinaryOp, left : Pattern, right : Pattern, body : Expr } ()
+interpretBinaryOpDef :
+    Interpreter
+        { op : BinaryOp
+        , left : ( Pattern, Maybe Type )
+        , right : ( Pattern, Maybe Type )
+        , body : Expr
+        }
+        ()
 interpretBinaryOpDef =
     \env { op, left, right, body } ->
         let
             newEnv =
                 Env.addBinaryOp (AST.binaryOp op)
                     (VClosure
-                        { args = [ left, right ]
+                        -- TODO we're throwing away the opdef arg types here. Have we processed them elsewhere?
+                        { args = List.map Tuple.first [ left, right ]
                         , body = body
                         , env = env
                         }
@@ -224,7 +240,13 @@ interpretBinaryOpDef =
         Outcome.succeed newEnv ()
 
 
-interpretUnaryOpDef : Interpreter { op : UnaryOp, arg : Pattern, body : Expr } ()
+interpretUnaryOpDef :
+    Interpreter
+        { op : UnaryOp
+        , arg : ( Pattern, Maybe Type )
+        , body : Expr
+        }
+        ()
 interpretUnaryOpDef =
     \env { op, arg, body } ->
         let
@@ -729,7 +751,7 @@ interpretPattern stmtMonad =
                                                     List.map2 Tuple.pair args r.args
                                             in
                                             Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) envX pairs) <| \envX1 maybeAdditions ->
-                                            case Maybe.combine maybeAdditions of
+                                            case Maybe.Extra.combine maybeAdditions of
                                                 Nothing ->
                                                     Outcome.succeed envX1 Nothing
 
@@ -772,7 +794,7 @@ interpretPattern stmtMonad =
             PList ps ->
                 case value of
                     VList vs ->
-                        interpretPatternList env ( ps, vs )
+                        interpretPatternList { canHaveSpreads = True } stmtMonad env ( ps, vs )
 
                     _ ->
                         Outcome.succeed env Nothing
@@ -811,12 +833,8 @@ interpretPattern stmtMonad =
             PAs _ _ ->
                 Debug.Extra.todo1 "interpret as-pattern" (AST.patternToString pattern)
 
-            PTyped p _ ->
-                let
-                    _ =
-                        Debug.log "TODO do something about the type in a typed pattern" ()
-                in
-                interpretPattern stmtMonad env ( p, value )
+            POr l r ->
+                Debug.Extra.todo1 "interpret or-pattern" (AST.patternToString pattern)
 
 
 interpretPatternTuple : StmtMonad -> Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
@@ -831,7 +849,7 @@ interpretPatternTuple stmtMonad =
                     List.map2 Tuple.pair ps vs
             in
             Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env pairs) <| \env1 maybeAdditions ->
-            case Maybe.combine maybeAdditions of
+            case Maybe.Extra.combine maybeAdditions of
                 Nothing ->
                     Outcome.succeed env1 Nothing
 
@@ -839,26 +857,74 @@ interpretPatternTuple stmtMonad =
                     Outcome.succeed env1 (Just (ManyAdditions additions))
 
 
-interpretPatternList : Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
-interpretPatternList =
+interpretPatternList : { canHaveSpreads : Bool } -> StmtMonad -> Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
+interpretPatternList { canHaveSpreads } stmtMonad =
     \env ( ps, vs ) ->
+        let
+            _ =
+                Debug.log "pattern list" ( ps, vs )
+        in
         case List.length (List.filter AST.isSpreadPattern ps) of
             0 ->
-                Debug.todo "interpretPatternList - zero spreads"
+                -- [],   []    -> Just AddNothing
+                -- [x],  [1]   -> x=1
+                -- [x,y],[1,2] -> x=1, y=2
+                if List.length ps == List.length vs then
+                    Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env (List.map2 Tuple.pair ps vs)) <| \env1 maybeAdditions ->
+                    case Maybe.Extra.combine maybeAdditions of
+                        Nothing ->
+                            Outcome.fail PatternMismatch
+
+                        Just additions ->
+                            Outcome.succeed env1 (Just (ManyAdditions additions))
+
+                else
+                    Outcome.succeed env Nothing
 
             1 ->
                 case ps of
-                    (PSpread a) :: rest ->
+                    (PSpread spread) :: rest ->
                         Debug.todo "interpretPatternList - one spread - spread at the beginning"
 
                     _ ->
                         case List.reverse ps of
-                            (PSpread a) :: rest ->
+                            (PSpread spread) :: rest ->
+                                -- the spread will take as many values as possible
+                                -- [x,    ...xs], [1,2,3,4] --> x=1,      xs=[2,3,4]
+                                -- [x, y, ...xs], [1,2,3,4] --> x=1, y=2, xs=[3,4]
+                                let
+                                    ( takenByRest, takenBySpread ) =
+                                        List.Extra.splitAt (List.length rest) vs
+
+                                    _ =
+                                        Debug.log "taken by rest" takenByRest
+
+                                    _ =
+                                        Debug.log "taken by spread" takenBySpread
+                                in
+                                Interpreter.do (interpretPatternList { canHaveSpreads = False } stmtMonad env ( List.reverse rest, takenByRest )) <| \env1 maybeAddition ->
                                 let
                                     _ =
-                                        Debug.log "TODO - interpretPatternList - one spread - spread at the end"
+                                        Debug.log "after the non-spread" ()
                                 in
-                                Outcome.succeed env (Just AddNothing)
+                                case maybeAddition of
+                                    Nothing ->
+                                        Outcome.fail PatternMismatch
+
+                                    Just addition ->
+                                        case spread of
+                                            Just spreadName ->
+                                                let
+                                                    newAddition =
+                                                        ManyAdditions
+                                                            [ addition
+                                                            , AddValue spreadName (VList takenBySpread)
+                                                            ]
+                                                in
+                                                Outcome.succeed env1 (Just newAddition)
+
+                                            Nothing ->
+                                                Outcome.succeed env1 maybeAddition
 
                             _ ->
                                 Debug.todo "interpretPatternList - one spread - spread somewhere in the middle"
@@ -986,7 +1052,7 @@ interpretCallVal stmtMonad =
                         else
                             let
                                 ( doableVals, valsRest ) =
-                                    List.splitAt argsLength argVals
+                                    List.Extra.splitAt argsLength argVals
                             in
                             Interpreter.do (interpretCallVal stmtMonad env ( fnVal, doableVals )) <| \env2 resultVal ->
                             interpretCallVal stmtMonad env2 ( resultVal, valsRest )
@@ -1005,7 +1071,7 @@ interpretCallVal stmtMonad =
                                     |> List.drop valsLength
                         in
                         Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env availablePairs) <| \env2 maybeAdditions ->
-                        case Maybe.combine maybeAdditions of
+                        case Maybe.Extra.combine maybeAdditions of
                             Nothing ->
                                 Outcome.fail PatternMismatch
 
@@ -1024,7 +1090,7 @@ interpretCallVal stmtMonad =
                                 List.map2 Tuple.pair r.args argVals
                         in
                         Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env pairs) <| \env2 maybeAdditions ->
-                        case Maybe.combine maybeAdditions of
+                        case Maybe.Extra.combine maybeAdditions of
                             Nothing ->
                                 Outcome.fail PatternMismatch
 
@@ -1128,7 +1194,12 @@ interpretEffectBlock stmtMonad =
                         addLayer
                             (SLet
                                 { lhs = PVar name
-                                , expr = Lambda { args = args, body = body }
+                                , expr =
+                                    Lambda
+                                        { -- TODO we're throwing away the fndef arg types here
+                                          args = List.map Tuple.first args
+                                        , body = body
+                                        }
                                 , mod = LetNoModifier
                                 , type_ = Nothing
                                 }
@@ -1139,7 +1210,12 @@ interpretEffectBlock stmtMonad =
                         addLayer
                             (SLet
                                 { lhs = PUnaryOpDef op
-                                , expr = Lambda { args = [ arg ], body = body }
+                                , expr =
+                                    Lambda
+                                        { -- TODO we're throwing away the opdef arg types here
+                                          args = [ Tuple.first arg ]
+                                        , body = body
+                                        }
                                 , mod = LetNoModifier
                                 , type_ = Nothing
                                 }
@@ -1150,7 +1226,12 @@ interpretEffectBlock stmtMonad =
                         addLayer
                             (SLet
                                 { lhs = PBinaryOpDef op
-                                , expr = Lambda { args = [ left, right ], body = body }
+                                , expr =
+                                    Lambda
+                                        { -- TODO we're throwing away the opdef arg types here
+                                          args = List.map Tuple.first [ left, right ]
+                                        , body = body
+                                        }
                                 , mod = LetNoModifier
                                 , type_ = Nothing
                                 }
@@ -1679,28 +1760,18 @@ interpretCase : StmtMonad -> Interpreter { subject : Expr, branches : List CaseB
 interpretCase stmtMonad =
     \env { subject, branches } ->
         Interpreter.do (interpretExpr stmtMonad env subject) <| \env1 subject_ ->
-        let
-            flatBranches : List ( Pattern, Expr )
-            flatBranches =
-                branches
-                    |> List.concatMap
-                        (\branch ->
-                            branch.orPatterns
-                                |> List.map (\pattern -> ( pattern, branch.body ))
-                        )
-        in
-        interpretCaseBranches stmtMonad env1 ( subject_, flatBranches )
+        interpretCaseBranches stmtMonad env1 ( subject_, branches )
 
 
-interpretCaseBranches : StmtMonad -> Interpreter ( Value, List ( Pattern, Expr ) ) Value
+interpretCaseBranches : StmtMonad -> Interpreter ( Value, List CaseBranch ) Value
 interpretCaseBranches stmtMonad =
     \env ( subject, branches ) ->
         case branches of
             [] ->
                 Outcome.fail NoCaseBranchMatched
 
-            ( pattern, body ) :: rest ->
-                Interpreter.do (interpretPattern stmtMonad env ( pattern, subject )) <| \env1 maybeAdditions ->
+            branch :: rest ->
+                Interpreter.do (interpretPattern stmtMonad env ( branch.pattern, subject )) <| \env1 maybeAdditions ->
                 case maybeAdditions of
                     Nothing ->
                         interpretCaseBranches stmtMonad env ( subject, rest )
@@ -1710,7 +1781,7 @@ interpretCaseBranches stmtMonad =
                             newEnv =
                                 addToEnv additions env1
                         in
-                        interpretExpr stmtMonad newEnv body
+                        interpretExpr stmtMonad newEnv branch.body
 
 
 interpretList : StmtMonad -> Interpreter (List Expr) Value

@@ -80,7 +80,7 @@ functionDefStmt =
                 { left = LParen
                 , right = RParen
                 , sep = Comma
-                , item = pattern
+                , item = patternWithType
                 , skipEol = True
                 , allowTrailingSep = False
                 }
@@ -124,13 +124,26 @@ binaryOperatorDefStmt =
     Parser.succeed (\op left right body -> SBinaryOperatorDef { op = op, left = left, right = right, body = body })
         |> Parser.keep binaryOperatorName
         |> Parser.skip (Parser.token LParen)
-        |> Parser.keep pattern
+        |> Parser.keep patternWithType
         |> Parser.skip (Parser.token Comma)
-        |> Parser.keep pattern
+        |> Parser.keep patternWithType
         |> Parser.skip (Parser.token RParen)
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep expr
+
+
+patternWithType : Parser ( Pattern, Maybe AST.Type )
+patternWithType =
+    Parser.succeed Tuple.pair
+        |> Parser.keep pattern
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.succeed identity
+                    |> Parser.skip (Parser.token Token.Colon)
+                    |> Parser.keep type_
+                )
+            )
 
 
 {-|
@@ -146,7 +159,7 @@ unaryOperatorDefStmt =
     Parser.succeed (\op arg body -> SUnaryOperatorDef { op = op, arg = arg, body = body })
         |> Parser.keep unaryOperatorName
         |> Parser.skip (Parser.token LParen)
-        |> Parser.keep pattern
+        |> Parser.keep patternWithType
         |> Parser.skip (Parser.token RParen)
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
@@ -851,43 +864,51 @@ letStatement =
 
 pattern : Parser Pattern
 pattern =
-    Parser.succeed
-        (\p mtype ->
-            case mtype of
-                Nothing ->
-                    p
+    patternAux 0 False
 
-                Just type__ ->
-                    PTyped p type__
-        )
-        |> Parser.keep
-            (Parser.oneOf
-                { commited =
-                    [ ( [ T LParen, T RParen ], unitPattern )
-                    , ( [ P Token.isLowerName ], varPattern )
-                    , ( [ P Token.isUpperName ], constructorPattern )
-                    , ( [ P Token.isQualifier ], constructorPattern )
-                    , ( [ P Token.isInt ], intPattern )
-                    , ( [ P Token.isFloat ], floatPattern )
-                    , ( [ T LParen ], tuplePattern )
-                    , ( [ T LBracket ], listPattern )
-                    , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
-                    , ( [ T Token.Minus, P Token.isFloat ], negatedFloatPattern )
-                    , ( [ T Underscore ], wildcardPattern )
-                    , ( [ T DotDotDot ], listSpreadPattern )
-                    , ( [ T LBrace, T DotDot ], recordSpreadPattern )
-                    , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
-                    ]
-                , noncommited = []
-                }
-            )
-        |> Parser.keep
-            (Parser.ifNextIs Token.Colon
-                (Parser.succeed identity
-                    |> Parser.skip (Parser.token Token.Colon)
-                    |> Parser.keep type_
-                )
-            )
+
+patternAux : Int -> Bool -> Parser Pattern
+patternAux precedence isRight =
+    Parser.pratt
+        { isRight = isRight
+        , precedence = precedence
+        , prefix = prefixPattern
+        , infix = infixPattern
+        }
+
+
+prefixPattern : Parser Pattern
+prefixPattern =
+    Parser.oneOf
+        { commited =
+            [ ( [ T LParen, T RParen ], unitPattern )
+            , ( [ P Token.isLowerName ], varPattern )
+            , ( [ P Token.isUpperName ], constructorPattern )
+            , ( [ P Token.isQualifier ], constructorPattern )
+            , ( [ P Token.isInt ], intPattern )
+            , ( [ P Token.isFloat ], floatPattern )
+            , ( [ T LParen ], tuplePattern )
+            , ( [ T LBracket ], listPattern )
+            , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
+            , ( [ T Token.Minus, P Token.isFloat ], negatedFloatPattern )
+            , ( [ T Underscore ], wildcardPattern )
+            , ( [ T DotDotDot ], listSpreadPattern )
+            , ( [ T LBrace, T DotDot ], recordSpreadPattern )
+            , ( [ T LBrace, P Token.isLowerName ], recordFieldsPattern )
+            ]
+        , noncommited = []
+        }
+
+
+infixPattern : InfixParserTable Pattern
+infixPattern =
+    \token { skippedEol } ->
+        case token of
+            Pipe ->
+                Just { precedence = 1, isRight = False, parser = orPattern }
+
+            _ ->
+                Nothing
 
 
 {-|
@@ -1619,22 +1640,14 @@ caseExpr =
 
 {-|
 
-    : pattern (PIPE pattern)* ARROW expr
+    : pattern ARROW expr
     = 1 -> "Hello"
-    = 1 | 2 -> "Hello"
 
 -}
 caseBranch : Parser CaseBranch
 caseBranch =
-    Parser.succeed (\p ps body -> { orPatterns = p :: ps, body = body })
+    Parser.succeed (\p body -> { pattern = p, body = body })
         |> Parser.keep pattern
-        |> Parser.keep
-            (Parser.many
-                (Parser.succeed identity
-                    |> Parser.skip (Parser.token Pipe)
-                    |> Parser.keep pattern
-                )
-            )
         |> Parser.skip (Parser.token Arrow)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep (Parser.lazy (\() -> expr))
@@ -2320,6 +2333,18 @@ binaryOpExpr : BinaryOp -> InfixParser Expr
 binaryOpExpr op { left, precedence, isRight } =
     Parser.succeed (\right -> BinaryOp left op right)
         |> Parser.keep (exprAux precedence isRight)
+
+
+{-|
+
+    : pattern ${tokenTag} pattern
+      ^^^^^^^^^^^^^^^^^^^ already parsed
+
+-}
+orPattern : InfixParser Pattern
+orPattern { left, precedence, isRight } =
+    Parser.succeed (\right -> POr left right)
+        |> Parser.keep (patternAux precedence isRight)
 
 
 {-|

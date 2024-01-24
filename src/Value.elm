@@ -246,12 +246,13 @@ isEqualityAllowed val =
 
 
 closureToString :
-        { args : List Pattern
-        , body : Expr
-        , env : Env Value
-        } -> String
-closureToString {args, body} =
-            AST.lambdaToString { args = args, body = body }
+    { args : List Pattern
+    , body : Expr
+    , env : Env Value
+    }
+    -> String
+closureToString { args, body } =
+    AST.lambdaToString { args = args, body = body }
 
 
 nothing : Value

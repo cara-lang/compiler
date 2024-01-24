@@ -1,0 +1,4 @@
+foo([...before,x,...after]) = 1
+foo(_) = 2
+
+IO.println!(foo([1,2,3]))

@@ -1,0 +1,12 @@
+E0037: Multiple spreads in a list pattern
+
+There can be at most one spread in a list pattern:
+
+    [first, ...rest]
+    // or
+    [...butlast, last]
+
+main.cara:1:5
+━━┓
+1 ┃ foo([...before,x,...after]) = 1
+  ┃     ^

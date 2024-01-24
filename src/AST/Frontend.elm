@@ -100,7 +100,7 @@ type Pattern
       -}
     | PUnaryOpDef UnaryOp
     | PBinaryOpDef BinaryOp
-    | PTyped Pattern Type -- a: Int
+    | POr Pattern Pattern -- a | b
 
 
 type Bang
@@ -130,18 +130,18 @@ type Stmt
     | SFunctionDef
         { mod : LetModifier
         , name : String
-        , args : List Pattern
+        , args : List ( Pattern, Maybe Type )
         , body : Expr
         }
     | SBinaryOperatorDef
         { op : BinaryOp
-        , left : Pattern
-        , right : Pattern
+        , left : ( Pattern, Maybe Type ) -- TODO maybe always need type here?
+        , right : ( Pattern, Maybe Type ) -- TODO maybe always need type here?
         , body : Expr
         }
     | SUnaryOperatorDef
         { op : UnaryOp
-        , arg : Pattern
+        , arg : ( Pattern, Maybe Type ) -- TODO maybe always need type here?
         , body : Expr
         }
     | SValueAnnotation
@@ -237,8 +237,8 @@ type ModuleModifier
 
 
 type alias CaseBranch =
-    -- 1 -> "hello", 1 | 2 -> "hello"
-    { orPatterns : List Pattern
+    -- 1 -> "hello"
+    { pattern : Pattern
     , body : Expr
     }
 
@@ -355,9 +355,6 @@ isSpreadPattern pattern =
         PAs _ inner ->
             isSpreadPattern inner
 
-        PTyped p _ ->
-            isSpreadPattern p
-
         PUnit ->
             False
 
@@ -398,6 +395,9 @@ isSpreadPattern pattern =
             False
 
         PBinaryOpDef _ ->
+            False
+
+        POr _ _ ->
             False
 
 
@@ -497,6 +497,18 @@ lambdaToString { args, body } =
         |> String.replace "{BODY}" (exprToString body)
 
 
+patternWithTypeToString : ( Pattern, Maybe Type ) -> String
+patternWithTypeToString ( pattern, maybeType ) =
+    case maybeType of
+        Nothing ->
+            patternToString pattern
+
+        Just type_ ->
+            "{PATTERN} : {TYPE}"
+                |> String.replace "{PATTERN}" (patternToString pattern)
+                |> String.replace "{TYPE}" (typeToString type_)
+
+
 patternToString : Pattern -> String
 patternToString pattern =
     case pattern of
@@ -565,10 +577,10 @@ patternToString pattern =
         PBinaryOpDef _ ->
             "<BINARY OP DEF>"
 
-        PTyped p t ->
-            "({PATTERN} : {TYPE})"
-                |> String.replace "{PATTERN}" (patternToString p)
-                |> String.replace "{TYPE}" (typeToString t)
+        POr l r ->
+            "{L} | {R}"
+                |> String.replace "{L}" (patternToString l)
+                |> String.replace "{R}" (patternToString r)
 
 
 recordExprContentToString : RecordExprContent -> String
@@ -668,13 +680,77 @@ exprToString expr =
         If _ ->
             Debug.todo "expr to string - if"
 
-        Case _ ->
-            Debug.todo "expr to string - case"
+        Case r ->
+            "case {SUBJECT} of\n{BRANCHES}"
+                |> String.replace "{SUBJECT}" (exprToString r.subject)
+                |> String.replace "{BRANCHES}" (String.join "\n" (List.map (caseBranchToString >> indent2) r.branches))
+
+
+caseBranchToString : CaseBranch -> String
+caseBranchToString caseBranch =
+    "{PATTERN} -> {BODY}"
+        |> String.replace "{PATTERN}" (patternToString caseBranch.pattern)
+        |> String.replace "{BODY}" (exprToString caseBranch.body)
 
 
 stmtToString : Stmt -> String
 stmtToString stmt =
-    Debug.todo "stmt to string"
+    case stmt of
+        SLet r ->
+            Debug.Extra.todo1 "stmtToString: SLet" r
+
+        SLetBang r ->
+            Debug.Extra.todo1 "stmtToString: SLetBang" r
+
+        SBang bang ->
+            Debug.Extra.todo1 "stmtToString: SBang" bang
+
+        SFunctionDef r ->
+            "{MOD}{NAME}({ARGS}) = {BODY}"
+                |> String.replace "{MOD}"
+                    (letModifierToString r.mod
+                        |> withSpaceToRightIfNotEmpty
+                    )
+                |> String.replace "{NAME}" r.name
+                |> String.replace "{ARGS}" (String.join "," (List.map patternWithTypeToString r.args))
+                |> String.replace "{BODY}" (exprToString r.body)
+
+        SBinaryOperatorDef r ->
+            Debug.Extra.todo1 "stmtToString: SBinaryOperatorDef" r
+
+        SUnaryOperatorDef r ->
+            Debug.Extra.todo1 "stmtToString: SUnaryOperatorDef" r
+
+        SValueAnnotation r ->
+            Debug.Extra.todo1 "stmtToString: SValueAnnotation" r
+
+        SBinaryOperatorAnnotation r ->
+            Debug.Extra.todo1 "stmtToString: SBinaryOperatorAnnotation" r
+
+        SUnaryOperatorAnnotation r ->
+            Debug.Extra.todo1 "stmtToString: SUnaryOperatorAnnotation" r
+
+        SUseModule id ->
+            Debug.Extra.todo1 "stmtToString: SUseModule" id
+
+
+letModifierToString : LetModifier -> String
+letModifierToString mod =
+    case mod of
+        LetNoModifier ->
+            ""
+
+        LetPrivate ->
+            "private"
+
+
+withSpaceToRightIfNotEmpty : String -> String
+withSpaceToRightIfNotEmpty s =
+    if s == "" then
+        s
+
+    else
+        s ++ " "
 
 
 indent4 : String -> String

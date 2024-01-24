@@ -35,3 +35,4 @@ E0033,Non-terminated character
 E0034,Non-terminated string
 E0035,Non-terminated multi-line string
 E0036,Main is not a function
+E0037,Multiple spreads in a list pattern

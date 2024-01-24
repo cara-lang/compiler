@@ -107,7 +107,7 @@ desugarStmt stmt =
 desugarFunctionDef :
     { mod : F.LetModifier
     , name : String
-    , args : List F.Pattern
+    , args : List ( F.Pattern, Maybe F.Type )
     , body : F.Expr
     }
     -> B.Decl
@@ -115,7 +115,7 @@ desugarFunctionDef r =
     -- TODO do something about the mod
     B.DFunctionDef
         { id = qualify (Id.local r.name)
-        , args = List.map desugarPattern r.args
+        , args = List.map desugarPatternWithType r.args
         , body = desugarExpr r.body
         }
 
@@ -293,6 +293,15 @@ qualify id =
     }
 
 
+desugarPatternWithType : ( F.Pattern, Maybe F.Type ) -> B.Pattern
+desugarPatternWithType ( pattern, _ ) =
+    let
+        _ =
+            Debug.log "TODO desugarPatternWithType: do something with the type?" ()
+    in
+    desugarPattern pattern
+
+
 desugarPattern : F.Pattern -> B.Pattern
 desugarPattern p =
     case p of
@@ -351,8 +360,8 @@ desugarPattern p =
         F.PBinaryOpDef r ->
             Debug.Extra.todo1 "uh... desugar PBinaryOpDef?" r
 
-        F.PTyped _ _ ->
-            Debug.Extra.todo1 "desugar typed pattern" p
+        F.POr _ _ ->
+            Debug.Extra.todo1 "desugar POr" p
 
 
 desugarBang : F.Bang -> Result DesugarError (List B.Decl)

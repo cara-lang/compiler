@@ -309,7 +309,7 @@ title error =
                     "No case..of branch matched"
 
                 MultipleSpreadPatterns ->
-                    "Multiple spread patterns in a list pattern"
+                    "Multiple spreads in a list pattern"
 
                 PatternDidNotMatch ( pattern, value ) ->
                     "Pattern did not match: ({PATTERN}, {VALUE})"
@@ -591,8 +591,7 @@ code error =
                     "EXXXX"
 
                 MultipleSpreadPatterns ->
-                    -- TODO
-                    "EXXXX"
+                    "E0037"
 
                 PatternDidNotMatch ( pattern, value ) ->
                     -- TODO
