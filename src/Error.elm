@@ -75,6 +75,7 @@ type ParserError
     | UnfinishedStringInterpolation
     | CouldntLexInsideStringInterpolation ( Loc, LexerError )
     | UnusedExpression F.Expr
+    | IfWithoutElse { cond : F.Expr, then_ : F.Expr }
 
 
 type InterpreterError
@@ -266,6 +267,9 @@ title error =
 
                 UnusedExpression _ ->
                     "Unused expression"
+
+                IfWithoutElse _ ->
+                    "If expression without an else branch"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of
@@ -537,6 +541,9 @@ code error =
 
                 UnusedExpression _ ->
                     "E0011"
+
+                IfWithoutElse _ ->
+                    "E0021"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of

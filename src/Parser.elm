@@ -1644,7 +1644,7 @@ caseBranch =
 -}
 ifExpr : Parser Expr
 ifExpr =
-    Parser.succeed (\cond then_ else_ -> AST.If { cond = cond, then_ = then_, else_ = else_ })
+    Parser.succeed Tuple.pair
         |> Parser.skip (Parser.token Token.If)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep (Parser.lazy (\() -> expr))
@@ -1653,9 +1653,23 @@ ifExpr =
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep (Parser.lazy (\() -> expr))
         |> Parser.skip Parser.skipEolBeforeIndented
-        |> Parser.skip (Parser.token Token.Else)
-        |> Parser.skip Parser.skipEolBeforeIndented
-        |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.andThen
+            (\( cond, then_ ) ->
+                Parser.oneOf
+                    { commited =
+                        [ ( [ T Token.Else ]
+                          , Parser.succeed (\else_ -> AST.If { cond = cond, then_ = then_, else_ = else_ })
+                                |> Parser.skip (Parser.token Token.Else)
+                                |> Parser.skip Parser.skipEolBeforeIndented
+                                |> Parser.keep (Parser.lazy (\() -> expr))
+                          )
+                        ]
+                    , noncommited =
+                        [ Parser.failUnrecoverably
+                            (IfWithoutElse { cond = cond, then_ = then_ })
+                        ]
+                    }
+            )
 
 
 {-|
