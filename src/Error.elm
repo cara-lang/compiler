@@ -106,6 +106,7 @@ type InterpreterError
     | UnknownBinaryOpOverload ( Value, F.BinaryOp, Value )
     | UnknownUnaryOpOverload ( F.UnaryOp, Value )
     | UnexpectedArgument Value
+    | MainIsNotFunction -- TODO this should perhaps be a typecheck error
 
 
 type DesugarError
@@ -355,6 +356,9 @@ title error =
 
                 UnexpectedArgument value ->
                     "Unexpected argument: " ++ Value.toInspectString value
+
+                MainIsNotFunction ->
+                    "Main is not a function"
 
         DesugarError ( _, desugarError ) ->
             case desugarError of
@@ -638,6 +642,9 @@ code error =
                 UnexpectedArgument value ->
                     -- TODO
                     "EXXXX"
+
+                MainIsNotFunction ->
+                    "E0036"
 
         DesugarError ( _, desugarError ) ->
             case desugarError of

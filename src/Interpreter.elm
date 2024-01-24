@@ -33,21 +33,16 @@ interpretProgram : Interpreter AST.Program ()
 interpretProgram =
     \env program ->
         Interpreter.do (Interpreter.traverse interpretDecl env program) <| \env2 _ ->
-        if hasMain env2 then
-            let
-                callMain =
-                    Call { fn = Identifier Id.main_, args = [] }
-            in
-            interpretExpr ToplevelIO env2 callMain
-                |> Outcome.map (\_ -> ())
+        case Env.get Id.main_ env2 of
+            Nothing ->
+                Outcome.succeed env2 ()
 
-        else
-            Outcome.succeed env2 ()
+            Just ((VClosure _) as main_) ->
+                interpretCallVal ToplevelIO env2 ( main_, [] )
+                    |> Outcome.map (\_ -> ())
 
-
-hasMain : Env Value -> Bool
-hasMain env =
-    Env.get Id.main_ env /= Nothing
+            Just _ ->
+                Outcome.fail MainIsNotFunction
 
 
 interpretDecl : Interpreter Decl ()

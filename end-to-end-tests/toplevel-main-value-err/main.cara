@@ -1,0 +1,7 @@
+IO.println!("before defining main")
+
+main = IO {
+  IO.println!("inside main")
+}
+
+IO.println!("after defining main")

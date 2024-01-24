@@ -1,0 +1,3 @@
+before defining main
+after defining main
+inside main
