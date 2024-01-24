@@ -1989,50 +1989,101 @@ parseStringInterpolation str =
                                     )
 
                 beforeOpening :: afterOpening :: rest ->
-                    case String.split "}" afterOpening of
-                        [] ->
-                            -- impossible
-                            Parser.succeed (AST.String str)
+                    if String.endsWith "\\" beforeOpening then
+                        -- Escaped \${ - let's ignore the \ and return ${...} verbatim
+                        let
+                            newBeforeOpening =
+                                String.dropRight 1 beforeOpening
 
-                        [ _ ] ->
-                            -- } not found, the ${... is unterminated
-                            Parser.fail UnfinishedStringInterpolation
+                            newAroundOpening =
+                                newBeforeOpening ++ afterOpening
 
-                        insideOpening :: afterClosing :: newChunks ->
-                            let
-                                ( debugModeEnabled, exprToParse ) =
-                                    if String.endsWith "=" insideOpening then
-                                        ( True, String.dropRight 1 insideOpening )
+                            newAcc : Expr
+                            newAcc =
+                                case acc of
+                                    Nothing ->
+                                        AST.String newAroundOpening
 
-                                    else
-                                        ( False, insideOpening )
+                                    Just acc_ ->
+                                        AST.BinaryOp
+                                            acc_
+                                            AST.Append
+                                            (AST.String newAroundOpening)
+                        in
+                        go (Just newAcc) rest
 
-                                parseResult : Result ( Loc, ParserError ) Expr
-                                parseResult =
-                                    exprToParse
-                                        |> (Lexer.lex >> Result.mapError (\( loc, lexerError ) -> ( loc, CouldntLexInsideStringInterpolation ( loc, lexerError ) )))
-                                        |> Result.andThen (parseWith expr)
-                            in
-                            case parseResult of
-                                Err ( _, err ) ->
-                                    Parser.fail err
+                    else
+                        -- Normal case: let's interpolate the contents of the ${...}!
+                        case String.split "}" afterOpening of
+                            [] ->
+                                -- impossible
+                                Parser.succeed (AST.String str)
 
-                                Ok interpolatedExpr ->
-                                    let
-                                        added : Expr
-                                        added =
-                                            if debugModeEnabled then
-                                                {- beforeOpening
-                                                   ++ exprToParse
-                                                   ++ "="
-                                                   ++ toString interpolatedExpr
-                                                   ++ afterClosing
-                                                -}
-                                                AST.BinaryOp
-                                                    (AST.String beforeOpening)
-                                                    AST.Append
-                                                    (AST.BinaryOp
-                                                        (AST.String (exprToParse ++ "="))
+                            [ _ ] ->
+                                -- } not found, the ${... is unterminated
+                                Parser.fail UnfinishedStringInterpolation
+
+                            insideOpening :: afterClosing :: newChunks ->
+                                let
+                                    ( debugModeEnabled, exprToParse ) =
+                                        if String.endsWith "=" insideOpening then
+                                            ( True, String.dropRight 1 insideOpening )
+
+                                        else
+                                            ( False, insideOpening )
+
+                                    parseResult : Result ( Loc, ParserError ) Expr
+                                    parseResult =
+                                        exprToParse
+                                            |> (Lexer.lex
+                                                    >> Result.mapError
+                                                        (\( loc, lexerError ) ->
+                                                            ( loc
+                                                            , CouldntLexInsideStringInterpolation ( loc, lexerError )
+                                                            )
+                                                        )
+                                               )
+                                            |> Result.andThen (parseWith expr)
+                                in
+                                case parseResult of
+                                    Err ( _, err ) ->
+                                        Parser.fail err
+
+                                    Ok interpolatedExpr ->
+                                        let
+                                            added : Expr
+                                            added =
+                                                if debugModeEnabled then
+                                                    {- beforeOpening
+                                                       ++ exprToParse
+                                                       ++ "="
+                                                       ++ toString interpolatedExpr
+                                                       ++ afterClosing
+                                                    -}
+                                                    AST.BinaryOp
+                                                        (AST.String beforeOpening)
+                                                        AST.Append
+                                                        (AST.BinaryOp
+                                                            (AST.String (exprToParse ++ "="))
+                                                            AST.Append
+                                                            (AST.BinaryOp
+                                                                (AST.Call
+                                                                    { fn = AST.Identifier (Intrinsic.id Intrinsic.IoToString)
+                                                                    , args = [ interpolatedExpr ]
+                                                                    }
+                                                                )
+                                                                AST.Append
+                                                                (AST.String afterClosing)
+                                                            )
+                                                        )
+
+                                                else
+                                                    {- beforeOpening
+                                                       ++ toString interpolatedExpr
+                                                       ++ afterClosing
+                                                    -}
+                                                    AST.BinaryOp
+                                                        (AST.String beforeOpening)
                                                         AST.Append
                                                         (AST.BinaryOp
                                                             (AST.Call
@@ -2043,41 +2094,22 @@ parseStringInterpolation str =
                                                             AST.Append
                                                             (AST.String afterClosing)
                                                         )
-                                                    )
 
-                                            else
-                                                {- beforeOpening
-                                                   ++ toString interpolatedExpr
-                                                   ++ afterClosing
-                                                -}
-                                                AST.BinaryOp
-                                                    (AST.String beforeOpening)
-                                                    AST.Append
-                                                    (AST.BinaryOp
-                                                        (AST.Call
-                                                            { fn = AST.Identifier (Intrinsic.id Intrinsic.IoToString)
-                                                            , args = [ interpolatedExpr ]
-                                                            }
-                                                        )
-                                                        AST.Append
-                                                        (AST.String afterClosing)
-                                                    )
-
-                                        newAcc : Expr
-                                        newAcc =
-                                            case acc of
-                                                Nothing ->
-                                                    added
-
-                                                Just acc_ ->
-                                                    AST.BinaryOp
-                                                        acc_
-                                                        AST.Append
+                                            newAcc : Expr
+                                            newAcc =
+                                                case acc of
+                                                    Nothing ->
                                                         added
-                                    in
-                                    go
-                                        (Just newAcc)
-                                        (String.join "}" (afterClosing :: newChunks) :: rest)
+
+                                                    Just acc_ ->
+                                                        AST.BinaryOp
+                                                            acc_
+                                                            AST.Append
+                                                            added
+                                        in
+                                        go
+                                            (Just newAcc)
+                                            (String.join "}" (afterClosing :: newChunks) :: rest)
     in
     go Nothing (String.split "${" str)
 

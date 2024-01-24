@@ -1050,6 +1050,12 @@ multilineString source i row col =
                                 '`' ->
                                     go newI_ row_ newCol_ ('`' :: content)
 
+                                {- This will get picked up by the parser.
+                                   The '\' will be ignored if it's right before '{'.
+                                -}
+                                '$' ->
+                                    go newI_ row_ newCol_ ('$' :: '\\' :: content)
+
                                 -- TODO \u{....}
                                 -- TODO \x{..}
                                 _ ->
