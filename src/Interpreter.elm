@@ -2,6 +2,7 @@ module Interpreter exposing (interpretProgram)
 
 import AST.Frontend as AST exposing (..)
 import Basics.Extra as Basics
+import BiDict
 import Bitwise
 import Common
 import Debug.Extra
@@ -675,7 +676,7 @@ interpretPattern stmtMonad =
                             |> Outcome.succeed env
 
                     VTuple values ->
-                        interpretPattern stmtMonad env ( PRecordSpread, VRecord (tupleToNumericAndWordyRecord values) )
+                        interpretPattern stmtMonad env ( PRecordSpread, VRecord (tupleToNumericRecord values) )
 
                     _ ->
                         Debug.todo <| "interpret pattern {..} - other: " ++ Value.toInspectString value
@@ -1521,39 +1522,19 @@ missingWordyTupleGetters =
 
 tupleIndexToWordyField : Int -> Maybe String
 tupleIndexToWordyField n =
-    case n of
-        0 ->
-            Just "first"
+    Common.namedTupleFields
+        |> BiDict.getReverse n
+        |> Set.toList
+        |> List.head
 
-        1 ->
-            Just "second"
 
-        2 ->
-            Just "third"
-
-        3 ->
-            Just "fourth"
-
-        4 ->
-            Just "fifth"
-
-        5 ->
-            Just "sixth"
-
-        6 ->
-            Just "seventh"
-
-        7 ->
-            Just "eighth"
-
-        8 ->
-            Just "ninth"
-
-        9 ->
-            Just "tenth"
-
-        _ ->
-            Nothing
+{-| Useful for spreads
+-}
+tupleToNumericRecord : List Value -> Dict String Value
+tupleToNumericRecord values =
+    values
+        |> List.indexedMap (\i value -> ( Common.tupleIndexToNumericField i, value ))
+        |> Dict.fromList
 
 
 {-| Useful for record gets

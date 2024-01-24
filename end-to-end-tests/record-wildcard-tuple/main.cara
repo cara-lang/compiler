@@ -2,5 +2,3 @@ x = (1, "Hello")
 {..} = x
 IO.println!(el0)
 IO.println!(el1)
-IO.println!(first)
-IO.println!(second)
