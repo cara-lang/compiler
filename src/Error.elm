@@ -274,7 +274,8 @@ title error =
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of
                 VarNotFound id ->
-                    "Var not found: " ++ Id.toString id
+                    "Unknown variable: `{ID}`"
+                        |> String.replace "{ID}" (Id.toString id)
 
                 RootVarNotFound id ->
                     "Root var not found: " ++ Id.toString id

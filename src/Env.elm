@@ -54,7 +54,7 @@ initWithIntrinsics cfg =
 
 rootModule : Module value
 rootModule =
-    emptyModule "<root>"
+    emptyModule Id.root
 
 
 emptyModule : String -> Module value

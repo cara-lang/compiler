@@ -3,7 +3,8 @@ module Id exposing
     , local, global
     , toString
     , bind, pure
-    , io
+    , main_
+    , io, root
     )
 
 {-|
@@ -11,8 +12,17 @@ module Id exposing
 @docs Id
 @docs local, global
 @docs toString
+
+
+## Important identifiers
+
 @docs bind, pure
-@docs io
+@docs main_
+
+
+## Important modules
+
+@docs io, root
 
 -}
 
@@ -52,6 +62,16 @@ pure monadModule =
     global monadModule "pure"
 
 
-io : List String
+main_ : Id
+main_ =
+    global [] "main"
+
+
+io : String
 io =
-    [ "IO" ]
+    "IO"
+
+
+root : String
+root =
+    "<root>"

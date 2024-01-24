@@ -31,8 +31,23 @@ type PatternAddition
 
 interpretProgram : Interpreter AST.Program ()
 interpretProgram =
-    Interpreter.traverse interpretDecl
-        |> Interpreter.map (\_ -> ())
+    \env program ->
+        Interpreter.do (Interpreter.traverse interpretDecl env program) <| \env2 _ ->
+        if hasMain env2 then
+            let
+                callMain =
+                    Call { fn = Identifier Id.main_, args = [] }
+            in
+            interpretExpr ToplevelIO env2 callMain
+                |> Outcome.map (\_ -> ())
+
+        else
+            Outcome.succeed env2 ()
+
+
+hasMain : Env Value -> Bool
+hasMain env =
+    Env.get Id.main_ env /= Nothing
 
 
 interpretDecl : Interpreter Decl ()
