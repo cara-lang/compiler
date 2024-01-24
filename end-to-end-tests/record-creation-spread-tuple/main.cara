@@ -1,0 +1,3 @@
+tuple = (0,1)
+record = {...tuple, x:2}
+IO.println!(record)

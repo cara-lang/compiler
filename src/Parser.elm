@@ -452,7 +452,16 @@ unaryOperatorAnnotationStmt =
 -}
 unusedExprStmt : Parser a
 unusedExprStmt =
-    expr
+    Parser.succeed (\e _ -> e)
+        |> Parser.keep expr
+        |> Parser.keep
+            (Parser.oneOf
+                { commited =
+                    [ ( [ T EOL ], Parser.succeed () )
+                    ]
+                , noncommited = []
+                }
+            )
         |> Parser.disallowed UnusedExpression
 
 
@@ -821,7 +830,6 @@ letStatement =
         |> Parser.keep letModifier
         |> Parser.keep
             (pattern
-                -- TODO do we need to support a "stop the world" type of error? This would be one of those
                 |> Parser.butNot PWildcard AssignmentOfExprToUnderscore
             )
         |> Parser.keep
