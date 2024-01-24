@@ -186,9 +186,10 @@ interpretStatement monad =
                 interpretUseModule env r
 
 
-interpretFunctionDef : Interpreter { name : String, args : List Pattern, body : Expr } ()
+interpretFunctionDef : Interpreter { mod : LetModifier, name : String, args : List Pattern, body : Expr } ()
 interpretFunctionDef =
-    \env { name, args, body } ->
+    \env { mod, name, args, body } ->
+        -- TODO interpret the modifier
         -- TODO somehow group related function declarations together and make one case..of from them (also get the modifier from the annotation)
         let
             envWithFn : Env Value

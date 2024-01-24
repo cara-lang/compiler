@@ -66,13 +66,14 @@ declaration =
 
 {-|
 
-    : LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
+    : PRIVATE? LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
     = f(a,b) = a + b
 
 -}
 functionDefStmt : Parser Stmt
 functionDefStmt =
-    Parser.succeed (\name args body -> SFunctionDef { name = name, args = args, body = body })
+    Parser.succeed (\mod name args body -> SFunctionDef { mod = mod, name = name, args = args, body = body })
+        |> Parser.keep letModifier
         |> Parser.keep lowerName
         |> Parser.keep
             (Parser.separatedList
@@ -610,7 +611,10 @@ moduleDecl =
             (Parser.many
                 (Parser.succeed identity
                     |> Parser.skip Parser.skipEol
-                    |> Parser.keep (Parser.lazy (\() -> declaration))
+                    |> Parser.keep
+                        (Parser.logCurrentAround "x"
+                            (Parser.lazy (\() -> declaration))
+                        )
                 )
             )
         |> Parser.skip Parser.skipEol

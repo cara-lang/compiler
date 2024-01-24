@@ -105,12 +105,14 @@ desugarStmt stmt =
 
 
 desugarFunctionDef :
-    { name : String
+    { mod : F.LetModifier
+    , name : String
     , args : List F.Pattern
     , body : F.Expr
     }
     -> B.Decl
 desugarFunctionDef r =
+    -- TODO do something about the mod
     B.DFunctionDef
         { id = qualify (Id.local r.name)
         , args = List.map desugarPattern r.args

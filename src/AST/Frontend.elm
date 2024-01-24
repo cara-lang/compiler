@@ -128,7 +128,8 @@ type Stmt
         }
     | SBang Bang
     | SFunctionDef
-        { name : String
+        { mod : LetModifier
+        , name : String
         , args : List Pattern
         , body : Expr
         }
