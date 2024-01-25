@@ -5,6 +5,7 @@ module AST.Frontend exposing
     , CaseBranch
     , Decl(..)
     , Expr(..)
+    , FunctionBranch
     , LetModifier(..)
     , ModuleModifier(..)
     , Pattern(..)
@@ -19,6 +20,7 @@ module AST.Frontend exposing
     , TypeModifier(..)
     , UnaryOp(..)
     , binaryOp
+    , functionDefToSingleFunction
     , inspect
     , isEffectfulStmt
     , isSpreadPattern
@@ -32,6 +34,7 @@ import Debug.Extra
 import Env exposing (Env)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
+import NonemptyList exposing (NonemptyList)
 
 
 type alias Program =
@@ -128,10 +131,9 @@ type Stmt
         }
     | SBang Bang
     | SFunctionDef
-        { mod : LetModifier
-        , name : String
-        , args : List ( Pattern, Maybe Type )
-        , body : Expr
+        { name : String
+        , mod : LetModifier
+        , branches : NonemptyList FunctionBranch
         }
     | SBinaryOperatorDef
         { op : BinaryOp
@@ -163,6 +165,12 @@ type Stmt
         , ret : Type
         }
     | SUseModule Id
+
+
+type alias FunctionBranch =
+    { args : List ( Pattern, Maybe Type )
+    , body : Expr
+    }
 
 
 type TypeModifier
@@ -706,14 +714,20 @@ stmtToString stmt =
             Debug.Extra.todo1 "stmtToString: SBang" bang
 
         SFunctionDef r ->
-            "{MOD}{NAME}({ARGS}) = {BODY}"
-                |> String.replace "{MOD}"
-                    (letModifierToString r.mod
-                        |> withSpaceToRightIfNotEmpty
+            r.branches
+                |> NonemptyList.toList
+                |> List.map
+                    (\branch ->
+                        "{MOD}{NAME}({ARGS}) = {BODY}"
+                            |> String.replace "{MOD}"
+                                (letModifierToString r.mod
+                                    |> withSpaceToRightIfNotEmpty
+                                )
+                            |> String.replace "{NAME}" r.name
+                            |> String.replace "{ARGS}" (String.join "," (List.map patternWithTypeToString branch.args))
+                            |> String.replace "{BODY}" (exprToString branch.body)
                     )
-                |> String.replace "{NAME}" r.name
-                |> String.replace "{ARGS}" (String.join "," (List.map patternWithTypeToString r.args))
-                |> String.replace "{BODY}" (exprToString r.body)
+                |> String.join "\n"
 
         SBinaryOperatorDef r ->
             Debug.Extra.todo1 "stmtToString: SBinaryOperatorDef" r
@@ -814,3 +828,53 @@ recordTypeFieldToString field =
     "{FIELD}:{TYPE}"
         |> String.replace "{FIELD}" field.field
         |> String.replace "{TYPE}" (typeToString field.type_)
+
+
+{-|
+
+    foo([]) = 1
+    foo([x]) = 2
+    foo([x,...xs]) = 5
+    -->
+    foo(a) =
+        case a of
+            [] -> 1
+            [x] -> 2
+            [x,...xs] -> 5
+
+-}
+functionDefToSingleFunction :
+    { name : String
+    , mod : LetModifier
+    , branches : NonemptyList FunctionBranch
+    }
+    ->
+        { args : List Pattern
+        , body : Expr
+        }
+functionDefToSingleFunction r =
+    let
+        argCount =
+            NonemptyList.head r.branches
+                |> .args
+                |> List.length
+
+        vars =
+            List.range 0 (argCount - 1)
+                |> List.map (\i -> "arg" ++ String.fromInt i)
+    in
+    { args = List.map PVar vars
+    , body =
+        Case
+            { subject = Tuple (List.map (Identifier << Id.simple) vars)
+            , branches =
+                r.branches
+                    |> NonemptyList.toList
+                    |> List.map
+                        (\branch ->
+                            { pattern = PTuple (List.map Tuple.first branch.args)
+                            , body = branch.body
+                            }
+                        )
+            }
+    }

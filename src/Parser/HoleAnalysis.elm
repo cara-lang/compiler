@@ -12,6 +12,7 @@ import AST.Frontend as AST
         , Stmt(..)
         )
 import Error exposing (ParserError)
+import NonemptyList
 
 
 type HoleAnalysis
@@ -141,7 +142,11 @@ analyzeStmt stmt =
             analyzeBang bang
 
         SFunctionDef r ->
-            analyzeHoles r.body
+            mergeMany
+                (r.branches
+                    |> NonemptyList.toList
+                    |> List.map (.body >> analyzeHoles)
+                )
 
         SBinaryOperatorDef r ->
             analyzeHoles r.body

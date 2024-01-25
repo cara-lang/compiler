@@ -76,6 +76,7 @@ type ParserError
     | CouldntLexInsideStringInterpolation ( Loc, LexerError )
     | UnusedExpression F.Expr
     | IfWithoutElse { cond : F.Expr, then_ : F.Expr }
+    | ExpectedSpecificFunctionName -- Shouldn't be visible to the user
 
 
 type InterpreterError
@@ -271,6 +272,9 @@ title error =
 
                 IfWithoutElse _ ->
                     "If expression without an else branch"
+
+                ExpectedSpecificFunctionName ->
+                    "Expected specific function name"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of
@@ -549,6 +553,10 @@ code error =
 
                 IfWithoutElse _ ->
                     "E0021"
+
+                ExpectedSpecificFunctionName ->
+                    -- TODO
+                    "EXXXX"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of

@@ -8,6 +8,7 @@ import Lexer
 import List.Zipper as Zipper
 import Loc exposing (Loc)
 import Maybe.Extra
+import NonemptyList exposing (NonemptyList)
 import Operator
 import Parser.HoleAnalysis as HoleAnalysis
 import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
@@ -66,15 +67,82 @@ declaration =
 
 {-|
 
-    : PRIVATE? LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
+    : functionBranch (EOL+ functionBranch)*
     = f(a,b) = a + b
 
 -}
 functionDefStmt : Parser Stmt
 functionDefStmt =
-    Parser.succeed (\mod name args body -> SFunctionDef { mod = mod, name = name, args = args, body = body })
+    functionBranch Nothing
+        |> Parser.andThen
+            (\first ->
+                let
+                    ( firstMod, firstName, firstBranch ) =
+                        first
+                in
+                Parser.many
+                    (Parser.succeed identity
+                        |> Parser.skip Parser.skipEol
+                        |> Parser.keep (functionBranch (Just firstName))
+                    )
+                    |> Parser.map
+                        (\rest ->
+                            let
+                                allBranches : NonemptyList FunctionBranch
+                                allBranches =
+                                    NonemptyList.fromCons
+                                        firstBranch
+                                        (List.map (\( _, _, branch ) -> branch) rest)
+
+                                finalMod =
+                                    case firstMod of
+                                        LetPrivate ->
+                                            LetPrivate
+
+                                        LetNoModifier ->
+                                            List.foldl
+                                                (\( newMod, _, _ ) acc ->
+                                                    case newMod of
+                                                        LetPrivate ->
+                                                            LetPrivate
+
+                                                        LetNoModifier ->
+                                                            acc
+                                                )
+                                                LetNoModifier
+                                                rest
+                            in
+                            SFunctionDef
+                                { mod = finalMod
+                                , name = firstName
+                                , branches = allBranches
+                                }
+                        )
+            )
+
+
+{-|
+
+    : PRIVATE? LOWER_NAME LPAREN (pattern (COMMA pattern)*)? RPAREN EQ EOL* expr
+    = f(a,b) = a + b
+
+-}
+functionBranch : Maybe String -> Parser ( LetModifier, String, FunctionBranch )
+functionBranch neededName =
+    Parser.succeed (\mod name args body -> ( mod, name, { args = args, body = body } ))
         |> Parser.keep letModifier
-        |> Parser.keep lowerName
+        |> Parser.keep
+            (lowerName
+                |> (case neededName of
+                        Nothing ->
+                            identity
+
+                        Just neededName_ ->
+                            Parser.butNot_
+                                (\gotName -> gotName /= neededName_)
+                                ExpectedSpecificFunctionName
+                   )
+            )
         |> Parser.keep
             (Parser.separatedList
                 { left = LParen

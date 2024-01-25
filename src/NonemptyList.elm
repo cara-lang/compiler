@@ -2,6 +2,7 @@ module NonemptyList exposing
     ( NonemptyList
     , fromCons
     , fromList
+    , head
     , singleton
     , toList
     )
@@ -34,3 +35,8 @@ fromList xs =
 
         fst :: rest ->
             Just ( fst, rest )
+
+
+head : NonemptyList a -> a
+head ( x, _ ) =
+    x

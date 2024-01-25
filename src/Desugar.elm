@@ -7,7 +7,7 @@ import Env
 import Error exposing (DesugarError)
 import Id exposing (Id)
 import Id.Qualified exposing (QualifiedId)
-import NonemptyList
+import NonemptyList exposing (NonemptyList)
 import Result.Extra as Result
 
 
@@ -107,16 +107,19 @@ desugarStmt stmt =
 desugarFunctionDef :
     { mod : F.LetModifier
     , name : String
-    , args : List ( F.Pattern, Maybe F.Type )
-    , body : F.Expr
+    , branches : NonemptyList F.FunctionBranch
     }
     -> B.Decl
 desugarFunctionDef r =
     -- TODO do something about the mod
+    let
+        { args, body } =
+            F.functionDefToSingleFunction r
+    in
     B.DFunctionDef
         { id = qualify (Id.simple r.name)
-        , args = List.map desugarPatternWithType r.args
-        , body = desugarExpr r.body
+        , args = List.map desugarPattern args
+        , body = desugarExpr body
         }
 
 
