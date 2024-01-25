@@ -364,6 +364,10 @@ addToEnv addition env =
             env
 
         AddValue name value ->
+            --let
+            --    _ =
+            --        Debug.log "adding to env" ( name, Value.toInspectString value )
+            --in
             Env.add name value env
 
         AddBinaryOp op value ->
@@ -842,7 +846,13 @@ interpretPattern stmtMonad =
                 Debug.Extra.todo1 "interpret as-pattern" (AST.patternToString pattern)
 
             POr l r ->
-                Debug.Extra.todo1 "interpret or-pattern" (AST.patternToString pattern)
+                Interpreter.do (interpretPattern stmtMonad env ( l, value )) <| \env1 maybeAddition ->
+                case maybeAddition of
+                    Nothing ->
+                        interpretPattern stmtMonad env1 ( r, value )
+
+                    Just _ ->
+                        Outcome.succeed env1 maybeAddition
 
 
 interpretPatternTuple : StmtMonad -> Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
@@ -868,10 +878,6 @@ interpretPatternTuple stmtMonad =
 interpretPatternList : { canHaveSpreads : Bool } -> StmtMonad -> Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
 interpretPatternList { canHaveSpreads } stmtMonad =
     \env ( ps, vs ) ->
-        let
-            _ =
-                Debug.log "pattern list" ( ps, vs )
-        in
         case List.length (List.filter AST.isSpreadPattern ps) of
             0 ->
                 -- [],   []    -> Just AddNothing
@@ -903,18 +909,8 @@ interpretPatternList { canHaveSpreads } stmtMonad =
                                 let
                                     ( takenByRest, takenBySpread ) =
                                         List.Extra.splitAt (List.length rest) vs
-
-                                    _ =
-                                        Debug.log "taken by rest" takenByRest
-
-                                    _ =
-                                        Debug.log "taken by spread" takenBySpread
                                 in
                                 Interpreter.do (interpretPatternList { canHaveSpreads = False } stmtMonad env ( List.reverse rest, takenByRest )) <| \env1 maybeAddition ->
-                                let
-                                    _ =
-                                        Debug.log "after the non-spread" ()
-                                in
                                 case maybeAddition of
                                     Nothing ->
                                         Outcome.fail PatternMismatch
