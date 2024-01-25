@@ -320,25 +320,33 @@ interpretTypeDecl =
                 r.constructors
                     |> List.map
                         (\c ->
-                            let
-                                names : List String
-                                names =
-                                    List.indexedMap
-                                        (\i _ -> "arg" ++ String.fromInt i)
-                                        c.args
-                            in
-                            AddValue c.name <|
-                                VClosure
-                                    { args = List.map PVar names
-                                    , body =
-                                        Constructor_
-                                            { id =
-                                                -- TODO what about the module?
-                                                Id.local c.name
-                                            , args = List.map (Identifier << Id.local) names
-                                            }
-                                    , env = env
-                                    }
+                            if List.isEmpty c.args then
+                                AddValue c.name <|
+                                    VConstructor
+                                        { id = Id.local c.name
+                                        , args = []
+                                        }
+
+                            else
+                                let
+                                    names : List String
+                                    names =
+                                        List.indexedMap
+                                            (\i _ -> "arg" ++ String.fromInt i)
+                                            c.args
+                                in
+                                AddValue c.name <|
+                                    VClosure
+                                        { args = List.map PVar names
+                                        , body =
+                                            Constructor_
+                                                { id =
+                                                    -- TODO what about the module?
+                                                    Id.local c.name
+                                                , args = List.map (Identifier << Id.local) names
+                                                }
+                                        , env = env
+                                        }
                         )
                     |> ManyAdditions
 
