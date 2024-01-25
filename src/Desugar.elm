@@ -28,7 +28,7 @@ desugarDecl decl =
             Ok
                 -- TODO mod
                 [ B.DType
-                    { id = qualify (Id.local r.name)
+                    { id = qualify (Id.simple r.name)
                     , vars = r.vars
                     , constructors = List.map desugarTypeConstructor r.constructors
                     }
@@ -58,7 +58,7 @@ desugarDecl decl =
 
 desugarTypeConstructor : F.TypeConstructor -> B.TypeConstructor
 desugarTypeConstructor ctr =
-    { id = qualify (Id.local ctr.name)
+    { id = qualify (Id.simple ctr.name)
     , arity = List.length ctr.args
     }
 
@@ -114,7 +114,7 @@ desugarFunctionDef :
 desugarFunctionDef r =
     -- TODO do something about the mod
     B.DFunctionDef
-        { id = qualify (Id.local r.name)
+        { id = qualify (Id.simple r.name)
         , args = List.map desugarPatternWithType r.args
         , body = desugarExpr r.body
         }

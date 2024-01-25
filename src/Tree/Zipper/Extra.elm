@@ -57,6 +57,12 @@ isRoot zipper =
     Zipper.parent zipper == Nothing
 
 
+{-| ["grandparent", "parent", "current"]
+
+Doesn't contain the current module name.
+Doesn't contain the root.
+
+-}
 breadcrumbs : Zipper a -> List a
 breadcrumbs zipper =
     let
@@ -64,7 +70,7 @@ breadcrumbs zipper =
         go acc current =
             case Zipper.parent current of
                 Nothing ->
-                    -- We're the root. We don't want the root label in breadcrumbs so let's stop here!
+                    -- We're the root. We don't want the "<root>" root label in breadcrumbs so let's stop here!
                     acc
 
                 Just parent ->

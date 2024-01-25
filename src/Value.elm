@@ -6,6 +6,7 @@ module Value exposing
     , nothing
     , toInspectString
     , toShowString
+    , withClosures
     )
 
 import AST.Frontend as AST exposing (Expr, Pattern)
@@ -29,7 +30,7 @@ type Value
     | VRecord (Dict String Value)
     | VRecordGetter String
     | VConstructor
-        { id : Id
+        { rootId : Id -- TODO QualifiedId?
         , args : List Value
         }
     | VClosure
@@ -97,8 +98,8 @@ toShowString value =
             "<record getter .{FIELD}>"
                 |> String.replace "{FIELD}" field
 
-        VConstructor { id, args } ->
-            Id.toString id
+        VConstructor { rootId, args } ->
+            Id.toString rootId
                 ++ (if List.isEmpty args then
                         ""
 
@@ -179,8 +180,8 @@ toInspectString value =
             "<record getter .{FIELD}>"
                 |> String.replace "{FIELD}" field
 
-        VConstructor { id, args } ->
-            Id.toString id
+        VConstructor { rootId, args } ->
+            Id.toString rootId
                 ++ (if List.isEmpty args then
                         ""
 
@@ -252,13 +253,16 @@ closureToString :
     }
     -> String
 closureToString { args, body } =
-    AST.lambdaToString { args = args, body = body }
+    AST.lambdaToString
+        { args = args
+        , body = body
+        }
 
 
 nothing : Value
 nothing =
     VConstructor
-        { id = Id.global [ "Maybe" ] "Nothing"
+        { rootId = Id.global [ "Maybe" ] "Nothing"
         , args = []
         }
 
@@ -266,6 +270,16 @@ nothing =
 just : Value -> Value
 just val =
     VConstructor
-        { id = Id.global [ "Maybe" ] "Just"
+        { rootId = Id.global [ "Maybe" ] "Just"
         , args = [ val ]
         }
+
+
+withClosures : (Value -> String) -> Value -> String
+withClosures toString value =
+    case value of
+        VClosure r ->
+            closureToString r
+
+        _ ->
+            toString value

@@ -1,0 +1,10 @@
+module Bar {
+  module Baz {
+    type Foo = Foo(Int)
+  }
+}
+
+f(Bar.Baz.Foo(x)) = x + 1
+y = f(Bar.Baz.Foo(5))
+
+IO.println!(y)

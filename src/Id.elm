@@ -1,6 +1,6 @@
 module Id exposing
     ( Id
-    , local, global
+    , simple, global
     , toString
     , bind, pure
     , main_
@@ -10,7 +10,7 @@ module Id exposing
 {-|
 
 @docs Id
-@docs local, global
+@docs simple, global
 @docs toString
 
 
@@ -38,8 +38,8 @@ toString id =
     String.join "." (id.qualifiers ++ [ id.name ])
 
 
-local : String -> Id
-local name =
+simple : String -> Id
+simple name =
     { qualifiers = []
     , name = name
     }

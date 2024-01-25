@@ -111,9 +111,8 @@ init flags =
                         Debug.todo ("handle desugar error: " ++ Debug.toString err)
 
                     Ok hvmString ->
-                        effect0 (Effect.Println hvmString) <|
-                            \() ->
-                                finish
+                        effect0 (Effect.Println hvmString) <| \() ->
+                        finish
 
             else
                 -- interpreting

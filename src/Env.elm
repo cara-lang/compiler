@@ -5,10 +5,11 @@ module Env exposing
     , goInto, goUp
     , get, getBinaryOp, getUnaryOp
     , toString
+    , localId, localize
     , Module
     )
 
-{-|
+{-| Everything in a given Env Module will be fully qualified. Thus, x => Bar.Foo(123) instead of x => Foo(123)
 
 @docs Env, initWithIntrinsics
 @docs add, addId, addBinaryOp, addUnaryOp
@@ -16,6 +17,7 @@ module Env exposing
 @docs goInto, goUp
 @docs get, getBinaryOp, getUnaryOp
 @docs toString
+@docs localId, localize
 @docs Module
 
 -}
@@ -27,7 +29,7 @@ import Intrinsic exposing (Intrinsic)
 import String.Extra as String
 import Tree
 import Tree.Zipper as Zipper exposing (Zipper)
-import Tree.Zipper.Extra as Zipper
+import Tree.Zipper.Extra as ZipperExtra
 
 
 type alias Env value =
@@ -76,7 +78,7 @@ addIntrinsics { intrinsicToValue } env =
                     Intrinsic.id intrinsic
             in
             env_
-                |> Zipper.mapRoot .name (addId id (intrinsicToValue intrinsic))
+                |> ZipperExtra.mapRoot .name (addId id (intrinsicToValue intrinsic))
     in
     Intrinsic.all
         |> List.foldl addIntrinsic env
@@ -92,7 +94,7 @@ addId : Id -> value -> Env value -> Env value
 addId id value env =
     env
         |> ensurePath id.qualifiers
-        |> Zipper.mapAtPath
+        |> ZipperExtra.mapAtPath
             .name
             id.qualifiers
             (add id.name value)
@@ -185,12 +187,12 @@ ensurePath path env =
 
 goInto : List String -> Env value -> Maybe (Env value)
 goInto modules env =
-    Zipper.navigate .name modules env
+    ZipperExtra.navigate .name modules env
 
 
 get : Id -> Env value -> Maybe value
 get id env =
-    Zipper.navigate .name id.qualifiers env
+    ZipperExtra.navigate .name id.qualifiers env
         |> Maybe.andThen
             (\deepEnv ->
                 (Zipper.label deepEnv).values
@@ -248,3 +250,23 @@ moduleToString { valueToString } module_ =
 goUp : Env value -> Maybe (Env value)
 goUp env =
     Zipper.parent env
+
+
+localId : Env value -> String -> Id
+localId env name =
+    let
+        qualifiers =
+            ZipperExtra.breadcrumbs env
+                |> List.map .name
+    in
+    Id.global qualifiers name
+
+
+localize : Env value -> Id -> Id
+localize env id =
+    let
+        extraQualifiers =
+            ZipperExtra.breadcrumbs env
+                |> List.map .name
+    in
+    Id.global (extraQualifiers ++ id.qualifiers) id.name

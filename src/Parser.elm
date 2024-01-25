@@ -624,10 +624,7 @@ moduleDecl =
             (Parser.many
                 (Parser.succeed identity
                     |> Parser.skip Parser.skipEol
-                    |> Parser.keep
-                        (Parser.logCurrentAround "x"
-                            (Parser.lazy (\() -> declaration))
-                        )
+                    |> Parser.keep (Parser.lazy (\() -> declaration))
                 )
             )
         |> Parser.skip Parser.skipEol
@@ -1433,7 +1430,7 @@ prefixExpr =
 
 operatorFnExpr : Parser Expr
 operatorFnExpr =
-    Parser.succeed (\op -> Identifier (Operator.id op))
+    Parser.succeed (\op -> Identifier (Id.simple (Operator.lexeme op)))
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep (Parser.tokenData Token.getOperator)
         |> Parser.skip (Parser.token RParen)
@@ -1786,9 +1783,9 @@ holeExpr =
     Parser.oneOf
         { commited = []
         , noncommited =
-            [ Parser.succeed (Identifier (Id.local "_"))
+            [ Parser.succeed (Identifier (Id.simple "_"))
                 |> Parser.skip (Parser.token Underscore)
-            , Parser.succeed (\hole -> Identifier (Id.local ("_" ++ String.fromInt hole)))
+            , Parser.succeed (\hole -> Identifier (Id.simple ("_" ++ String.fromInt hole)))
                 |> Parser.keep (Parser.tokenData Token.getHole)
             ]
         }
