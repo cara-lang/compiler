@@ -1,0 +1,4 @@
+x = case [1,2,3,4,5] of
+  [first,second,...suffix] -> (first,second,suffix)
+
+IO.println!(x)
