@@ -877,14 +877,24 @@ interpretPatternTuple stmtMonad =
 
 interpretPatternList : { canHaveSpreads : Bool } -> StmtMonad -> Interpreter ( List Pattern, List Value ) (Maybe PatternAddition)
 interpretPatternList { canHaveSpreads } stmtMonad =
-    \env ( ps, vs ) ->
-        case List.length (List.filter AST.isSpreadPattern ps) of
-            0 ->
+    \env ( patterns, values ) ->
+        let
+            spreadsCount =
+                List.length (List.filter AST.isSpreadPattern patterns)
+
+            patternsCount =
+                List.length patterns
+
+            valuesCount =
+                List.length values
+        in
+        case ( spreadsCount, canHaveSpreads ) of
+            ( 0, _ ) ->
                 -- [],   []    -> Just AddNothing
                 -- [x],  [1]   -> x=1
                 -- [x,y],[1,2] -> x=1, y=2
-                if List.length ps == List.length vs then
-                    Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env (List.map2 Tuple.pair ps vs)) <| \env1 maybeAdditions ->
+                if patternsCount == valuesCount then
+                    Interpreter.do (Interpreter.traverse (interpretPattern stmtMonad) env (List.map2 Tuple.pair patterns values)) <| \env1 maybeAdditions ->
                     case Maybe.Extra.combine maybeAdditions of
                         Nothing ->
                             Outcome.fail PatternMismatch
@@ -895,22 +905,46 @@ interpretPatternList { canHaveSpreads } stmtMonad =
                 else
                     Outcome.succeed env Nothing
 
-            1 ->
-                case ps of
-                    (PSpread spread) :: rest ->
-                        Debug.todo "interpretPatternList - one spread - spread at the beginning"
+            ( 1, True ) ->
+                case patterns of
+                    (PSpread spread) :: restPatterns ->
+                        -- [...xs,    x], [1,2,3,4] --> xs=[1,2,3], x=4
+                        -- [...xs, x, y], [1,2,3,4] --> xs=[1,2],   x=3, y=4
+                        let
+                            ( takenBySpread, takenByRest ) =
+                                List.Extra.splitAt (valuesCount - patternsCount + 1 {- n of spread items -}) values
+                        in
+                        Interpreter.do (interpretPatternList { canHaveSpreads = False } stmtMonad env ( restPatterns, takenByRest )) <| \env1 maybeAddition ->
+                        case maybeAddition of
+                            Nothing ->
+                                Outcome.fail PatternMismatch
 
-                    _ ->
-                        case List.reverse ps of
-                            (PSpread spread) :: rest ->
-                                -- the spread will take as many values as possible
+                            Just addition ->
+                                case spread of
+                                    Just spreadName ->
+                                        let
+                                            newAddition =
+                                                ManyAdditions
+                                                    -- TODO in case somebody does [...x,x], this order will become important. Let's pin this down with a test
+                                                    [ addition
+                                                    , AddValue spreadName (VList takenBySpread)
+                                                    ]
+                                        in
+                                        Outcome.succeed env1 (Just newAddition)
+
+                                    Nothing ->
+                                        Outcome.succeed env1 maybeAddition
+
+                    firstPattern :: restPatterns ->
+                        case List.reverse patterns of
+                            (PSpread spread) :: revButlastPatterns ->
                                 -- [x,    ...xs], [1,2,3,4] --> x=1,      xs=[2,3,4]
                                 -- [x, y, ...xs], [1,2,3,4] --> x=1, y=2, xs=[3,4]
                                 let
                                     ( takenByRest, takenBySpread ) =
-                                        List.Extra.splitAt (List.length rest) vs
+                                        List.Extra.splitAt (patternsCount - 1 {- n of non-spread items -}) values
                                 in
-                                Interpreter.do (interpretPatternList { canHaveSpreads = False } stmtMonad env ( List.reverse rest, takenByRest )) <| \env1 maybeAddition ->
+                                Interpreter.do (interpretPatternList { canHaveSpreads = False } stmtMonad env ( List.reverse revButlastPatterns, takenByRest )) <| \env1 maybeAddition ->
                                 case maybeAddition of
                                     Nothing ->
                                         Outcome.fail PatternMismatch
@@ -921,6 +955,7 @@ interpretPatternList { canHaveSpreads } stmtMonad =
                                                 let
                                                     newAddition =
                                                         ManyAdditions
+                                                            -- TODO in case somebody does [x,...x], this order will become important. Let's pin this down with a test
                                                             [ addition
                                                             , AddValue spreadName (VList takenBySpread)
                                                             ]
@@ -930,11 +965,41 @@ interpretPatternList { canHaveSpreads } stmtMonad =
                                             Nothing ->
                                                 Outcome.succeed env1 maybeAddition
 
-                            _ ->
-                                Debug.todo "interpretPatternList - one spread - spread somewhere in the middle"
+                            lastPattern :: revButlastPatterns ->
+                                {- [x, ...middle, y], [1,2,3,4] --> x=1, xs=[2,3], y=4
 
-            _ ->
+                                   Because we'd have hard time destructuring the Spread
+                                   that's somewhere in the middle, we rather just slice
+                                   one of the values off the end and then try
+                                   interpretPatternList again. Eventually the spread
+                                   will be at the beginning of the list and some other
+                                   case..of branch will fire.
+                                -}
+                                case List.reverse values of
+                                    [] ->
+                                        Outcome.fail PatternMismatch
+
+                                    lastValue :: revRestValues ->
+                                        Interpreter.do (interpretPattern stmtMonad env ( lastPattern, lastValue )) <| \env1 maybeAddition1 ->
+                                        Interpreter.do (interpretPatternList { canHaveSpreads = True } stmtMonad env1 ( List.reverse revButlastPatterns, List.reverse revRestValues )) <| \env2 maybeAddition2 ->
+                                        case Maybe.Extra.combine [ maybeAddition1, maybeAddition2 ] of
+                                            Nothing ->
+                                                Outcome.fail PatternMismatch
+
+                                            Just additions ->
+                                                Outcome.succeed env2 (Just (ManyAdditions additions))
+
+                            [] ->
+                                Debug.todo "This shouldn't be possible - compiler bug. We've just seen there's one PSpread somewhere in the list, so the list can't be empty."
+
+                    [] ->
+                        Debug.todo "This shouldn't be possible - compiler bug. We've just seen there's one PSpread somewhere in the list, so the list can't be empty."
+
+            ( _, True ) ->
                 Outcome.fail MultipleSpreadPatterns
+
+            ( _, False ) ->
+                Outcome.fail PatternMismatch
 
 
 interpretExpr : StmtMonad -> Interpreter Expr Value

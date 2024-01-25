@@ -1,4 +1,16 @@
-x = case [1,2,3,4,5] of
-  [...prefix,last2,last1] -> (prefix,last2,last1)
+x2 = case [1,2]       of
+  [...prefix,butlast,last] -> (prefix,butlast,last)
 
-IO.println!(x)
+x3 = case [1,2,3]     of 
+  [...prefix,butlast,last] -> (prefix,butlast,last)
+
+x4 = case [1,2,3,4]   of 
+  [...prefix,butlast,last] -> (prefix,butlast,last)
+
+x5 = case [1,2,3,4,5] of 
+  [...prefix,butlast,last] -> (prefix,butlast,last)
+
+IO.println!(x2)
+IO.println!(x3)
+IO.println!(x4)
+IO.println!(x5)
