@@ -1,8 +1,14 @@
-E0034: Non-terminated string
+E0012: Unescaped newline in a single-line string
 
-A non-terminated string was found. Add the second " character.
+The string contains an unescaped newline. Escape the newline with `\n` or
+change the string to the multi-line variant with a backquote:
 
-main.cara:1:5
+  `abc
+  def`
+
+The newline was found immediately before the position below:
+
+main.cara:2:1
 ━━┓
-1 ┃ x = "abc
-  ┃     ^
+2 ┃ def")
+  ┃ ^
