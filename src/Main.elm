@@ -60,15 +60,21 @@ type Msg
 
 
 logLexed : Result Error (List Token) -> Result Error (List Token)
-logLexed =
-    Result.map
-        (\ts ->
+logLexed result =
+    case result of
+        Err err ->
+            let
+                _ =
+                    Debug.log "err" err
+            in
+            result
+
+        Ok ts ->
             let
                 _ =
                     ts |> List.reverse |> List.map (Token.toDebugString >> Debug.log "lexed")
             in
-            ts
-        )
+            result
 
 
 logParsed : AST.Program -> AST.Program
