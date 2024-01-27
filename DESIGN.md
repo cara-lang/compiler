@@ -67,8 +67,42 @@ WANTED:
 * Probably no <| pipelines? << and >> still might have their place. 
 * inline pragmas? for Maybe.map to become tail-safe etc.
 * what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
-* GADTs?
+
+* Opaque types by default? Keyword for opt-in transparency instead of for opt-in opaqueness?
+
+----------------------
+
+GADTs?
+
+Would really love them to make more precise constructors and more powerful pattern matching:
+
+(pseudo-Elm:)
+
+    type Expr a where
+      I : Int -> Expr Int
+      B : Bool -> Expr Bool
+      Add : Expr Int -> Expr Int -> Expr Int
+      Mul : Expr Mul -> Expr Mul -> Expr Mul
+      Eq : Expr a -> Expr a -> Expr Bool
+
+    eval : Expr a -> a      -- see? no `Maybe (Either Int Bool)`
+    eval expr =
+      case expr of
+        I i -> i                        -- see?
+        B b -> b                        -- these two rows?
+        Add e1 e2 -> eval e1 + eval e2
+        Mul e1 e2 -> eval e1 * eval e2
+        Eq e1 e2 -> eval e1 == eval e2  -- see? no manual checking of impossible cases!
+
+
   * https://dev.realworldocaml.org/gadts.html
+  * https://github.com/ollef/sixten?tab=readme-ov-file#algebraic-data-types-and-pattern-matching
+  Can we even have GADTs with Hindley-Milner?
+    * There is some issue with QuickCheck IIRC. `https://wiki.haskell.org/QuickCheck_/_GADT`
+    * Might be useful for implementation: https://www.microsoft.com/en-us/research/publication/practical-type-inference-for-arbitrary-rank-types/
+
+----------------------
+
 * automatic letrec
 * explicit qualification like `List.map` etc. is preferable over typeclass-y `fmap`
 * functions can be implicitly namespaced, as if methods on a type
@@ -242,3 +276,37 @@ Promises made:
 - [ ] int8, int16, int32, int64 in language
 - [ ] uint8, uint16, uint32, uint64 in language
 - [ ] float32, float64 in language
+
+
+
+-----------------------------------
+
+From core-lang.dev/design:
+
+> "Always rules" are better than "almost rules":
+> = assigns
+> : ascribes
+> @ annotates
+> . selects
+> () encloses values
+> [] encloses types
+
+- perhaps something similar should hold for Cara? "if I see @ it's always for XYZ"
+-------------------------------
+
+From ptls.dev/online/collatz.html:
+
+output =
+  iterate(step, 175) -- sequence starts at 175
+  |> takeUntil(eq(1))
+  |> scale(4)
+  |> println
+
+--> ASCII chart, how cool is that!
+
+                                    ▂         █                                  
+                                  ▁ █       ▅ █▁                                 
+                                ▃ █▁█▅  ▂ ▆ █▃██▁                                
+▁▂▁▃▂▄▂▆▃▂▅▃▂▁▂▁▃▂▄▂▁▃▂▄▂▁▃▂▅▃▇▄█▅████▆▃█▅█▇█████▄▂▆▃▂▄▂▁▃▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+
+Overall pointless is worth studying more: https://ptls.dev/docs.html
