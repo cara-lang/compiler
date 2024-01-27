@@ -1,0 +1,4 @@
+lines = IO.readLines!()
+lines
+  |> List.reverse 
+  |> IO.each!(IO.println)

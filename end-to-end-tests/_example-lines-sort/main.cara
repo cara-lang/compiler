@@ -1,0 +1,4 @@
+lines = IO.readLines!()
+lines
+  |> List.sort
+  |> IO.each!(IO.println)

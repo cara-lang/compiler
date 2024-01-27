@@ -1,0 +1,2 @@
+lines = IO.readLines!()
+IO.println!(List.length(lines))

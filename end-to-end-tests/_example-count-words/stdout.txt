@@ -1,0 +1,7 @@
+"a": 1
+"beautiful": 1
+"hello": 2
+"is": 1
+"it": 1
+"there": 1
+"world": 2

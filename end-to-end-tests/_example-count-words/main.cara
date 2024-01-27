@@ -1,0 +1,8 @@
+string = IO.read!()
+words = String.words(string)
+count = Dict.frequencies(words)
+count
+  |> Dict.toList
+  |> List.sortBy(.el0)
+  |> List.map (\(word,count) -> "${IO.inspect(char)}: ${count}")
+  |> IO.each!(IO.println)

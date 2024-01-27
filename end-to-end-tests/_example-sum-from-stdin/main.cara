@@ -1,0 +1,7 @@
+line = IO.readLine!()
+numbers = String.split(" ", line)
+sum =
+  numbers 
+    |> List.filterMap(String.toInt) // throw away non-numbers
+    |> List.sum
+IO.println!(sum)
