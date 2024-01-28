@@ -20,4 +20,9 @@ module Gen {
     Char.fromCode(code)
   }
 
+
+  // TODO to have Gen.rngSeed (see Random), we'd need:
+  // map2
+  // intAtLeast(0)
+
 }

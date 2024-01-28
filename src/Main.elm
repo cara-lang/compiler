@@ -280,9 +280,11 @@ pauseOnEffectBool effect k =
 
 printError : Error -> Cmd msg
 printError error =
-    "{LOC} - {TITLE}"
+    --"{LOC} - {TITLE}"
+    "{LOC} - {ERROR}"
         |> String.replace "{LOC}" (Loc.toString (Error.loc error))
-        |> String.replace "{TITLE}" (Error.title error)
+        --|> String.replace "{TITLE}" (Error.title error)
+        |> String.replace "{ERROR}" (Error.inspect error)
         |> Effect.eprintln
 
 

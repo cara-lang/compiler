@@ -5,6 +5,7 @@ module Error exposing
     , LexerError(..)
     , ParserError(..)
     , code
+    , inspect
     , loc
     , title
     )
@@ -690,3 +691,19 @@ loc error =
 
         DesugarError ( loc_, _ ) ->
             loc_
+
+
+inspect : Error -> String
+inspect error =
+    case error of
+        LexerError ( _, err ) ->
+            Debug.toString err
+
+        ParserError ( _, err ) ->
+            Debug.toString err
+
+        InterpreterError ( _, err ) ->
+            Debug.toString err
+
+        DesugarError ( _, err ) ->
+            Debug.toString err

@@ -1,3 +1,6 @@
+// TODO import Gen
+// (or somehow make knowledge about certain intrinsics baked into the compiler so that Gen can be built on top of Random)
+
 module Random {
 
   /*
@@ -9,12 +12,12 @@ module Random {
 
   opaque type Seed = Seed(state: Int, incr: Int)
 
-  extend module Gen {
-    seed : Gen[Seed]
-    seed = Gen.map2(#(Seed(_1,_2)),
-                    Gen.intAtLeast(0),
-                    Gen.intAtLeast(0))
-  }
+  //extend module Gen {
+  //  rngSeed : Gen[Seed]
+  //  rngSeed = Gen.map2(#(Seed(_1,_2)),
+  //                  Gen.intAtLeast(0),
+  //                  Gen.intAtLeast(0))
+  //}
 
   /* TODO are we missing a "modulo by 32" here?
      Seems to be the case based on the comment in elm/random.
