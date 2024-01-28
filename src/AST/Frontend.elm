@@ -26,6 +26,7 @@ module AST.Frontend exposing
     , isSpreadPattern
     , lambdaToString
     , patternToString
+    , stmtToString
     , typeToString
     , unaryOp
     )
@@ -56,19 +57,50 @@ type Expr
       -- Calls
     | UnaryOp UnaryOp Expr -- ~a
     | BinaryOp Expr BinaryOp Expr -- a+b
-    | Call { fn : Expr, args : List Expr } -- foo(), bar(1,2)
-    | RecordGet { record : Expr, field : String } -- record.field
+    | Call
+        -- foo(), bar(1,2)
+        { fn : Expr
+        , args : List Expr
+        }
+    | RecordGet
+        -- record.field
+        { record : Expr
+        , field : String
+        }
       -- Blocks
-    | Block { stmts : List Stmt, ret : Expr } -- x = { ... }
-    | EffectBlock { monadModule : List String, stmts : List Stmt, ret : BangOrExpr } -- x = My.Monad { ... }
+    | Block
+        -- x = { ... }
+        { stmts : List Stmt
+        , ret : Expr
+        }
+    | EffectBlock
+        -- x = My.Monad { ... }
+        { monadModule : List String
+        , stmts : List Stmt
+        , ret : BangOrExpr
+        }
       -- Other
-    | Constructor_ { id : Id, args : List Expr } -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
+    | Constructor_
+        -- Foo, Bar.Foo, Foo(1,2), Bar.Foo(1,2)
+        { id : Id
+        , args : List Expr
+        }
     | Identifier Id -- foo, Bar.foo
     | RootIdentifier Id -- ::foo, ::Bar.foo
-    | Lambda { args : List Pattern, body : Expr }
+    | Lambda
+        { args : List Pattern
+        , body : Expr
+        }
     | RecordGetter String -- .field
-    | If { cond : Expr, then_ : Expr, else_ : Expr }
-    | Case { subject : Expr, branches : List CaseBranch }
+    | If
+        { cond : Expr
+        , then_ : Expr
+        , else_ : Expr
+        }
+    | Case
+        { subject : Expr
+        , branches : List CaseBranch
+        }
 
 
 type Type
@@ -109,7 +141,11 @@ type Pattern
 
 type Bang
     = BValue Expr -- foo!, Bar.foo!, x |> foo!, foo.bar!
-    | BCall { fn : Expr, args : List Expr } -- foo!(1,2), Bar.foo!(1,2), x |> foo!(1,2), foo.bar!(1,2)
+    | BCall
+        -- foo!(1,2), Bar.foo!(1,2), x |> foo!(1,2), foo.bar!(1,2)
+        { fn : Expr
+        , args : List Expr
+        }
 
 
 type BangOrExpr
@@ -656,7 +692,10 @@ exprToString expr =
             unaryOp op ++ exprToString e
 
         BinaryOp left op right ->
-            exprToString left ++ binaryOp op ++ exprToString right
+            "{LEFT} {OP} {RIGHT}"
+                |> String.replace "{LEFT}" (exprToString left)
+                |> String.replace "{OP}" (binaryOp op)
+                |> String.replace "{RIGHT}" (exprToString right)
 
         Call { fn, args } ->
             exprToString fn
@@ -668,10 +707,24 @@ exprToString expr =
             exprToString record ++ "." ++ field
 
         Block { stmts, ret } ->
-            "{\n" ++ String.join "\n" (List.map (stmtToString >> indent4) stmts) ++ "\n}"
+            [ [ "{" ]
+            , List.map (stmtToString >> indent4) stmts
+            , [ exprToString ret
+              , "}"
+              ]
+            ]
+                |> List.concat
+                |> String.join "\n"
 
-        EffectBlock _ ->
-            Debug.todo "expr to string - effect block"
+        EffectBlock r ->
+            [ [ String.join "." r.monadModule ++ " {" ]
+            , List.map (stmtToString >> indent4) r.stmts
+            , [ bangOrExprToString r.ret
+              , "}"
+              ]
+            ]
+                |> List.concat
+                |> String.join "\n"
 
         Constructor_ { id, args } ->
             Id.toString id
@@ -696,13 +749,42 @@ exprToString expr =
         RecordGetter field ->
             "." ++ field
 
-        If _ ->
-            Debug.todo "expr to string - if"
+        If r ->
+            "if {COND} then {THEN} else {ELSE}"
+                |> String.replace "{COND}" (exprToString r.cond)
+                |> String.replace "{THEN}" (exprToString r.then_)
+                |> String.replace "{ELSE}" (exprToString r.else_)
 
         Case r ->
             "case {SUBJECT} of\n{BRANCHES}"
                 |> String.replace "{SUBJECT}" (exprToString r.subject)
                 |> String.replace "{BRANCHES}" (String.join "\n" (List.map (caseBranchToString >> indent2) r.branches))
+
+
+bangOrExprToString : BangOrExpr -> String
+bangOrExprToString boe =
+    case boe of
+        B bang ->
+            bangToString bang
+
+        E expr ->
+            exprToString expr
+
+
+bangToString : Bang -> String
+bangToString bang =
+    case bang of
+        BValue expr ->
+            "{EXPR}!"
+                |> String.replace "{EXPR}" (exprToString expr)
+
+        BCall { fn, args } ->
+            "{FN}!({ARGS})"
+                |> String.replace "{EXPR}" (exprToString fn)
+                |> String.replace "{ARGS}"
+                    (String.join ","
+                        (List.map exprToString args)
+                    )
 
 
 caseBranchToString : CaseBranch -> String
@@ -716,13 +798,41 @@ stmtToString : Stmt -> String
 stmtToString stmt =
     case stmt of
         SLet r ->
-            Debug.Extra.todo1 "stmtToString: SLet" r
+            "{MOD}{PATTERN}{TYPE} = {VALUE}"
+                |> String.replace "{MOD}"
+                    (letModifierToString r.mod
+                        |> withSpaceToRightIfNotEmpty
+                    )
+                |> String.replace "{PATTERN}" (patternToString r.lhs)
+                |> String.replace "{TYPE}"
+                    (case r.type_ of
+                        Nothing ->
+                            ""
+
+                        Just type_ ->
+                            typeToString type_
+                    )
+                |> String.replace "{VALUE}" (exprToString r.expr)
 
         SLetBang r ->
-            Debug.Extra.todo1 "stmtToString: SLetBang" r
+            "{MOD}{PATTERN}{TYPE} = {BANG}"
+                |> String.replace "{MOD}"
+                    (letModifierToString r.mod
+                        |> withSpaceToRightIfNotEmpty
+                    )
+                |> String.replace "{PATTERN}" (patternToString r.lhs)
+                |> String.replace "{TYPE}"
+                    (case r.type_ of
+                        Nothing ->
+                            ""
+
+                        Just type_ ->
+                            typeToString type_
+                    )
+                |> String.replace "{BANG}" (bangToString r.bang)
 
         SBang bang ->
-            Debug.Extra.todo1 "stmtToString: SBang" bang
+            bangToString bang
 
         SFunctionDef r ->
             r.branches
@@ -747,7 +857,13 @@ stmtToString stmt =
             Debug.Extra.todo1 "stmtToString: SUnaryOperatorDef" r
 
         SValueAnnotation r ->
-            Debug.Extra.todo1 "stmtToString: SValueAnnotation" r
+            "{MOD}{NAME} : {TYPE}"
+                |> String.replace "{MOD}"
+                    (letModifierToString r.mod
+                        |> withSpaceToRightIfNotEmpty
+                    )
+                |> String.replace "{NAME}" r.name
+                |> String.replace "{TYPE}" (typeToString r.type_)
 
         SBinaryOperatorAnnotation r ->
             Debug.Extra.todo1 "stmtToString: SBinaryOperatorAnnotation" r

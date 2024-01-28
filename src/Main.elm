@@ -2,6 +2,7 @@ module Main exposing (Flags, Model, Msg, main)
 
 import AST.Frontend as AST
 import Codegen.HVM
+import Console
 import Debug.Extra
 import Desugar
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
@@ -74,7 +75,9 @@ logLexed result =
         Err err ->
             let
                 _ =
-                    Debug.log "err" err
+                    Debug.log
+                        (Debug.Extra.standOut "err")
+                        err
             in
             result
 
@@ -104,7 +107,7 @@ process : File -> Env Value -> ( Model, Cmd Msg )
 process { file, content } env =
     let
         _ =
-            Debug.log "processing" file
+            Debug.log (Console.blue "processing") file
     in
     let
         astResult : Result Error AST.Program
@@ -285,6 +288,7 @@ printError error =
         |> String.replace "{LOC}" (Loc.toString (Error.loc error))
         --|> String.replace "{TITLE}" (Error.title error)
         |> String.replace "{ERROR}" (Error.inspect error)
+        |> Debug.Extra.standOut
         |> Effect.eprintln
 
 

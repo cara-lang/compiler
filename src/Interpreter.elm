@@ -5,6 +5,7 @@ import Basics.Extra as Basics
 import BiDict
 import Bitwise
 import Common
+import Console
 import Debug.Extra
 import Dict exposing (Dict)
 import Effect
@@ -105,7 +106,7 @@ interpretUnitTest =
     \env { name, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretUnitTest" name
+                Debug.log (Console.dark "TODO interpretUnitTest") name
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -116,7 +117,7 @@ interpretParameterizedTest =
     \env { name, table, args, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretParameterizedTest" ()
+                Debug.log (Console.dark "TODO interpretParameterizedTest") ()
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -127,7 +128,7 @@ interpretPropertyTypeTest =
     \env { name, types, args, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretPropertyTypeTest" name
+                Debug.log (Console.dark "TODO interpretPropertyTypeTest") name
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -138,7 +139,7 @@ interpretPropertyGenTest =
     \env { name, gens, args, expr } ->
         let
             _ =
-                Debug.log "TODO do something in interpretPropertyGenTest" name
+                Debug.log (Console.dark "TODO interpretPropertyGenTest") name
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -258,7 +259,7 @@ interpretUnaryOpDef =
     \env { op, arg, body } ->
         let
             _ =
-                Debug.log "TODO do something in interpretUnaryOpDef" ()
+                Debug.log (Console.dark "TODO interpretUnaryOpDef") ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -269,7 +270,7 @@ interpretValueAnnotation =
     \env { mod, name, type_ } ->
         let
             _ =
-                Debug.log "TODO do something in interpretValueAnnotation" name
+                Debug.log (Console.dark "TODO interpretValueAnnotation") name
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -280,7 +281,7 @@ interpretBinaryOpAnnotation =
     \env { mod, op, left, right, ret } ->
         let
             _ =
-                Debug.log "TODO do something in interpretBinaryOpAnnotation" ()
+                Debug.log (Console.dark "TODO interpretBinaryOpAnnotation") ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -291,7 +292,7 @@ interpretUnaryOpAnnotation =
     \env { mod, op, arg, ret } ->
         let
             _ =
-                Debug.log "TODO do something in interpretUnaryOpAnnotation" ()
+                Debug.log (Console.dark "TODO interpretUnaryOpAnnotation") ()
         in
         -- TODO make type annotations do something
         Outcome.succeed env ()
@@ -302,7 +303,7 @@ interpretUseModule =
     \env moduleId ->
         let
             _ =
-                Debug.log "TODO do something in interpretUseModule" ()
+                Debug.log (Console.dark "TODO interpretUseModule") ()
 
             modulePath =
                 moduleId.qualifiers ++ [ moduleId.name ]
@@ -397,7 +398,7 @@ interpretTypeAlias =
     \env { mod, name, vars, body } ->
         let
             _ =
-                Debug.log "TODO do something in interpretTypeAlias" ()
+                Debug.log "TODO interpretTypeAlias" ()
         in
         -- TODO make type aliases do something
         Outcome.succeed env ()
@@ -1329,28 +1330,28 @@ interpretEffectBlock stmtMonad =
                     SValueAnnotation r ->
                         let
                             _ =
-                                Debug.log "TODO do something in interpretEffectBlock - SValueAnnotation" ()
+                                Debug.log "TODO interpretEffectBlock - SValueAnnotation" ()
                         in
                         innerExpr
 
                     SUnaryOperatorAnnotation r ->
                         let
                             _ =
-                                Debug.log "TODO do something in interpretEffectBlock - SUnaryOperatorAnnotation" ()
+                                Debug.log "TODO interpretEffectBlock - SUnaryOperatorAnnotation" ()
                         in
                         innerExpr
 
                     SBinaryOperatorAnnotation r ->
                         let
                             _ =
-                                Debug.log "TODO do something in interpretEffectBlock - SBinaryOperatorAnnotation" ()
+                                Debug.log "TODO interpretEffectBlock - SBinaryOperatorAnnotation" ()
                         in
                         innerExpr
 
                     SUseModule m ->
                         let
                             _ =
-                                Debug.log "TODO do something in interpretEffectBlock - SUseModule" ()
+                                Debug.log "TODO interpretEffectBlock - SUseModule" ()
                         in
                         innerExpr
         in

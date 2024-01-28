@@ -1,6 +1,7 @@
 module Parser exposing (parse)
 
 import AST.Frontend as AST exposing (..)
+import Console
 import Error exposing (Error(..), ParserError(..))
 import Id exposing (Id)
 import Intrinsic

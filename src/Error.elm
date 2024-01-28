@@ -697,13 +697,13 @@ inspect : Error -> String
 inspect error =
     case error of
         LexerError ( _, err ) ->
-            Debug.toString err
+            "LexerError: " ++ Debug.toString err
 
         ParserError ( _, err ) ->
-            Debug.toString err
+            "ParserError: " ++ Debug.toString err
 
         InterpreterError ( _, err ) ->
-            Debug.toString err
+            "InterpreterError: " ++ Debug.toString err
 
         DesugarError ( _, err ) ->
-            Debug.toString err
+            "DesugarError: " ++ Debug.toString err
