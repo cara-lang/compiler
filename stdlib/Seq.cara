@@ -48,9 +48,9 @@ module Seq {
   tail(Empty) = Nothing
   tail(Cons(_,xs)) = Just(xs())
 
-  member? : a -> Seq[a] -> Bool
-  member?(_,Empty) = False
-  member?(toFind,Cons(x,xs)) = x == toFind || member?(toFind,xs())
+  contains? : a -> Seq[a] -> Bool
+  contains?(_,Empty) = False
+  contains?(toFind,Cons(x,xs)) = x == toFind || contains?(toFind,xs())
 
   nth : Int -> Seq[a] -> Maybe[a]
   nth(n,seq) = head(drop(n-1,seq))
