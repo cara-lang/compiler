@@ -100,8 +100,12 @@ isCompilingToHVM =
     False
 
 
-process : File -> ( Model, Cmd Msg )
-process { file, content } =
+process : File -> Env Value -> ( Model, Cmd Msg )
+process { file, content } env =
+    let
+        _ =
+            Debug.log "processing" file
+    in
     let
         astResult : Result Error AST.Program
         astResult =
@@ -112,7 +116,7 @@ process { file, content } =
     in
     case astResult of
         Err err ->
-            finishWithError err
+            exitWithError err
 
         Ok frontendProgram ->
             if isCompilingToHVM then
@@ -127,23 +131,71 @@ process { file, content } =
                         Debug.todo ("handle desugar error: " ++ Debug.toString err)
 
                     Ok hvmString ->
-                        effect0 (Effect.Println hvmString) <| \() ->
-                        finishEmpty
+                        effect0 (Effect.Println hvmString) <|
+                            \() -> initModel
 
             else
                 -- interpreting
                 frontendProgram
                     --|> logParsed
-                    |> Interpreter.interpretProgram initEnv
+                    |> Interpreter.interpretProgram env
                     |> handleInterpreterOutcome
 
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    process
-        { file = "main.cara" -- TODO could be more specific (which test?)
-        , content = flags.sourceCode
-        }
+    initModel
+        |> andThenMany (List.map process flags.stdlibSources)
+        |> andThen
+            (process
+                { file = "main.cara"
+                , content = flags.sourceCode
+                }
+            )
+
+
+andThenMany : List (K (Env Value)) -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+andThenMany ks ( model, cmd ) =
+    case ( ks, model ) of
+        ( [], _ ) ->
+            ( model, cmd )
+
+        ( k :: rest, Exit ) ->
+            ( model, cmd )
+
+        ( k :: rest, _ ) ->
+            andThenMany rest (andThen k ( model, cmd ))
+
+
+andThen : K (Env Value) -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+andThen k ( model, cmd ) =
+    case model of
+        Exit ->
+            ( model, cmd )
+
+        Done env ->
+            let
+                ( newModel, newCmd ) =
+                    k env
+            in
+            ( newModel
+            , Cmd.batch [ cmd, newCmd ]
+            )
+
+        ExitingWithError ->
+            ( model, cmd )
+
+        PausedOnEffect0 eff k2 ->
+            Debug.todo "andThen p0"
+
+        PausedOnEffectStr eff k2 ->
+            Debug.todo "andThen pStr"
+
+        PausedOnEffectMaybeStr eff k2 ->
+            Debug.todo "andThen pMaybeStr"
+
+        PausedOnEffectBool eff k2 ->
+            Debug.todo "andThen pBool"
 
 
 effect0 : Effect0 -> K () -> ( Model, Cmd Msg )
@@ -157,10 +209,10 @@ handleInterpreterOutcome : Interpreter.Outcome () -> ( Model, Cmd Msg )
 handleInterpreterOutcome outcome =
     case outcome of
         Interpreter.DoneInterpreting env _ ->
-            finish env
+            done env
 
         Interpreter.FoundError error ->
-            finishWithError (InterpreterError error)
+            exitWithError (InterpreterError error)
 
         Interpreter.NeedsEffect0 effect k ->
             pauseOnEffect0 effect k
@@ -175,13 +227,13 @@ handleInterpreterOutcome outcome =
             pauseOnEffectBool effect k
 
 
-finishWithError : Error -> ( Model, Cmd Msg )
-finishWithError err =
+exitWithError : Error -> ( Model, Cmd Msg )
+exitWithError err =
     ( ExitingWithError, printError err )
 
 
-finish : Env Value -> ( Model, Cmd Msg )
-finish env =
+done : Env Value -> ( Model, Cmd Msg )
+done env =
     ( Done env, Cmd.none )
 
 
@@ -190,9 +242,9 @@ initEnv =
     Env.initWithIntrinsics { intrinsicToValue = VIntrinsic }
 
 
-finishEmpty : ( Model, Cmd Msg )
-finishEmpty =
-    finish initEnv
+initModel : ( Model, Cmd Msg )
+initModel =
+    done initEnv
 
 
 pauseOnEffect0 : Effect0 -> KO () -> ( Model, Cmd Msg )

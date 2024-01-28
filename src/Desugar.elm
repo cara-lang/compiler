@@ -336,6 +336,9 @@ desugarPattern p =
         F.PString str ->
             B.PString str
 
+        F.PBool bool ->
+            B.PBool bool
+
         F.PList list ->
             B.PList (List.map desugarPattern list)
 

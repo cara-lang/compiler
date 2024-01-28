@@ -90,6 +90,7 @@ type Pattern
     | PFloat Float -- 1.2345
     | PChar String -- 'a'
     | PString String -- "abc"
+    | PBool Bool -- True
     | PList (List Pattern) -- [1,a]
     | PTuple (List Pattern) -- (1,a)
     | PWildcard -- _
@@ -384,6 +385,9 @@ isSpreadPattern pattern =
         PString _ ->
             False
 
+        PBool _ ->
+            False
+
         PList _ ->
             False
 
@@ -552,6 +556,13 @@ patternToString pattern =
             "\"{STR}\""
                 -- TODO escaping?
                 |> String.replace "{STR}" s
+
+        PBool bool ->
+            if bool then
+                "True"
+
+            else
+                "False"
 
         PAs name inner ->
             "({INNER}) as {NAME}"

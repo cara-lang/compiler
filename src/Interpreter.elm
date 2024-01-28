@@ -711,6 +711,19 @@ interpretPattern stmtMonad =
                         _ ->
                             Nothing
 
+            PBool bool ->
+                Outcome.succeed env <|
+                    case value of
+                        VBool v ->
+                            if bool == v then
+                                Just AddNothing
+
+                            else
+                                Nothing
+
+                        _ ->
+                            Nothing
+
             PRecordSpread ->
                 case value of
                     VRecord fields ->

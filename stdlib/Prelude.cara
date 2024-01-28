@@ -1,14 +1,16 @@
 module Prelude {
 
-  // TODO make compiler depend on this
+  // TODO make compiler depend on this?
   not : Bool -> Bool
   not(True) = False
   not(False) = True
 
+  /* TODO
   // TODO << for functions?
   // TODO >> for functions?
 
   `..` : Int -> Seq[Int]
   `..`(n) = Seq.numbersFrom(n)
+  */
 
 }

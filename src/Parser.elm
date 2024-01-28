@@ -68,7 +68,10 @@ declaration =
 {-|
 
     : functionBranch (EOL+ functionBranch)*
-    = f(a,b) = a + b
+    = f(1,b) = b * 2
+      f(a,b) = a + b
+
+    (It eats multiple of them if they have the same name.)
 
 -}
 functionDefStmt : Parser Stmt
@@ -94,6 +97,7 @@ functionDefStmt =
                                         firstBranch
                                         (List.map (\( _, _, branch ) -> branch) rest)
 
+                                {- the idea is: LetPrivate wins, like True with || -}
                                 finalMod =
                                     case firstMod of
                                         LetPrivate ->
@@ -950,6 +954,8 @@ prefixPattern =
             , ( [ P Token.isLowerName ], varPattern )
             , ( [ P Token.isUpperName ], constructorPattern )
             , ( [ P Token.isQualifier ], constructorPattern )
+            , ( [ T True_ ], boolPattern )
+            , ( [ T False_ ], boolPattern )
             , ( [ P Token.isInt ], intPattern )
             , ( [ P Token.isFloat ], floatPattern )
             , ( [ T LParen ], tuplePattern )
@@ -1035,6 +1041,33 @@ constructorPattern =
                             Just ( arg, args ) ->
                                 arg :: args
                     )
+            )
+
+
+{-|
+
+    : (TRUE | FALSE)
+    = True
+    = False
+
+-}
+boolPattern : Parser Pattern
+boolPattern =
+    Parser.succeed PBool
+        |> Parser.keep
+            (Parser.oneOf
+                { commited =
+                    [ ( [ T True_ ]
+                      , Parser.succeed True
+                            |> Parser.skip (Parser.token True_)
+                      )
+                    , ( [ T False_ ]
+                      , Parser.succeed False
+                            |> Parser.skip (Parser.token False_)
+                      )
+                    ]
+                , noncommited = []
+                }
             )
 
 

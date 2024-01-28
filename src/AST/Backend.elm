@@ -86,6 +86,7 @@ type Pattern
     | PFloat Float
     | PChar String
     | PString String
+    | PBool Bool
     | PList (List Pattern)
     | PTuple (List Pattern)
     | PWildcard
