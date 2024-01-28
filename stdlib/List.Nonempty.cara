@@ -2,6 +2,7 @@ extend module List {
 
   type alias Nonempty[a] = (a,List[a])
 
+  /* TODO
   extend module Gen {
     nonemptyList : Gen[a] -> Gen[List.Nonempty[a]]
     nonemptyList(itemGen) = Gen {
@@ -10,6 +11,7 @@ extend module List {
       (x,xs)
     }
   }
+  */
 
   module Nonempty {
     
