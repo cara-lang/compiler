@@ -25,7 +25,7 @@ module Random {
     Seed(state0 * 1664525 + incr, incr)
 
   initSeed : Int -> Seed
-  initSeed x = {
+  initSeed(x) = {
     // the default increment magic constant is taken from Numerical Recipes
     Seed(state1,incr) = next(Seed(0,1013904223))
     state2 = state1 + x
