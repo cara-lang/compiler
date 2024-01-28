@@ -101,6 +101,12 @@ Would really love them to make more precise constructors and more powerful patte
     * There is some issue with QuickCheck IIRC. `https://wiki.haskell.org/QuickCheck_/_GADT`
     * Might be useful for implementation: https://www.microsoft.com/en-us/research/publication/practical-type-inference-for-arbitrary-rank-types/
 
+    * Slides: https://www.cis.upenn.edu/~sweirich/talks/icfp06-wobbly.pdf
+    * Paper: https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/gadt-pldi.pdf
+    * Seems like we need to enforce functions using case..of to have type annotations.
+        * Eg: https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/gadt.html
+        >  The general principle is this: type refinement is only carried out based on user-supplied type annotations. So if no type signature is supplied for eval, no type refinement happens, and lots of obscure error messages will occur.
+
 ----------------------
 
 * automatic letrec
