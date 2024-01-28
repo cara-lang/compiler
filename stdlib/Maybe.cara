@@ -4,21 +4,67 @@ module Maybe {
     | Nothing
     | Just(a)
 
-  // TODO withDefault : a -> Maybe[a] -> a
-  // TODO withDefault: we're promising a thunk-aware version in the docs:
-  // https://cara-lang.com/reference/anonymous-fns-and-holes/
-  // (-> a) -> Maybe[a] -> a
-  // Can we even overload in this way? (Same number of arguments)
+  pure : a -> Maybe[a]
+  pure(a) = Just(a)
 
-  // TODO map
-  // TODO map2
-  // TODO map3
-  // TODO map4
-  // TODO map5
+  bind : Maybe[a] -> (a -> Maybe[b]) -> Maybe[b]
+  bind(Nothing, _) = Nothing
+  bind(Just(a), fn) = fn(a)
 
-  // TODO andThen
-  // TODO bind
-  // TODO pure
+  andThen : (a -> Maybe[b]) -> Maybe[a] -> Maybe[b]
+  andThen(fn, maybe) = bind(maybe, fn)
+
+  withDefault : a -> Maybe[a] -> a
+  withDefault(default, Nothing) = default
+  withDefault(_, Just(a)) = a
+
+  withDefault : (-> a) -> Maybe[a] -> a
+  withDefault(toDefault, Nothing) = toDefault()
+  withDefault(_, Just(a)) = a
+
+  isJust : Maybe[a] -> Bool
+  isJust(Nothing) = False
+  isJust(Just(_)) = True
+
+  isNothing : Maybe[a] -> Bool
+  isNothing(Nothing) = True
+  isNothing(Just(_)) = False
+
+  flatten : Maybe[Maybe[a]] -> Maybe[a]
+  flatten(Nothing) = Nothing
+  flatten(Just(maybe)) = maybe
+
+  map : (a -> b) -> Maybe[a] -> Maybe[b]
+  map(_, Nothing) = Nothing
+  map(fn, Just(a)) = Just(fn(a))
+
+  map2 : (a -> b -> c) -> Maybe[a] -> Maybe[b] -> Maybe[c]
+  map2(fn, Just(a), Just(b)) = Just(fn(a,b))
+  map2(_, _, _) = Nothing
+
+  map3 : (a -> b -> c -> d) -> Maybe[a] -> Maybe[b] -> Maybe[c] -> Maybe[d]
+  map3(fn, Just(a), Just(b), Just(c)) = Just(fn(a,b,c))
+  map3(_, _, _, _) = Nothing
+
+  map4 : (a -> b -> c -> d -> e) -> Maybe[a] -> Maybe[b] -> Maybe[c] -> Maybe[d] -> Maybe[e]
+  map4(fn, Just(a), Just(b), Just(c), Just(d)) = Just(fn(a,b,c,d))
+  map4(_, _, _, _, _) = Nothing
+
+  map5 : (a -> b -> c -> d -> e -> f) -> Maybe[a] -> Maybe[b] -> Maybe[c] -> Maybe[d] -> Maybe[e] -> Maybe[f]
+  map5(fn, Just(a), Just(b), Just(c), Just(d), Just(e)) = Just(fn(a,b,c,d,e))
+  map5(_, _, _, _, _, _) = Nothing
+
+  andMap : Maybe[a] -> Maybe[a -> b] -> Maybe[b]
+  andMap(Just(a), Just(fn)) = Just(fn(a))
+  andMap(_, _) = Nothing
+
+  filter : (a -> Bool) -> Maybe[a] -> Maybe[a]
+  filter(pred, Just(a)) = if pred(a) then Just(a) else Nothing
+  filter(_, _) = Nothing
+
+  `||` : Maybe[a] -> Maybe[a] -> Maybe[a]
+  `||`(Just(_) as a, _) = a
+  `||`(Nothing,      b) = b
 
   // TODO tests
   // TODO gen
