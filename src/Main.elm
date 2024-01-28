@@ -2,9 +2,10 @@ module Main exposing (Flags, Model, Msg, main)
 
 import AST.Frontend as AST
 import Codegen.HVM
+import Debug.Extra
 import Desugar
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
-import Env
+import Env exposing (Env)
 import Error exposing (Error(..))
 import HVM.AST
 import HVM.ToString
@@ -26,8 +27,15 @@ main =
         }
 
 
+type alias File =
+    { file : String
+    , content : String
+    }
+
+
 type alias Flags =
     { sourceCode : String
+    , stdlibSources : List File
     }
 
 
@@ -40,7 +48,8 @@ type alias KO a =
 
 
 type Model
-    = Done
+    = Exit
+    | Done (Env Value)
     | ExitingWithError
     | PausedOnEffect0 Effect0 (K ())
     | PausedOnEffectStr EffectStr (K String)
@@ -86,12 +95,17 @@ logParsed ast =
     ast
 
 
-init : Flags -> ( Model, Cmd Msg )
-init flags =
+isCompilingToHVM : Bool
+isCompilingToHVM =
+    False
+
+
+process : File -> ( Model, Cmd Msg )
+process { file, content } =
     let
         astResult : Result Error AST.Program
         astResult =
-            flags.sourceCode
+            content
                 |> (Lexer.lex >> Result.mapError LexerError)
                 --|> logLexed
                 |> Result.andThen (Parser.parse >> Result.mapError ParserError)
@@ -101,10 +115,6 @@ init flags =
             finishWithError err
 
         Ok frontendProgram ->
-            let
-                isCompilingToHVM =
-                    False
-            in
             if isCompilingToHVM then
                 case
                     frontendProgram
@@ -118,14 +128,22 @@ init flags =
 
                     Ok hvmString ->
                         effect0 (Effect.Println hvmString) <| \() ->
-                        finish
+                        finishEmpty
 
             else
                 -- interpreting
                 frontendProgram
                     --|> logParsed
-                    |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
+                    |> Interpreter.interpretProgram initEnv
                     |> handleInterpreterOutcome
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    process
+        { file = "main.cara" -- TODO could be more specific (which test?)
+        , content = flags.sourceCode
+        }
 
 
 effect0 : Effect0 -> K () -> ( Model, Cmd Msg )
@@ -139,7 +157,7 @@ handleInterpreterOutcome : Interpreter.Outcome () -> ( Model, Cmd Msg )
 handleInterpreterOutcome outcome =
     case outcome of
         Interpreter.DoneInterpreting env _ ->
-            finish
+            finish env
 
         Interpreter.FoundError error ->
             finishWithError (InterpreterError error)
@@ -162,9 +180,19 @@ finishWithError err =
     ( ExitingWithError, printError err )
 
 
-finish : ( Model, Cmd Msg )
-finish =
-    ( Done, Cmd.none )
+finish : Env Value -> ( Model, Cmd Msg )
+finish env =
+    ( Done env, Cmd.none )
+
+
+initEnv : Env Value
+initEnv =
+    Env.initWithIntrinsics { intrinsicToValue = VIntrinsic }
+
+
+finishEmpty : ( Model, Cmd Msg )
+finishEmpty =
+    finish initEnv
 
 
 pauseOnEffect0 : Effect0 -> KO () -> ( Model, Cmd Msg )
@@ -209,13 +237,16 @@ printError error =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        Done ->
-            Debug.todo <| "BUG: we're getting a Msg when we're Done: " ++ Debug.toString msg
+        Exit ->
+            Debug.Extra.todo1 "BUG: we're getting a Msg when we're Exit'ed" msg
+
+        Done env ->
+            Debug.Extra.todo1 "update Done" msg
 
         ExitingWithError ->
             case msg of
                 CompletedEprintln ->
-                    ( Done, Cmd.none )
+                    ( Exit, Cmd.none )
 
                 _ ->
                     Debug.todo <| "BUG: we're getting a non-eprintln Msg when ExitingWithError: " ++ Debug.toString msg

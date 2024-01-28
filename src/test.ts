@@ -5,7 +5,7 @@ import {Elm} from '../dist/elm.js';
 import {chdir} from 'node:process';
 import registerPorts from './registerPorts.ts';
 
-const selectedTest = null;
+const selectedTest = 'int-bin';
 
 ///////////////////////////////////////////
 
@@ -29,13 +29,27 @@ if (selectedTest == null) {
 } else {
 
   // run just the one test
+  
+  let stdlibFiles = [];
+  for await (const dirEntry of Deno.readDir('stdlib')) {
+    if (dirEntry.isFile) {
+      stdlibFiles.push(`stdlib/${dirEntry.name}`);
+    }
+  }
+
+  const stdlibSources = await Promise.all(
+    stdlibFiles.map(file =>
+      Deno.readTextFile(file)
+          .then(content => ({file,content}))
+    )
+  );
 
   const testCwd = `./${testsDir}/${selectedTest}`;
   chdir(testCwd);
 
   const sourceCode: string = await Deno.readTextFile('main.cara');
 
-  const app = Elm.Main.init({flags: {sourceCode}});
+  const app = Elm.Main.init({flags: {sourceCode, stdlibSources}});
   registerPorts(app);
 
 }
