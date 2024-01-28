@@ -1,5 +1,6 @@
 module TestRunner exposing (Flags, Model, Msg, main)
 
+import Debug.Extra
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env
 import Error exposing (Error(..))
@@ -226,9 +227,13 @@ effectMaybeStr eff k =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        mismatch effect =
+            Debug.Extra.todo1 "Effect mismatch" ( effect, msg )
+    in
     case model of
         Done ->
-            Debug.todo <| "BUG: we're getting a Msg when we're Done: " ++ Debug.toString msg
+            Debug.Extra.todo1 "BUG: we're getting a Msg when we're Done" msg
 
         PausedOnEffect0 effect k ->
             case ( effect, msg ) of
@@ -236,31 +241,31 @@ update msg model =
                     k ()
 
                 ( Effect.Print _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
                 ( Effect.Println _, CompletedPrintln ) ->
                     k ()
 
                 ( Effect.Println _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
                 ( Effect.Eprintln _, CompletedEprintln ) ->
                     k ()
 
                 ( Effect.Eprintln _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
                 ( Effect.WriteFile _, CompletedWriteFile ) ->
                     k ()
 
                 ( Effect.WriteFile _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
                 ( Effect.Chdir _, CompletedChdir ) ->
                     k ()
 
                 ( Effect.Chdir _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
         PausedOnEffectStr effect k ->
             case ( effect, msg ) of
@@ -268,7 +273,7 @@ update msg model =
                     k content
 
                 ( Effect.ReadFile _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
         PausedOnEffectMaybeStr effect k ->
             case ( effect, msg ) of
@@ -276,7 +281,7 @@ update msg model =
                     k content
 
                 ( Effect.ReadFileMaybe _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
         PausedOnEffectBool effect k ->
             case ( effect, msg ) of
@@ -284,7 +289,7 @@ update msg model =
                     k result
 
                 ( Effect.WriteFileMaybe _, _ ) ->
-                    Debug.todo <| "Effect mismatch: " ++ Debug.toString ( effect, msg )
+                    mismatch effect
 
 
 subscriptions : Model -> Sub Msg
