@@ -41,7 +41,7 @@ module List {
 
     go : List[a] -> List[b] -> List[b]
     go([],acc) = acc
-    go(x::xs,acc) = go(xs,f(x)++acc)
+    go([x,...xs],acc) = go(xs,f(x)++acc)
 
     go(xs,[])
 
