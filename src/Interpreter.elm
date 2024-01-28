@@ -106,7 +106,7 @@ interpretUnitTest =
     \env { name, expr } ->
         let
             _ =
-                Debug.log (Console.dark "TODO interpretUnitTest") name
+                Debug.log (Console.dark "TODO interpretUnitTest") (Maybe.withDefault "" name)
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -117,7 +117,7 @@ interpretParameterizedTest =
     \env { name, table, args, expr } ->
         let
             _ =
-                Debug.log (Console.dark "TODO interpretParameterizedTest") ()
+                Debug.log (Console.dark "TODO interpretParameterizedTest") (Maybe.withDefault "" name)
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -128,7 +128,7 @@ interpretPropertyTypeTest =
     \env { name, types, args, expr } ->
         let
             _ =
-                Debug.log (Console.dark "TODO interpretPropertyTypeTest") name
+                Debug.log (Console.dark "TODO interpretPropertyTypeTest") (Maybe.withDefault "" name)
         in
         -- TODO actually do something
         Outcome.succeed env ()
@@ -139,7 +139,7 @@ interpretPropertyGenTest =
     \env { name, gens, args, expr } ->
         let
             _ =
-                Debug.log (Console.dark "TODO interpretPropertyGenTest") name
+                Debug.log (Console.dark "TODO interpretPropertyGenTest") (Maybe.withDefault "" name)
         in
         -- TODO actually do something
         Outcome.succeed env ()
