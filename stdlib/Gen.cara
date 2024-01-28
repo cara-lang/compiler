@@ -10,16 +10,27 @@ these random numbers.
 */
 module Gen {
 
-  // TODO pure
-  // TODO bind
+  opaque type Gen[a] = Gen // TODO figure this out
 
-  // TODO const
+  constant : a -> Gen[a]
+  constant(a) = TODO("constant")
+
+  pure : a -> Gen[a]
+  pure(a) = constant(a)
+
+  bind : Gen[a] -> (a -> Gen[b]) -> Gen[b]
+  bind(gen,fn) = TODO("bind")
+
+  andThen : (a -> Gen[b]) -> Gen[a] -> Gen[b]
+  andThen(fn,gen) = bind(gen,fn)
+
+  int : Int -> Int -> Gen[Int]
+  int(from,to) = TODO("int(Int,Int)")
 
   char = Gen {
     code = int!(25,83)
     Char.fromCode(code)
   }
-
 
   // TODO to have Gen.rngSeed (see Random), we'd need:
   // map2
