@@ -5,6 +5,7 @@ module Seq {
     | Empty
     | Cons(a,(-> Seq[a]))
 
+  /* TODO
   extend module Gen {
     finiteSeq : Gen[a] -> Gen[Seq[a]]
     finiteSeq(itemGen) = Gen {
@@ -24,6 +25,7 @@ module Seq {
       unfoldMaybe(fn,seed)
     }
   }
+  */
 
   empty : Seq[a]
   empty = Empty
