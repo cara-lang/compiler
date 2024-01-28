@@ -1,0 +1,8 @@
+f : Int -> Bool
+f(_) = True
+
+f : String -> Bool
+f(_) = False
+
+IO.println!(f(123))
+IO.println!(f("hey"))
