@@ -398,7 +398,7 @@ interpretTypeAlias =
     \env { mod, name, vars, body } ->
         let
             _ =
-                Debug.log "TODO interpretTypeAlias" ()
+                Debug.log (Console.dark "TODO interpretTypeAlias") name
         in
         -- TODO make type aliases do something
         Outcome.succeed env ()
