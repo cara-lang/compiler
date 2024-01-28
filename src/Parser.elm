@@ -978,6 +978,9 @@ infixPattern =
             Pipe ->
                 Just { precedence = 1, isRight = False, parser = orPattern }
 
+            LowerName "as" ->
+                Just { precedence = 2, isRight = False, parser = asPattern }
+
             _ ->
                 Nothing
 
@@ -2443,6 +2446,20 @@ orPattern : InfixParser Pattern
 orPattern { left, precedence, isRight } =
     Parser.succeed (\right -> POr left right)
         |> Parser.keep (patternAux precedence isRight)
+
+
+{-|
+
+    : pattern "as" LOWER_NAME
+      ^^^^^^^^^^^^ already parsed
+
+    TODO should we lex "as" as its own token type, or keep it as LowerName("as")?
+
+-}
+asPattern : InfixParser Pattern
+asPattern { left, precedence, isRight } =
+    Parser.succeed (\name -> PAs name left)
+        |> Parser.keep lowerName
 
 
 {-|
