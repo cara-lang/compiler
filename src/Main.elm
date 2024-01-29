@@ -49,9 +49,9 @@ type alias KO a =
 
 
 type Model
-    = Exit
-    | Done (Env Value)
-    | ExitingWithError
+    = PartiallyDone (Env Value)
+    | ExitOk
+    | ExitErr
     | PausedOnEffect0 Effect0 (K ())
     | PausedOnEffectStr EffectStr (K String)
     | PausedOnEffectMaybeStr EffectMaybeStr (K (Maybe String))
@@ -163,7 +163,7 @@ andThenMany ks ( model, cmd ) =
         ( [], _ ) ->
             ( model, cmd )
 
-        ( k :: rest, Exit ) ->
+        ( k :: rest, ExitOk ) ->
             ( model, cmd )
 
         ( k :: rest, _ ) ->
@@ -173,10 +173,7 @@ andThenMany ks ( model, cmd ) =
 andThen : K (Env Value) -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 andThen k ( model, cmd ) =
     case model of
-        Exit ->
-            ( model, cmd )
-
-        Done env ->
+        PartiallyDone env ->
             let
                 ( newModel, newCmd ) =
                     k env
@@ -185,7 +182,10 @@ andThen k ( model, cmd ) =
             , Cmd.batch [ cmd, newCmd ]
             )
 
-        ExitingWithError ->
+        ExitOk ->
+            ( model, cmd )
+
+        ExitErr ->
             ( model, cmd )
 
         PausedOnEffect0 eff k2 ->
@@ -232,12 +232,12 @@ handleInterpreterOutcome outcome =
 
 exitWithError : Error -> ( Model, Cmd Msg )
 exitWithError err =
-    ( ExitingWithError, printError err )
+    ( ExitErr, printError err )
 
 
 done : Env Value -> ( Model, Cmd Msg )
 done env =
-    ( Done env, Cmd.none )
+    ( PartiallyDone env, Cmd.none )
 
 
 initEnv : Env Value
@@ -299,19 +299,19 @@ update msg model =
             Debug.Extra.todo1 "Effect mismatch" ( effect, msg )
     in
     case model of
-        Exit ->
-            Debug.Extra.todo1 "BUG: we're getting a Msg when we're Exit'ed" msg
+        PartiallyDone env ->
+            Debug.Extra.todo1 "update PartiallyDone" msg
 
-        Done env ->
-            Debug.Extra.todo1 "update Done" msg
+        ExitOk ->
+            Debug.Extra.todo1 "BUG: we're getting a Msg when we're ExitOk'ed" msg
 
-        ExitingWithError ->
+        ExitErr ->
             case msg of
                 CompletedEprintln ->
-                    ( Exit, Cmd.none )
+                    ( ExitOk, Cmd.none )
 
                 _ ->
-                    Debug.Extra.todo1 "BUG: we're getting a non-eprintln Msg when ExitingWithError" msg
+                    Debug.Extra.todo1 "BUG: we're getting a non-eprintln Msg when ExitErr" msg
 
         PausedOnEffect0 effect k ->
             case ( effect, msg ) of

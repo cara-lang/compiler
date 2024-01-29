@@ -9,6 +9,20 @@ const selectedTest = null;
 
 ///////////////////////////////////////////
 
+let stdlibFiles = [];
+for await (const dirEntry of Deno.readDir('stdlib')) {
+  if (dirEntry.isFile) {
+    stdlibFiles.push(`stdlib/${dirEntry.name}`);
+  }
+}
+
+const stdlibSources = await Promise.all(
+  stdlibFiles.map(file =>
+    Deno.readTextFile(file)
+        .then(content => ({file,content}))
+  )
+);
+
 const testsDir = 'end-to-end-tests';
 
 if (selectedTest == null) {
@@ -23,27 +37,13 @@ if (selectedTest == null) {
       .map(dirent => dirent.name)
       .sort();
 
-  const app = Elm.TestRunner.init({flags: {dirs, rootPath}});
+  const app = Elm.TestRunner.init({flags: {dirs, rootPath, stdlibSources}});
   registerPorts(app);
 
 } else {
 
   // run just the one test
   
-  let stdlibFiles = [];
-  for await (const dirEntry of Deno.readDir('stdlib')) {
-    if (dirEntry.isFile) {
-      stdlibFiles.push(`stdlib/${dirEntry.name}`);
-    }
-  }
-
-  const stdlibSources = await Promise.all(
-    stdlibFiles.map(file =>
-      Deno.readTextFile(file)
-          .then(content => ({file,content}))
-    )
-  );
-
   const testCwd = `./${testsDir}/${selectedTest}`;
   chdir(testCwd);
 
