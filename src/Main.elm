@@ -76,7 +76,7 @@ logLexed result =
             let
                 _ =
                     Debug.log
-                        (Debug.Extra.standOut "err")
+                        (Debug.Extra.standOutErr "err")
                         err
             in
             result
@@ -288,7 +288,7 @@ printError error =
         |> String.replace "{LOC}" (Loc.toString (Error.loc error))
         --|> String.replace "{TITLE}" (Error.title error)
         |> String.replace "{ERROR}" (Error.inspect error)
-        |> Debug.Extra.standOut
+        |> Debug.Extra.standOutErr
         |> Effect.eprintln
 
 

@@ -2,7 +2,8 @@ module Debug.Extra exposing
     ( logged1
     , logged2
     , prettyPrint
-    , standOut
+    , standOutErr
+    , standOutInfo
     , todo1
     )
 
@@ -125,12 +126,20 @@ prettyPrintListlike opening closing list =
 
 todo1 : String -> a -> b
 todo1 msg val =
-    Debug.todo (standOut (msg ++ ": " ++ prettyPrint val))
+    Debug.todo (standOutErr (msg ++ ": " ++ prettyPrint val))
 
 
-standOut : String -> String
-standOut str =
+standOutErr : String -> String
+standOutErr str =
     str
         |> Console.bold
         |> Console.bgRed
+        |> Console.white
+
+
+standOutInfo : String -> String
+standOutInfo str =
+    str
+        |> Console.bold
+        |> Console.bgBlue
         |> Console.white

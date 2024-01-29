@@ -1,5 +1,6 @@
 module TestRunner exposing (Flags, Model, Msg, main)
 
+import Console
 import Debug.Extra
 import Effect exposing (Effect0, EffectBool, EffectMaybeStr, EffectStr)
 import Env
@@ -56,8 +57,7 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    effect0 (Effect.Println "Running tests") <| \() ->
-    effect0 (Effect.Println "----------------------------") <| \() ->
+    effect0 (Effect.Println (Debug.Extra.standOutInfo "Running tests")) <| \() ->
     runTests flags.rootPath flags.dirs
 
 
@@ -65,8 +65,7 @@ runTests : String -> List String -> ( Model, Cmd Msg )
 runTests rootPath testDirs =
     case testDirs of
         [] ->
-            effect0 (Effect.Println "----------------------------") <| \() ->
-            effect0 (Effect.Println "Done running tests!") <| \() ->
+            effect0 (Effect.Println (Debug.Extra.standOutInfo "Done running tests!")) <| \() ->
             ( Done, Cmd.none )
 
         testDir :: rest ->
@@ -105,7 +104,7 @@ runTest name fileContents k =
                 effect0 (Effect.Eprintln <| ": " ++ name ++ " | " ++ Error.title err) k
 
         Ok astTree ->
-            effect0 (Effect.Println <| "interpreting: " ++ name) <| \() ->
+            effect0 (Effect.Println <| Console.blue "interpreting: " ++ name) <| \() ->
             astTree
                 |> Interpreter.interpretProgram (Env.initWithIntrinsics { intrinsicToValue = VIntrinsic })
                 |> handleInterpreterOutcome name k
