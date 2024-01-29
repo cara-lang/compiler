@@ -780,7 +780,7 @@ bangToString bang =
 
         BCall { fn, args } ->
             "{FN}!({ARGS})"
-                |> String.replace "{EXPR}" (exprToString fn)
+                |> String.replace "{FN}" (exprToString fn)
                 |> String.replace "{ARGS}"
                     (String.join ","
                         (List.map exprToString args)
