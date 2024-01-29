@@ -988,9 +988,9 @@ infixPattern =
 
 {-|
 
-    : DOTDOTDOT (lowerName | UNDERSCORE)
+    : DOTDOTDOT lowerName?
     = ...a
-    = ..._
+    = ...
 
     Only allowed inside PList.
     TODO what about PTuple?
@@ -1001,15 +1001,7 @@ listSpreadPattern : Parser Pattern
 listSpreadPattern =
     Parser.succeed PSpread
         |> Parser.skip (Parser.token DotDotDot)
-        |> Parser.keep
-            (Parser.oneOf
-                { commited = []
-                , noncommited =
-                    [ Parser.map Just lowerName
-                    , Parser.map (\_ -> Nothing) (Parser.token Underscore)
-                    ]
-                }
-            )
+        |> Parser.keep (Parser.maybe lowerName)
 
 
 {-|

@@ -149,7 +149,7 @@ module List {
   // TODO first instead of head?
   head : List[a] -> Maybe[a]
   head([]) = Nothing
-  head([x,..._]) = Just(x)
+  head([x,...]) = Just(x)
 
   test: head([]) == Nothing
   test: head([1]) == Just(1)

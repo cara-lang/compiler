@@ -66,6 +66,38 @@ module Maybe {
   `||`(Just(_) as a, _) = a
   `||`(Nothing,      b) = b
 
+  `||` : (-> Maybe[a]) -> Maybe[a] -> Maybe[a]
+  `||`(toMaybe, b) = toMaybe() || b
+
+  `||` : Maybe[a] -> (-> Maybe[a]) -> Maybe[a]
+  `||`(Just(_) as a, _) = a
+  `||`(Nothing, toMaybe) = toMaybe()
+
+  `||` : (-> Maybe[a]) -> (-> Maybe[a]) -> Maybe[a]
+  `||`(toMaybe, b) = toMaybe() || b
+
+  firstJust : List[Maybe[a]] -> Maybe[a]
+  firstJust([]) = Nothing
+  firstJust([Just(_) as a,...]) = a
+  firstJust([Nothing,...xs]) = firstJust(xs)
+
+  sequence : List[Maybe[a]] -> Maybe[List[a]]
+  sequence(xs) = {
+    go : List[Maybe[a]] -> List[a] -> Maybe[List[a]]
+    go([],acc) = Just(List.reverse(acc))
+    go([Just(a),...xs],acc) = go(xs,List.prepend(a,acc))
+    go([Nothing,...],_) = Nothing
+
+    go(xs,[])
+  }
+
+  traverse : (a -> Maybe[b]) -> List[a] -> Maybe[List[b]]
+  traverse(fn,xs) = 
+    xs
+      |> List.map(fn)
+      |> sequence
+
+
   // TODO tests
   // TODO gen
 

@@ -1,0 +1,7 @@
+x = case [1,2,3,4,5] of [...,butlast,last] -> (butlast,last)
+y = case [1,2,3,4,5] of [first,second,...] -> (first,second)
+z = case [1,2,3,4,5] of [first,...,last]   -> (first,last)
+
+IO.println!(x)
+IO.println!(y)
+IO.println!(z)
