@@ -1,6 +1,8 @@
-E0033: Non-terminated character
+E0017: Unescaped newline in a character
 
-A non-terminated character was found. Add the second ' character.
+The character contains an unescaped newline. Escape the newline with `\n`:
+
+  '\n'
 
 main.cara:1:5
 ━━┓
