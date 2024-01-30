@@ -21,12 +21,6 @@ WANTED:
         * dict["xyz"]
         * record["abc"] ?? unsure if we can do that type-safely. probably not or only with literals
 
-* -> arrows in names?
-* ? questionmarks in names?
-* ! bangs in names? (perhaps not, IDK)
-* ' apostrophes in names?
-* _ underscores in names?
-
 * functions can have multiple arities with different implementations (and return types)
   * (Seq.sum(lambda, seq) vs Seq.sum(seq))
   * can have the same arity multiple times, dispatching on the input types
