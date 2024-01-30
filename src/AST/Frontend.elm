@@ -37,7 +37,7 @@ import Env exposing (Env)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
 import NonemptyList exposing (NonemptyList)
-import Operator exposing (BinaryOp(..), UnaryOp(..))
+import Operator exposing (BinaryOp(..), Operator, UnaryOp(..))
 import Transform
 
 
@@ -90,6 +90,7 @@ type Expr
         }
     | Identifier Id -- foo, Bar.foo
     | RootIdentifier Id -- ::foo, ::Bar.foo
+    | OpIdentifier Operator
     | Lambda
         { args : List Pattern
         , body : Expr
@@ -619,6 +620,10 @@ exprToString expr =
         RootIdentifier id ->
             "::" ++ Id.toString id
 
+        OpIdentifier op ->
+            "({OP})"
+                |> String.replace "{OP}" (Operator.toString op)
+
         Lambda r ->
             lambdaToString r
 
@@ -1146,6 +1151,9 @@ recurse f e =
         RootIdentifier _ ->
             e
 
+        OpIdentifier _ ->
+            e
+
         Lambda r ->
             Lambda
                 { args = r.args
@@ -1282,6 +1290,9 @@ recursiveChildren f e =
             []
 
         RootIdentifier _ ->
+            []
+
+        OpIdentifier _ ->
             []
 
         Lambda r ->

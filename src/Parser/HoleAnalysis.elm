@@ -102,6 +102,9 @@ analyzeHoles expr =
         RootIdentifier _ ->
             NoHoles
 
+        OpIdentifier _ ->
+            NoHoles
+
         RecordGetter _ ->
             NoHoles
 

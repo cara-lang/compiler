@@ -1527,7 +1527,7 @@ prefixExpr =
 
 operatorFnExpr : Parser Expr
 operatorFnExpr =
-    Parser.succeed (\op -> Identifier (Id.simple (Operator.toString op)))
+    Parser.succeed (\op -> OpIdentifier op)
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep (Parser.tokenData Token.getOperator)
         |> Parser.skip (Parser.token RParen)

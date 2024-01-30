@@ -239,6 +239,9 @@ desugarExpr e =
         F.RootIdentifier id ->
             B.RootIdentifier (qualify id)
 
+        F.OpIdentifier op ->
+            Debug.todo "desugar op identifier" op
+
         F.Lambda { args, body } ->
             case List.reverse args of
                 [] ->

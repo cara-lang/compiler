@@ -18,7 +18,7 @@ import Intrinsic exposing (Intrinsic(..))
 import List.Extra
 import Maybe.Extra
 import NonemptyList exposing (NonemptyList)
-import Operator exposing (BinaryOp(..), UnaryOp(..))
+import Operator exposing (BinaryOp(..), Operator(..), UnaryOp(..))
 import Set exposing (Set)
 import Tree.Zipper as Zipper
 import Value exposing (Value(..))
@@ -1041,6 +1041,9 @@ interpretExpr stmtMonad =
             RootIdentifier id ->
                 interpretRootIdentifier stmtMonad env id
 
+            OpIdentifier op ->
+                interpretOpIdentifier env op
+
             Constructor_ r ->
                 interpretConstructor stmtMonad env r
 
@@ -1908,6 +1911,16 @@ interpretConstructor stmtMonad =
                         , args = argValues
                         }
                 )
+
+
+interpretOpIdentifier : Interpreter Operator Value
+interpretOpIdentifier =
+    \env op ->
+        {- TODO this will probably need the type information on how
+           this is used (is it the unary negation or the binary minus?
+           etc.)
+        -}
+        Debug.Extra.todo1 "interpret op identifier" op
 
 
 interpretIf : StmtMonad -> Interpreter { cond : Expr, then_ : Expr, else_ : Expr } Value
