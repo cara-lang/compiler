@@ -3,6 +3,7 @@ module NonemptyList exposing
     , fromCons
     , fromList
     , head
+    , map
     , singleton
     , toList
     )
@@ -40,3 +41,8 @@ fromList xs =
 head : NonemptyList a -> a
 head ( x, _ ) =
     x
+
+
+map : (a -> b) -> NonemptyList a -> NonemptyList b
+map f ( x, xs ) =
+    ( f x, List.map f xs )

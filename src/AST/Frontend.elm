@@ -1252,10 +1252,17 @@ recurse f e =
                 }
 
         Block r ->
-            Debug.Extra.todo1 "AST.F recurse block" r
+            Block
+                { stmts = List.map (recurseStmt f) r.stmts
+                , ret = f r.ret
+                }
 
         EffectBlock r ->
-            Debug.Extra.todo1 "AST.F recurse eff-block" r
+            EffectBlock
+                { monadModule = r.monadModule
+                , stmts = List.map (recurseStmt f) r.stmts
+                , ret = recurseBangOrExpr f r.ret
+                }
 
         Constructor_ r ->
             Constructor_
@@ -1290,6 +1297,63 @@ recurse f e =
                 { subject = f r.subject
                 , branches = List.map (recurseCaseBranch f) r.branches
                 }
+
+
+recurseStmt : (Expr -> Expr) -> Stmt -> Stmt
+recurseStmt f stmt =
+    case stmt of
+        SLet r ->
+            SLet
+                { mod = r.mod
+                , lhs = r.lhs
+                , type_ = r.type_
+                , expr = f r.expr
+                }
+
+        SLetBang r ->
+            SLetBang
+                { mod = r.mod
+                , lhs = r.lhs
+                , type_ = r.type_
+                , bang = recurseBang f r.bang
+                }
+
+        SBang bang ->
+            SBang (recurseBang f bang)
+
+        SFunctionDef r ->
+            SFunctionDef
+                { name = r.name
+                , mod = r.mod
+                , branches = NonemptyList.map (recurseFunctionBranch f) r.branches
+                }
+
+        SBinaryOperatorDef r ->
+            SBinaryOperatorDef
+                { op = r.op
+                , left = r.left
+                , right = r.right
+                , body = f r.body
+                }
+
+        SUnaryOperatorDef r ->
+            SUnaryOperatorDef
+                { op = r.op
+                , arg = r.arg
+                , body = f r.body
+                }
+
+        SValueAnnotation _ ->
+            stmt
+
+        SBinaryOperatorAnnotation _ ->
+            stmt
+
+        SUnaryOperatorAnnotation _ ->
+            stmt
+
+        SUseModule _ ->
+            stmt
 
 
 recursiveChildren : (Expr -> List Expr) -> Expr -> List Expr
@@ -1440,6 +1504,36 @@ recurseRecordField f content =
 
         Spread _ ->
             content
+
+
+recurseFunctionBranch : (Expr -> Expr) -> FunctionBranch -> FunctionBranch
+recurseFunctionBranch f branch =
+    { args = branch.args
+    , body = f branch.body
+    }
+
+
+recurseBangOrExpr : (Expr -> Expr) -> BangOrExpr -> BangOrExpr
+recurseBangOrExpr f boe =
+    case boe of
+        B bang ->
+            B (recurseBang f bang)
+
+        E expr ->
+            E (f expr)
+
+
+recurseBang : (Expr -> Expr) -> Bang -> Bang
+recurseBang f bang =
+    case bang of
+        BValue expr ->
+            BValue (f expr)
+
+        BCall r ->
+            BCall
+                { fn = f r.fn
+                , args = List.map f r.args
+                }
 
 
 recordFieldExpr : RecordExprContent -> Maybe Expr
