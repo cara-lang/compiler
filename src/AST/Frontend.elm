@@ -1336,10 +1336,10 @@ recursiveChildren f e =
             f r.record
 
         Block r ->
-            Debug.Extra.todo1 "AST.F children block" r
+            List.concatMap (stmtChildren f) r.stmts ++ f r.ret
 
         EffectBlock r ->
-            Debug.Extra.todo1 "AST.F children eff-block" r
+            List.concatMap (stmtChildren f) r.stmts ++ bangOrExprChildren f r.ret
 
         Constructor_ { args } ->
             List.concatMap f args
@@ -1361,6 +1361,62 @@ recursiveChildren f e =
 
         Case r ->
             f r.subject ++ List.concatMap (.body >> f) r.branches
+
+
+stmtChildren : (Expr -> List Expr) -> Stmt -> List Expr
+stmtChildren f stmt =
+    case stmt of
+        SLet r ->
+            f r.expr
+
+        SLetBang r ->
+            bangChildren f r.bang
+
+        SBang bang ->
+            bangChildren f bang
+
+        SFunctionDef r ->
+            r.branches
+                |> NonemptyList.toList
+                |> List.concatMap (.body >> f)
+
+        SBinaryOperatorDef r ->
+            f r.body
+
+        SUnaryOperatorDef r ->
+            f r.body
+
+        SValueAnnotation _ ->
+            []
+
+        SBinaryOperatorAnnotation _ ->
+            []
+
+        SUnaryOperatorAnnotation _ ->
+            []
+
+        SUseModule _ ->
+            []
+
+
+bangChildren : (Expr -> List Expr) -> Bang -> List Expr
+bangChildren f bang =
+    case bang of
+        BValue expr ->
+            f expr
+
+        BCall r ->
+            f r.fn ++ List.concatMap f r.args
+
+
+bangOrExprChildren : (Expr -> List Expr) -> BangOrExpr -> List Expr
+bangOrExprChildren f boe =
+    case boe of
+        B bang ->
+            bangChildren f bang
+
+        E expr ->
+            f expr
 
 
 recurseCaseBranch : (Expr -> Expr) -> CaseBranch -> CaseBranch
