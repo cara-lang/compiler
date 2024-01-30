@@ -13,6 +13,7 @@ module Error exposing
 import AST.Frontend as F
 import Id exposing (Id)
 import Loc exposing (Loc)
+import Operator exposing (BinaryOp, UnaryOp)
 import Token
 import Value exposing (Value)
 
@@ -105,8 +106,8 @@ type InterpreterError
     | AccessingMissingTupleElement String
     | SpreadingNonRecord
     | EquatingNonequatable
-    | UnknownBinaryOpOverload ( Value, F.BinaryOp, Value )
-    | UnknownUnaryOpOverload ( F.UnaryOp, Value )
+    | UnknownBinaryOpOverload ( Value, BinaryOp, Value )
+    | UnknownUnaryOpOverload ( UnaryOp, Value )
     | UnexpectedArgument Value
     | MainIsNotFunction -- TODO this should perhaps be a typecheck error
 
@@ -351,12 +352,12 @@ title error =
                 UnknownBinaryOpOverload ( left, op, right ) ->
                     "Unknown binary op: {LEFT}, {OP}, {RIGHT}"
                         |> String.replace "{LEFT}" (Value.toInspectString left)
-                        |> String.replace "{OP}" (F.binaryOp op)
+                        |> String.replace "{OP}" (Operator.binaryOpToString op)
                         |> String.replace "{RIGHT}" (Value.toInspectString right)
 
                 UnknownUnaryOpOverload ( op, arg ) ->
                     "Unknown unary op: {OP}, {ARG}"
-                        |> String.replace "{OP}" (F.unaryOp op)
+                        |> String.replace "{OP}" (Operator.unaryOpToString op)
                         |> String.replace "{ARG}" (Value.toInspectString arg)
 
                 UnexpectedArgument value ->

@@ -28,7 +28,7 @@ module Token exposing
     )
 
 import Loc exposing (Loc)
-import Operator exposing (Operator)
+import Operator exposing (BinaryOp(..), Operator(..), UnaryOp(..))
 
 
 type alias Token =
@@ -289,82 +289,85 @@ isOperator type_ =
             False
 
 
+{-| It's probably fine that we're choosing arbitrarily between Unary and Binary
+for the operators that share lexemes (eg. Binary Minus and Unary NegateNum)
+-}
 getOperator : Type -> Maybe Operator
 getOperator type_ =
     case type_ of
         -- unary
         DotDot ->
-            Just Operator.InclusiveRange
+            Just (Unary InfiniteRange)
 
         Minus ->
-            Just Operator.Minus
+            Just (Unary NegateNum)
 
         Bang ->
-            Just Operator.Negate
+            Just (Unary NegateBool)
 
         -- binary
         AndAnd ->
-            Just Operator.LogicalAnd
+            Just (Binary AndBool)
 
         OrOr ->
-            Just Operator.LogicalOr
+            Just (Binary OrBool)
 
         PlusPlus ->
-            Just Operator.Append
+            Just (Binary Append)
 
         DotDotDot ->
-            Just Operator.ExclusiveRange
+            Just (Binary RangeExclusive)
 
         Pipe ->
-            Just Operator.BinaryOr
+            Just (Binary OrBin)
 
         Caret ->
-            Just Operator.BinaryXor
+            Just (Binary XorBin)
 
         And ->
-            Just Operator.BinaryAnd
+            Just (Binary AndBin)
 
         EqEq ->
-            Just Operator.Eq
+            Just (Binary Operator.Eq)
 
         Neq ->
-            Just Operator.Neq
+            Just (Binary Operator.Neq)
 
         Lte ->
-            Just Operator.Lte
+            Just (Binary Operator.Lte)
 
         Lt ->
-            Just Operator.Lt
+            Just (Binary Operator.Lt)
 
         Gt ->
-            Just Operator.Gt
+            Just (Binary Operator.Gt)
 
         Gte ->
-            Just Operator.Gte
+            Just (Binary Operator.Gte)
 
         Shl ->
-            Just Operator.Shl
+            Just (Binary ShiftL)
 
         Shr ->
-            Just Operator.Shr
+            Just (Binary ShiftR)
 
         Shru ->
-            Just Operator.Shru
+            Just (Binary ShiftRU)
 
         Plus ->
-            Just Operator.Plus
+            Just (Binary Operator.Plus)
 
         Times ->
-            Just Operator.Times
+            Just (Binary Operator.Times)
 
         Div ->
-            Just Operator.Div
+            Just (Binary Operator.Div)
 
         Percent ->
-            Just Operator.Modulo
+            Just (Binary Modulo)
 
         Power ->
-            Just Operator.Power
+            Just (Binary Operator.Power)
 
         _ ->
             Nothing

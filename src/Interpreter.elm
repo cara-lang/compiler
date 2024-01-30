@@ -18,6 +18,7 @@ import Intrinsic exposing (Intrinsic(..))
 import List.Extra
 import Maybe.Extra
 import NonemptyList exposing (NonemptyList)
+import Operator exposing (BinaryOp(..), UnaryOp(..))
 import Set exposing (Set)
 import Tree.Zipper as Zipper
 import Value exposing (Value(..))
@@ -235,7 +236,7 @@ interpretBinaryOpDef =
     \env { op, left, right, body } ->
         let
             newEnv =
-                Env.addBinaryOp (AST.binaryOp op)
+                Env.addBinaryOp (Operator.binaryOpToString op)
                     (VClosure
                         -- TODO we're throwing away the opdef arg types here. Have we processed them elsewhere?
                         { args = List.map Tuple.first [ left, right ]
@@ -378,10 +379,10 @@ addToEnv addition env =
             Env.add name value env
 
         AddBinaryOp op value ->
-            Env.addBinaryOp (AST.binaryOp op) value env
+            Env.addBinaryOp (Operator.binaryOpToString op) value env
 
         AddUnaryOp op value ->
-            Env.addUnaryOp (AST.unaryOp op) value env
+            Env.addUnaryOp (Operator.unaryOpToString op) value env
 
         ManyAdditions additions ->
             List.foldl addToEnv env additions
@@ -1401,7 +1402,7 @@ interpretUnaryOpCallVal stmtMonad =
                     finishWithUnknown () =
                         Outcome.fail <| UnknownUnaryOpOverload ( op, val )
                 in
-                case Env.getUnaryOp (AST.unaryOp op) env of
+                case Env.getUnaryOp (Operator.unaryOpToString op) env of
                     Nothing ->
                         finishWithUnknown ()
 
@@ -1426,9 +1427,30 @@ interpretUnaryOpCallUser stmtMonad finishWithUnknown =
 interpretBinaryOpCall : StmtMonad -> Interpreter ( Expr, BinaryOp, Expr ) Value
 interpretBinaryOpCall stmtMonad =
     \env ( left, op, right ) ->
-        Interpreter.do (interpretExpr stmtMonad env left) <| \env1 leftVal ->
-        Interpreter.do (interpretExpr stmtMonad env1 right) <| \env2 rightVal ->
-        interpretBinaryOpCallVal stmtMonad env2 ( leftVal, op, rightVal )
+        let
+            eager () =
+                Interpreter.do (interpretExpr stmtMonad env left) <| \env1 leftVal ->
+                Interpreter.do (interpretExpr stmtMonad env1 right) <| \env2 rightVal ->
+                interpretBinaryOpCallVal stmtMonad env2 ( leftVal, op, rightVal )
+
+            shortCircuit wantedValue =
+                Interpreter.do (interpretExpr stmtMonad env left) <| \env1 leftVal ->
+                if leftVal == wantedValue then
+                    Outcome.succeed env1 leftVal
+
+                else
+                    Interpreter.do (interpretExpr stmtMonad env1 right) <| \env2 rightVal ->
+                    interpretBinaryOpCallVal stmtMonad env2 ( leftVal, op, rightVal )
+        in
+        case op of
+            AndBool ->
+                shortCircuit (VBool False)
+
+            OrBool ->
+                shortCircuit (VBool True)
+
+            _ ->
+                eager ()
 
 
 interpretBinaryOpCallVal : StmtMonad -> Interpreter ( Value, BinaryOp, Value ) Value
@@ -1475,10 +1497,10 @@ interpretBinaryOpCallVal stmtMonad =
                 Outcome.succeed env <| VFloat (a / b)
 
             -- Mod: ints, floats
-            ( VInt a, Mod, VInt b ) ->
+            ( VInt a, Modulo, VInt b ) ->
                 Outcome.succeed env <| VInt (a |> modBy b)
 
-            ( VFloat a, Mod, VInt b ) ->
+            ( VFloat a, Modulo, VInt b ) ->
                 let
                     integer =
                         floor a
@@ -1488,11 +1510,11 @@ interpretBinaryOpCallVal stmtMonad =
                 in
                 Outcome.succeed env <| VFloat result
 
-            ( VFloat a, Mod, VFloat b ) ->
+            ( VFloat a, Modulo, VFloat b ) ->
                 Outcome.succeed env <| VFloat (a - b * toFloat (floor (a / b)))
 
             -- Pow: ints, floats
-            ( VInt a, Pow, VInt b ) ->
+            ( VInt a, Power, VInt b ) ->
                 Outcome.succeed env <| VInt (a ^ b)
 
             -- OrBin: ints
@@ -1597,7 +1619,7 @@ interpretBinaryOpCallVal stmtMonad =
                     finishWithUnknown () =
                         Outcome.fail <| UnknownBinaryOpOverload ( left, op, right )
                 in
-                case Env.getBinaryOp (AST.binaryOp op) env of
+                case Env.getBinaryOp (Operator.binaryOpToString op) env of
                     Nothing ->
                         finishWithUnknown ()
 

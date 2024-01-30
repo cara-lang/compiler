@@ -1,7 +1,6 @@
 module AST.Frontend exposing
     ( Bang(..)
     , BangOrExpr(..)
-    , BinaryOp(..)
     , CaseBranch
     , Decl(..)
     , Expr(..)
@@ -18,9 +17,7 @@ module AST.Frontend exposing
     , TypeConstructor
     , TypeConstructorArg
     , TypeModifier(..)
-    , UnaryOp(..)
     , anyExpr
-    , binaryOp
     , children
     , exprToString
     , functionDefToSingleFunction
@@ -32,7 +29,6 @@ module AST.Frontend exposing
     , patternToString
     , stmtToString
     , typeToString
-    , unaryOp
     )
 
 import Console
@@ -41,6 +37,7 @@ import Env exposing (Env)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
 import NonemptyList exposing (NonemptyList)
+import Operator exposing (BinaryOp(..), UnaryOp(..))
 import Transform
 
 
@@ -324,44 +321,6 @@ type alias TypeConstructorArg =
     }
 
 
-type UnaryOp
-    = NegateNum -- -e
-    | NegateBool -- !e
-    | NegateBin -- ~e
-    | InfiniteRange -- e..
-
-
-type BinaryOp
-    = -- arithmetic
-      Plus -- +
-    | Minus -- -
-    | Times -- *
-    | Div -- /
-    | Mod -- %
-    | Pow -- **
-      -- binary
-    | OrBin -- |
-    | AndBin -- &
-    | XorBin -- ^
-    | ShiftL -- <<
-    | ShiftR -- >>
-    | ShiftRU -- >>>, unsigned
-      -- comparisons and booleans
-    | Lte -- <=
-    | Lt -- <
-    | Eq -- ==
-    | Neq -- !=
-    | Gt -- >
-    | Gte -- >=
-    | OrBool -- ||
-    | AndBool -- &&
-      -- appendables
-    | Append -- ++
-      -- ranges
-    | RangeInclusive -- ..
-    | RangeExclusive -- ...
-
-
 isEffectfulStmt : Stmt -> Bool
 isEffectfulStmt stmt =
     case stmt of
@@ -453,95 +412,6 @@ isSpreadPattern pattern =
 
         POr _ _ ->
             False
-
-
-binaryOp : BinaryOp -> String
-binaryOp op =
-    case op of
-        Plus ->
-            "+"
-
-        Minus ->
-            "-"
-
-        Times ->
-            "*"
-
-        Div ->
-            "/"
-
-        Mod ->
-            "%"
-
-        Pow ->
-            "**"
-
-        OrBin ->
-            "|"
-
-        AndBin ->
-            "&"
-
-        XorBin ->
-            "^"
-
-        ShiftL ->
-            "<<"
-
-        ShiftR ->
-            ">>"
-
-        ShiftRU ->
-            ">>>"
-
-        Lte ->
-            "<="
-
-        Lt ->
-            "<"
-
-        Eq ->
-            "=="
-
-        Neq ->
-            "!="
-
-        Gt ->
-            ">"
-
-        Gte ->
-            ">="
-
-        OrBool ->
-            "||"
-
-        AndBool ->
-            "&&"
-
-        Append ->
-            "++"
-
-        RangeInclusive ->
-            ".."
-
-        RangeExclusive ->
-            "..."
-
-
-unaryOp : UnaryOp -> String
-unaryOp op =
-    case op of
-        NegateNum ->
-            "-"
-
-        NegateBool ->
-            "!"
-
-        NegateBin ->
-            "~"
-
-        InfiniteRange ->
-            ".."
 
 
 lambdaToString : { args : List Pattern, body : Expr } -> String
@@ -692,15 +562,15 @@ exprToString expr =
             "{" ++ String.join "," (List.map recordExprContentToString contents) ++ "}"
 
         UnaryOp InfiniteRange e ->
-            exprToString e ++ unaryOp InfiniteRange
+            exprToString e ++ Operator.unaryOpToString InfiniteRange
 
         UnaryOp op e ->
-            unaryOp op ++ exprToString e
+            Operator.unaryOpToString op ++ exprToString e
 
         BinaryOp left op right ->
             "{LEFT} {OP} {RIGHT}"
                 |> String.replace "{LEFT}" (exprToString left)
-                |> String.replace "{OP}" (binaryOp op)
+                |> String.replace "{OP}" (Operator.binaryOpToString op)
                 |> String.replace "{RIGHT}" (exprToString right)
 
         Call { fn, args } ->

@@ -10,7 +10,7 @@ import List.Zipper as Zipper
 import Loc exposing (Loc)
 import Maybe.Extra
 import NonemptyList exposing (NonemptyList)
-import Operator
+import Operator exposing (BinaryOp(..), UnaryOp(..))
 import Parser.HoleAnalysis as HoleAnalysis
 import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser, TokenPred(..))
 import Token exposing (Token, Type(..))
@@ -559,22 +559,22 @@ binaryOperatorName =
             (\name ->
                 case name of
                     "+" ->
-                        Parser.succeed AST.Plus
+                        Parser.succeed Operator.Plus
 
                     "-" ->
-                        Parser.succeed AST.Minus
+                        Parser.succeed Operator.Minus
 
                     "*" ->
-                        Parser.succeed AST.Times
+                        Parser.succeed Operator.Times
 
                     "/" ->
-                        Parser.succeed AST.Div
+                        Parser.succeed Operator.Div
 
                     "%" ->
-                        Parser.succeed Mod
+                        Parser.succeed Modulo
 
                     "**" ->
-                        Parser.succeed Pow
+                        Parser.succeed Operator.Power
 
                     "|" ->
                         Parser.succeed OrBin
@@ -595,22 +595,22 @@ binaryOperatorName =
                         Parser.succeed ShiftRU
 
                     "<=" ->
-                        Parser.succeed AST.Lte
+                        Parser.succeed Operator.Lte
 
                     "<" ->
-                        Parser.succeed AST.Lt
+                        Parser.succeed Operator.Lt
 
                     "==" ->
-                        Parser.succeed AST.Eq
+                        Parser.succeed Operator.Eq
 
                     "!=" ->
-                        Parser.succeed AST.Neq
+                        Parser.succeed Operator.Neq
 
                     ">" ->
-                        Parser.succeed AST.Gt
+                        Parser.succeed Operator.Gt
 
                     ">=" ->
-                        Parser.succeed AST.Gte
+                        Parser.succeed Operator.Gte
 
                     "||" ->
                         Parser.succeed OrBool
@@ -1527,7 +1527,7 @@ prefixExpr =
 
 operatorFnExpr : Parser Expr
 operatorFnExpr =
-    Parser.succeed (\op -> Identifier (Id.simple (Operator.lexeme op)))
+    Parser.succeed (\op -> Identifier (Id.simple (Operator.toString op)))
         |> Parser.skip (Parser.token LParen)
         |> Parser.keep (Parser.tokenData Token.getOperator)
         |> Parser.skip (Parser.token RParen)
@@ -2117,7 +2117,7 @@ parseStringInterpolation str =
                             else
                                 Parser.succeed
                                     (AST.BinaryOp acc_
-                                        AST.Append
+                                        Operator.Append
                                         (AST.String chunk)
                                     )
 
@@ -2140,7 +2140,7 @@ parseStringInterpolation str =
                                     Just acc_ ->
                                         AST.BinaryOp
                                             acc_
-                                            AST.Append
+                                            Operator.Append
                                             (AST.String newAroundOpening)
                         in
                         go (Just newAcc) rest
@@ -2195,17 +2195,17 @@ parseStringInterpolation str =
                                                     -}
                                                     AST.BinaryOp
                                                         (AST.String beforeOpening)
-                                                        AST.Append
+                                                        Operator.Append
                                                         (AST.BinaryOp
                                                             (AST.String (exprToParse ++ "="))
-                                                            AST.Append
+                                                            Operator.Append
                                                             (AST.BinaryOp
                                                                 (AST.Call
                                                                     { fn = AST.Identifier (Intrinsic.id Intrinsic.IoToString)
                                                                     , args = [ interpolatedExpr ]
                                                                     }
                                                                 )
-                                                                AST.Append
+                                                                Operator.Append
                                                                 (AST.String afterClosing)
                                                             )
                                                         )
@@ -2217,14 +2217,14 @@ parseStringInterpolation str =
                                                     -}
                                                     AST.BinaryOp
                                                         (AST.String beforeOpening)
-                                                        AST.Append
+                                                        Operator.Append
                                                         (AST.BinaryOp
                                                             (AST.Call
                                                                 { fn = AST.Identifier (Intrinsic.id Intrinsic.IoToString)
                                                                 , args = [ interpolatedExpr ]
                                                                 }
                                                             )
-                                                            AST.Append
+                                                            Operator.Append
                                                             (AST.String afterClosing)
                                                         )
 
@@ -2237,7 +2237,7 @@ parseStringInterpolation str =
                                                     Just acc_ ->
                                                         AST.BinaryOp
                                                             acc_
-                                                            AST.Append
+                                                            Operator.Append
                                                             added
                                         in
                                         go
@@ -2336,22 +2336,22 @@ infixExpr =
                 Just { precedence = 8, isRight = False, parser = binaryOpExpr AndBin }
 
             EqEq ->
-                Just { precedence = 9, isRight = False, parser = binaryOpExpr AST.Eq }
+                Just { precedence = 9, isRight = False, parser = binaryOpExpr Operator.Eq }
 
             Token.Neq ->
-                Just { precedence = 9, isRight = False, parser = binaryOpExpr AST.Neq }
+                Just { precedence = 9, isRight = False, parser = binaryOpExpr Operator.Neq }
 
             Token.Lte ->
-                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Lte }
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr Operator.Lte }
 
             Token.Lt ->
-                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Lt }
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr Operator.Lt }
 
             Token.Gt ->
-                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Gt }
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr Operator.Gt }
 
             Token.Gte ->
-                Just { precedence = 10, isRight = False, parser = binaryOpExpr AST.Gte }
+                Just { precedence = 10, isRight = False, parser = binaryOpExpr Operator.Gte }
 
             Shl ->
                 Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftL }
@@ -2363,22 +2363,22 @@ infixExpr =
                 Just { precedence = 11, isRight = False, parser = binaryOpExpr ShiftRU }
 
             Token.Plus ->
-                Just { precedence = 12, isRight = False, parser = binaryOpExpr AST.Plus }
+                Just { precedence = 12, isRight = False, parser = binaryOpExpr Operator.Plus }
 
             Token.Minus ->
-                Just { precedence = 12, isRight = False, parser = binaryOpExpr AST.Minus }
+                Just { precedence = 12, isRight = False, parser = binaryOpExpr Operator.Minus }
 
             Token.Times ->
-                Just { precedence = 13, isRight = False, parser = binaryOpExpr AST.Times }
+                Just { precedence = 13, isRight = False, parser = binaryOpExpr Operator.Times }
 
             Token.Div ->
-                Just { precedence = 13, isRight = False, parser = binaryOpExpr AST.Div }
+                Just { precedence = 13, isRight = False, parser = binaryOpExpr Operator.Div }
 
             Percent ->
-                Just { precedence = 13, isRight = False, parser = binaryOpExpr Mod }
+                Just { precedence = 13, isRight = False, parser = binaryOpExpr Modulo }
 
             Token.Power ->
-                Just { precedence = 14, isRight = True, parser = binaryOpExpr Pow }
+                Just { precedence = 14, isRight = True, parser = binaryOpExpr Operator.Power }
 
             -- Keeping a gap (precedence = 15) for prefix unary ops
             LParen ->
