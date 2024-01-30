@@ -5,6 +5,8 @@ WANTED:
 
 * arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
 
+* String pattern matching ("ABC" ++ rest ++ "DEF"), similar to List pattern matching
+
 * `[]`(): the postfix "array-access" operator
     * [n], [-n], [m..n], [m...n], [str] 
     * examples: 
