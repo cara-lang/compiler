@@ -202,10 +202,11 @@ interpretFunctionDef :
 interpretFunctionDef =
     \env ({ mod, name } as r) ->
         -- TODO interpret the modifier
-        -- TODO somehow group related function declarations together and make one case..of from them (also get the modifier from the annotation)
         let
             { args, body } =
-                AST.functionDefToSingleFunction r
+                r
+                    |> AST.functionDefToSingleFunction
+                    |> AST.makeRecursive name
 
             envWithFn : Env Value
             envWithFn =
@@ -1192,7 +1193,8 @@ interpretCallVal stmtMonad =
 interpretLambda : Interpreter { args : List Pattern, body : Expr } Value
 interpretLambda =
     \env { args, body } ->
-        Outcome.succeed env <| VClosure { args = args, body = body, env = env }
+        Outcome.succeed env <|
+            VClosure { args = args, body = body, env = env }
 
 
 type StmtMonad
@@ -1436,10 +1438,6 @@ interpretBinaryOpCallVal stmtMonad =
             -- language-given binary operators
             -- Plus: ints, floats
             ( VInt a, Plus, VInt b ) ->
-                let
-                    _ =
-                        Debug.log "plus" ( a, b )
-                in
                 Outcome.succeed env <| VInt (a + b)
 
             ( VInt a, Plus, VFloat b ) ->
@@ -2061,3 +2059,8 @@ interpretWriteFile =
 envToString : Env Value -> String
 envToString env =
     Env.toString { valueToString = Value.withClosures Value.toInspectString } env
+
+
+envToString_ : Env Value -> String
+envToString_ env =
+    Env.toString { valueToString = Value.toInspectString } env

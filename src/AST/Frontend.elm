@@ -19,23 +19,29 @@ module AST.Frontend exposing
     , TypeConstructorArg
     , TypeModifier(..)
     , UnaryOp(..)
+    , anyExpr
     , binaryOp
+    , children
+    , exprToString
     , functionDefToSingleFunction
     , inspect
     , isEffectfulStmt
     , isSpreadPattern
     , lambdaToString
+    , makeRecursive
     , patternToString
     , stmtToString
     , typeToString
     , unaryOp
     )
 
+import Console
 import Debug.Extra
 import Env exposing (Env)
 import Id exposing (Id)
 import Intrinsic exposing (Intrinsic)
 import NonemptyList exposing (NonemptyList)
+import Transform
 
 
 type alias Program =
@@ -540,7 +546,7 @@ unaryOp op =
 
 lambdaToString : { args : List Pattern, body : Expr } -> String
 lambdaToString { args, body } =
-    "\\{ARGS} -> {BODY}"
+    "(\\{ARGS} -> {BODY})"
         |> String.replace "{ARGS}" (String.join "," (List.map patternToString args))
         |> String.replace "{BODY}" (exprToString body)
 
@@ -980,28 +986,414 @@ functionDefToSingleFunction :
         , body : Expr
         }
 functionDefToSingleFunction r =
-    let
-        argCount =
-            NonemptyList.head r.branches
-                |> .args
-                |> List.length
-
-        vars =
-            List.range 0 (argCount - 1)
-                |> List.map (\i -> "arg" ++ String.fromInt i)
-    in
-    { args = List.map PVar vars
-    , body =
-        Case
-            { subject = Tuple (List.map (Identifier << Id.simple) vars)
-            , branches =
-                r.branches
-                    |> NonemptyList.toList
-                    |> List.map
-                        (\branch ->
-                            { pattern = PTuple (List.map Tuple.first branch.args)
-                            , body = branch.body
-                            }
-                        )
+    case r.branches of
+        ( singleBranch, [] ) ->
+            -- TODO we're throwing away fnargs type decls... is that OK?
+            { args = List.map Tuple.first singleBranch.args
+            , body = singleBranch.body
             }
+
+        _ ->
+            let
+                argCount =
+                    NonemptyList.head r.branches
+                        |> .args
+                        |> List.length
+
+                vars =
+                    List.range 0 (argCount - 1)
+                        |> List.map (\i -> "arg" ++ String.fromInt i)
+            in
+            { args = List.map PVar vars
+            , body =
+                Case
+                    { subject = Tuple (List.map (Identifier << Id.simple) vars)
+                    , branches =
+                        r.branches
+                            |> NonemptyList.toList
+                            |> List.map
+                                (\branch ->
+                                    { pattern = PTuple (List.map Tuple.first branch.args)
+                                    , body = branch.body
+                                    }
+                                )
+                    }
+            }
+
+
+{-| Normally we'd use the Y combinator to achieve recursion.
+Elm is eager (strict) though, and using Y combinator would result in an
+infinite loop (in the compiler).
+(Yes, I've tried. ~janiczek)
+
+Instead, let's use a strict fixed-point combinator Z:
+<https://en.wikipedia.org/wiki/Fixed-point_combinator#Strict_fixed-point_combinator>
+
+     Z = \f -> ((\x -> f(\v -> x(x)(v))) (\x -> f(\v -> x(x)(v))))
+
+Theoretically Z is just an eta-expansion of Y. Introduce a lambda and call it
+immediately, as in:
+
+     x = someFn(1)
+     -- is the same as
+     x = (\n -> someFn(n))(1)
+
+-}
+zCombinator : Expr
+zCombinator =
+    let
+        pf =
+            PVar "f"
+
+        px =
+            PVar "x"
+
+        pv =
+            PVar "v"
+
+        f =
+            Identifier <| Id.simple "f"
+
+        x =
+            Identifier <| Id.simple "x"
+
+        v =
+            Identifier <| Id.simple "v"
+
+        arm =
+            Lambda
+                { args = [ px ]
+                , body =
+                    Call
+                        { fn = f
+                        , args =
+                            [ Lambda
+                                { args = [ pv ]
+                                , body =
+                                    Call
+                                        { fn = x
+                                        , args = [ x, v ]
+                                        }
+                                }
+                            ]
+                        }
+                }
+    in
+    Lambda
+        { args = [ pf ]
+        , body =
+            Call
+                { fn = arm
+                , args = [ arm ]
+                }
+        }
+
+
+{-| The Implementation of Functional Programming Languages (SPJ)
+§2.4 Recursive functions
+
+TL;DR the Y-combinator!
+Well actually, the Z-combinator (see docs for zCombinator).
+
+    fac = \n -> if n == 0 then 1 else n * fac(n-1)
+
+    ---> beta-abstraction of the self-name
+
+    f = \self -> \n -> if n == 0 then 1 else n * self(n-1)
+
+    (at this point `fac = f(fac)` is true)
+
+    ---> apply Z-combinator
+
+    z = \f -> (\x -> f(\v -> x(x)(v)))(\x -> f(\v -> x(x)(v)))
+    fac = z(f)
+
+-}
+makeRecursive :
+    String
+    ->
+        { args : List Pattern
+        , body : Expr
+        }
+    ->
+        { args : List Pattern
+        , body : Expr
+        }
+makeRecursive name ({ args, body } as old) =
+    -- TODO what about root identifiers?
+    -- TODO what about qualified identifiers?
+    -- TODO do this for normal defs too?
+    -- TODO do this for binops too
+    -- TODO do this for unary ops too
+    let
+        realSelf : Expr
+        realSelf =
+            Identifier (Id.simple name)
+
+        isSelf : Expr -> Bool
+        isSelf e =
+            e == realSelf
+    in
+    if anyExpr isSelf body then
+        let
+            dummySelfStr : String
+            dummySelfStr =
+                "self"
+
+            dummySelf : Expr
+            dummySelf =
+                Identifier (Id.simple dummySelfStr)
+
+            replaceWithDummy : Expr -> Expr
+            replaceWithDummy e =
+                if isSelf e then
+                    dummySelf
+
+                else
+                    e
+
+            argumentToZ : Expr
+            argumentToZ =
+                Lambda
+                    { args = PVar dummySelfStr :: args
+                    , body =
+                        Transform.transformOnce
+                            recurse
+                            replaceWithDummy
+                            body
+                    }
+
+            newArgs : List String
+            newArgs =
+                List.range 0 (List.length args - 1)
+                    |> List.map (\i -> "arg" ++ String.fromInt i)
+
+            newArgPatterns : List Pattern
+            newArgPatterns =
+                List.map PVar newArgs
+
+            newArgExprs : List Expr
+            newArgExprs =
+                List.map (Identifier << Id.simple) newArgs
+
+            newBody : Expr
+            newBody =
+                Call
+                    { fn = zCombinator
+                    , args = argumentToZ :: newArgExprs
+                    }
+        in
+        { args = newArgPatterns
+        , body = newBody
+        }
+
+    else
+        old
+
+
+anyExpr : (Expr -> Bool) -> Expr -> Bool
+anyExpr pred expr =
+    -- TODO make this streaming somehow in the Transform library?
+    children expr
+        |> List.any pred
+
+
+children : Expr -> List Expr
+children e =
+    Transform.children recursiveChildren e
+
+
+recurse : (Expr -> Expr) -> Expr -> Expr
+recurse f e =
+    case e of
+        Int _ ->
+            e
+
+        Float _ ->
+            e
+
+        Char _ ->
+            e
+
+        String _ ->
+            e
+
+        Bool _ ->
+            e
+
+        Unit ->
+            e
+
+        Tuple xs ->
+            Tuple (List.map f xs)
+
+        List xs ->
+            List (List.map f xs)
+
+        Record r ->
+            Record (List.map (recurseRecordField f) r)
+
+        UnaryOp op arg ->
+            UnaryOp op (f arg)
+
+        BinaryOp l op r ->
+            BinaryOp (f l) op (f r)
+
+        Call r ->
+            Call
+                { fn = f r.fn
+                , args = List.map f r.args
+                }
+
+        RecordGet r ->
+            RecordGet
+                { record = f r.record
+                , field = r.field
+                }
+
+        Block r ->
+            Debug.Extra.todo1 "AST.F recurse block" r
+
+        EffectBlock r ->
+            Debug.Extra.todo1 "AST.F recurse eff-block" r
+
+        Constructor_ r ->
+            Constructor_
+                { id = r.id
+                , args = List.map f r.args
+                }
+
+        Identifier _ ->
+            e
+
+        RootIdentifier _ ->
+            e
+
+        Lambda r ->
+            Lambda
+                { args = r.args
+                , body = f r.body
+                }
+
+        RecordGetter _ ->
+            e
+
+        If r ->
+            If
+                { cond = f r.cond
+                , then_ = f r.then_
+                , else_ = f r.else_
+                }
+
+        Case r ->
+            Case
+                { subject = f r.subject
+                , branches = List.map (recurseCaseBranch f) r.branches
+                }
+
+
+recursiveChildren : (Expr -> List Expr) -> Expr -> List Expr
+recursiveChildren f e =
+    case e of
+        Int _ ->
+            []
+
+        Float _ ->
+            []
+
+        Char _ ->
+            []
+
+        String _ ->
+            []
+
+        Bool _ ->
+            []
+
+        Unit ->
+            []
+
+        Tuple xs ->
+            List.concatMap f xs
+
+        List xs ->
+            List.concatMap f xs
+
+        Record r ->
+            List.filterMap recordFieldExpr r
+                |> List.concatMap f
+
+        UnaryOp op arg ->
+            f arg
+
+        BinaryOp l op r ->
+            f l ++ f r
+
+        Call r ->
+            f r.fn ++ List.concatMap f r.args
+
+        RecordGet r ->
+            f r.record
+
+        Block r ->
+            Debug.Extra.todo1 "AST.F children block" r
+
+        EffectBlock r ->
+            Debug.Extra.todo1 "AST.F children eff-block" r
+
+        Constructor_ { args } ->
+            List.concatMap f args
+
+        Identifier _ ->
+            []
+
+        RootIdentifier _ ->
+            []
+
+        Lambda r ->
+            f r.body
+
+        RecordGetter _ ->
+            []
+
+        If r ->
+            f r.cond ++ f r.then_ ++ f r.else_
+
+        Case r ->
+            f r.subject ++ List.concatMap (.body >> f) r.branches
+
+
+recurseCaseBranch : (Expr -> Expr) -> CaseBranch -> CaseBranch
+recurseCaseBranch f branch =
+    { pattern = branch.pattern
+    , body = f branch.body
     }
+
+
+recurseRecordField : (Expr -> Expr) -> RecordExprContent -> RecordExprContent
+recurseRecordField f content =
+    case content of
+        Field r ->
+            Field
+                { field = r.field
+                , expr = f r.expr
+                }
+
+        Pun _ ->
+            content
+
+        Spread _ ->
+            content
+
+
+recordFieldExpr : RecordExprContent -> Maybe Expr
+recordFieldExpr content =
+    case content of
+        Field { expr } ->
+            Just expr
+
+        Pun _ ->
+            Nothing
+
+        Spread _ ->
+            Nothing

@@ -1,2 +1,2 @@
-getToZero(n) = if n >= 0 then getToZero(n-1) else n
+getToZero(n) = if n > 0 then getToZero(n-1) else n
 IO.println!(getToZero(5))

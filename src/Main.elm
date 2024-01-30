@@ -145,16 +145,29 @@ process { file, content } env =
                     |> handleInterpreterOutcome
 
 
+loadStdlib : Bool
+loadStdlib =
+    False
+
+
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    initModel
-        |> andThenMany (List.map process flags.stdlibSources)
-        |> andThen
-            (process
-                { file = "main.cara"
-                , content = flags.sourceCode
-                }
-            )
+    if loadStdlib then
+        initModel
+            |> andThenMany (List.map process flags.stdlibSources)
+            |> andThen
+                (process
+                    { file = "main.cara"
+                    , content = flags.sourceCode
+                    }
+                )
+
+    else
+        process
+            { file = "main.cara"
+            , content = flags.sourceCode
+            }
+            initEnv
 
 
 andThenMany : List (K (Env Value)) -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )

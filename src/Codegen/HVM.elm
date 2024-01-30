@@ -22,7 +22,8 @@ codegenProgram program =
         maxTupleArity : Maybe Int
         maxTupleArity =
             program
-                |> AST.getExprs AST.getTuple
+                |> AST.programChildren
+                |> List.filterMap AST.getTuple
                 |> List.map List.length
                 |> List.maximum
 
@@ -49,7 +50,8 @@ codegenProgram program =
         recordsFile : List HVM.File
         recordsFile =
             program
-                |> AST.getExprs AST.getRecord
+                |> AST.programChildren
+                |> List.filterMap AST.getRecord
                 |> List.map
                     (\{ sortedFields } ->
                         let

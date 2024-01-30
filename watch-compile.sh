@@ -5,7 +5,8 @@ DIM="\e[2m";
 
 function compile {
   # deno check test.ts src/*.ts 2>&1
-  yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js \
+  yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm-unreadable.js \
+    && elm-make-readable dist/elm-unreadable.js dist/elm.js \
     && ./src/test.ts 2>&1 | \
       tee \
         >(grep -A2 ".*error.*Uncaught" >uncaught.txt) \

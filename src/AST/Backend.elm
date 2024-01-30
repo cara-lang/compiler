@@ -4,12 +4,14 @@ module AST.Backend exposing
     , Pattern(..)
     , Program
     , TypeConstructor
-    , getExprs
+    , children
     , getRecord
     , getTuple
+    , programChildren
     )
 
 import Id.Qualified exposing (QualifiedId)
+import Transform
 
 
 type alias Program =
@@ -102,99 +104,79 @@ type alias TypeConstructor =
     }
 
 
-getExprs : (Expr -> Maybe a) -> Program -> List a
-getExprs fn decls =
-    foldExprs
-        (\expr acc ->
-            case fn expr of
-                Nothing ->
-                    acc
-
-                Just data ->
-                    data :: acc
-        )
-        []
-        decls
+children : Expr -> List Expr
+children e =
+    Transform.children recursiveChildren e
 
 
-foldExprs : (Expr -> a -> a) -> a -> Program -> a
-foldExprs fn init decls =
-    List.foldl
-        (\decl acc -> foldDecl fn acc decl)
-        init
-        decls
+programChildren : Program -> List Expr
+programChildren decls =
+    List.concatMap declChildren decls
 
 
-foldDecl : (Expr -> a -> a) -> a -> Decl -> a
-foldDecl fn init decl =
+declChildren : Decl -> List Expr
+declChildren decl =
     case decl of
         DType _ ->
-            init
+            []
 
         DLetStmt r ->
-            foldExpr fn init r.expr
+            children r.expr
 
         DFunctionDef r ->
-            foldExpr fn init r.body
+            children r.body
 
 
-foldExpr : (Expr -> a -> a) -> a -> Expr -> a
-foldExpr fn init expr =
-    let
-        self () =
-            fn expr init
-
-        selfAnd xs =
-            List.foldl fn (self ()) xs
-    in
-    case expr of
+recursiveChildren : (Expr -> List Expr) -> Expr -> List Expr
+recursiveChildren f e =
+    case e of
         Int _ ->
-            self ()
+            []
 
         Float _ ->
-            self ()
+            []
 
         Char _ ->
-            self ()
+            []
 
         String _ ->
-            self ()
+            []
 
         Bool _ ->
-            self ()
+            []
 
         Unit ->
-            self ()
+            []
 
         Tuple xs ->
-            selfAnd xs
+            List.concatMap f xs
 
         List xs ->
-            selfAnd xs
+            List.concatMap f xs
 
-        Constructor_ { args } ->
-            selfAnd args
+        Constructor_ r ->
+            List.concatMap f r.args
 
-        Lambda1 { body } ->
-            selfAnd [ body ]
+        Lambda1 r ->
+            f r.body
 
         RootIdentifier _ ->
-            self ()
+            []
 
         If r ->
-            selfAnd [ r.cond, r.then_, r.else_ ]
+            f r.cond ++ f r.then_ ++ f r.else_
 
         FnCall1 r ->
-            selfAnd [ r.fn, r.arg ]
+            f r.fn ++ f r.arg
 
         Let1 r ->
-            selfAnd [ r.value, r.body ]
+            f r.value ++ f r.body
 
         RecordGetter _ ->
-            self ()
+            []
 
         Record r ->
-            selfAnd (List.map .expr r.sortedFields)
+            List.concatMap (.expr >> f) r.sortedFields
 
 
 getTuple : Expr -> Maybe (List Expr)
