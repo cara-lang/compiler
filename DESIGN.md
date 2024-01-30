@@ -73,7 +73,7 @@ Would really love them to make more precise constructors and more powerful patte
       I : Int -> Expr Int
       B : Bool -> Expr Bool
       Add : Expr Int -> Expr Int -> Expr Int
-      Mul : Expr Mul -> Expr Mul -> Expr Mul
+      Mul : Expr Int -> Expr Int -> Expr Int
       Eq : Expr a -> Expr a -> Expr Bool
 
     eval : Expr a -> a      -- see? no `Maybe (Either Int Bool)`

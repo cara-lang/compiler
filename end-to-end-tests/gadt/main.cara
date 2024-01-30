@@ -1,0 +1,24 @@
+type Expr[a] where
+  I   : Int  -> Expr[Int]
+  B   : Bool -> Expr[Bool]
+  Add : Expr[Int] -> Expr[Int] -> Expr[Int]
+  Mul : Expr[Int] -> Expr[Int] -> Expr[Int]
+  Eq  : Expr[a]   -> Expr[a]   -> Expr[Bool]
+
+eval : Expr[a] -> a
+eval(I(i)) = i
+eval(B(b)) = b
+eval(Add(e1,e2)) = eval(e1) + eval(e2)
+eval(Mul(e1,e2)) = eval(e1) * eval(e2)
+eval(Eq(e1,e2)) = eval(e1) == eval(e2)
+
+my2 = I(2)
+my5 = I(5)
+my10 = Mul(my2,my5)
+myBool = Eq(my10,my5)
+
+IO.println!(my10)
+IO.println!(eval(my10))
+
+IO.println!(myBool)
+IO.println!(eval(myBool))
