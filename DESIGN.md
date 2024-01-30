@@ -1,8 +1,5 @@
 WANTED:
 
-* nested or-patterns ([twitter](https://twitter.com/ChShersh/status/1744005962178953365?t=aKI-P4XUy48rZqizJ6oByw&s=19))
-  * `case event of KeyDown (Key "q" | Escape) | KeyDown (Up | Key "k") ->`
-
 * arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
 
 * String pattern matching ("ABC" ++ rest ++ "DEF"), similar to List pattern matching
