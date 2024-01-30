@@ -1703,7 +1703,7 @@ recordExprSpreadContent =
 
 {-|
 
-    : CASE expr OF EOL+ caseBranch (EOL+ caseBranch)*
+    : CASE expr OF EOL* caseBranch (EOL+ caseBranch)*
     = case foo of
         1 -> "Hello"
         2 -> "World"
@@ -1719,7 +1719,6 @@ caseExpr =
         |> Parser.skip (Parser.token Token.Case)
         |> Parser.keep (Parser.lazy (\() -> expr))
         |> Parser.skip (Parser.token Of)
-        |> Parser.skip (Parser.token EOL)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep caseBranch
         |> Parser.keep
