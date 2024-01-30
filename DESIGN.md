@@ -1,9 +1,8 @@
 WANTED:
 
-* nested or-patterns ([twitter](https://twitter.com/ChShersh/status/1744005962178953365?t=aKI-P4XUy48rZqizJ6oByw&s=19))
-  * `case event of KeyDown (Key "q" | Escape) | KeyDown (Up | Key "k") ->`
-
 * arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
+
+* String pattern matching ("ABC" ++ rest ++ "DEF"), similar to List pattern matching
 
 * `[]`(): the postfix "array-access" operator
     * [n], [-n], [m..n], [m...n], [str] 
@@ -49,7 +48,6 @@ WANTED:
     * foo(x: Int, y: Int): Int // <- allowed
     * in new syntax: foo : x:Int -> y:Int -> Int
   * return type cannot be omitted
-* allow ' in var names
 
 * Extending others' modules with new functions and constants
 
@@ -66,7 +64,6 @@ WANTED:
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
 * Probably no <| pipelines? << and >> still might have their place. 
 * inline pragmas? for Maybe.map to become tail-safe etc.
-* what if N-tuples are just syntax sugar for concrete record {el0,el1}, {el0,el1,el2}, etc.?
 
 * Opaque types by default? Keyword for opt-in transparency instead of for opt-in opaqueness?
 

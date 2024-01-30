@@ -1,0 +1,18 @@
+type Event =
+  | KeyDown Key
+
+type Key =
+  | Key Char
+  | Escape
+  | Up
+
+toInt : Event -> Int
+toInt(event) =
+  case event of
+    | KeyDown (Key('q')| Escape) -> 0
+    | KeyDown (Up | Key('k')) -> 1
+    | _ -> 2
+
+IO.println!(KeyDown(Up))
+IO.println!(KeyDown(Key('q')))
+IO.println!(KeyDown(Key('x')))
