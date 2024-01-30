@@ -1,3 +1,4 @@
+// Note this is different from our normal ADT syntax (`type Expr[a] = ...`)
 type Expr[a] where
   I   : Int  -> Expr[Int]
   B   : Bool -> Expr[Bool]
@@ -5,6 +6,9 @@ type Expr[a] where
   Mul : Expr[Int] -> Expr[Int] -> Expr[Int]
   Eq  : Expr[a]   -> Expr[a]   -> Expr[Bool]
 
+// This type signature would not be possible with normal ADTs
+// (unless we made it non-total, ie. allowed it to crash in impossible states)
+// This is the promise of GADTs: no need to check types of inner sub-exprs everywhere!
 eval : Expr[a] -> a
 eval(I(i)) = i
 eval(B(b)) = b
