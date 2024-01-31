@@ -54,6 +54,7 @@ WANTED:
 * implements LSP(?) and Debug Adapter Protocol (to have VSCode/... debugger out of box)
   * https://microsoft.github.io/debug-adapter-protocol/
 * holes? to aid programming and ask the typechecker for its opinion
+  * might be cool if not only the compiler tells you, but the LSP tells you or the formatter replaces the hole with the needed type
 * Fraction type?
 * operator overloading probably done in the Kotlin way: operator fun plus, etc.
 * Probably no <| pipelines? << and >> still might have their place. 
