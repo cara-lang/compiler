@@ -5,8 +5,6 @@
 - [ ] adhoc polymorphism (typeclass instances)
 - [ ] tail recursion (100k steps loop?)
 - [ ] tail recursion modulo cons (show off different function calls)
-- [ ] case-of style fib
-- [ ] if..then style fib
 - [ ] case..of A a | B a if the `a` is the same
 - [ ] case..of A a b | B a b if the `a` and `b` are the same respectively
 - [ ] case..of guards
@@ -21,8 +19,6 @@
 - [ ] f32,f64
 - [ ] BigDecimal
 - [ ] Rational
-- [ ] |> pipeline with .foo()
-- [ ] |> pipeline with .foo record getter
 - [ ] type annotation: omit name
 - [ ] type annotation: omit type
 - [ ] type annotation: omit name for 2 args of the same type - error

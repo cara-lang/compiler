@@ -1,6 +1,17 @@
-fib(0) = 0
-fib(1) = 1
-fib(n) = fib(n-1) + fib(n-2)
+fib1(0) = 0
+fib1(1) = 1
+fib1(n) = fib1(n-1) + fib1(n-2)
 
-x = fib(10)
-IO.println!(x)
+fib2(n) = case n of
+  0 -> 0
+  1 -> 1
+  _ -> fib2(n-1) + fib2(n-2)
+
+fib3(n) =
+  if n == 0 then 0
+  else if n == 1 then 1
+  else fib3(n-1) + fib3(n-2)
+
+IO.println!(fib1(10))
+IO.println!(fib2(10))
+IO.println!(fib3(10))
