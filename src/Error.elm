@@ -91,7 +91,6 @@ type InterpreterError
         { wanted : Int -- 0-based
         , length : Int
         }
-    | TupleUnknownField String
     | IfConditionNotBool
     | PatternMismatch
     | NoCaseBranchMatched
@@ -300,10 +299,6 @@ title error =
                     "Tuple length mismatch: wanted to get {WHICH} field of a tuple that has only {LENGTH} items"
                         |> String.replace "{WHICH}" (String.fromInt wanted ++ th (wanted + 1))
                         |> String.replace "{LENGTH}" (String.fromInt length)
-
-                TupleUnknownField field ->
-                    "Tried to access field '{FIELD}' on a tuple"
-                        |> String.replace "{FIELD}" field
 
                 IfConditionNotBool ->
                     "If expression with a non-bool condition"
@@ -582,10 +577,6 @@ code error =
                     "EXXXX"
 
                 TupleLengthMismatch { wanted, length } ->
-                    -- TODO
-                    "EXXXX"
-
-                TupleUnknownField field ->
                     -- TODO
                     "EXXXX"
 

@@ -1,10 +1,10 @@
 E0023: Trying to access a missing tuple element
 
-The tuple doesn't contain the field `eleventh`.
+The tuple doesn't contain the field `first`.
 
 Note: Tuple fields are named `el0`, `el1` etc.
 
 main.cara:2:15
 ━━┓
-2 ┃ IO.println!(x.eleventh)
+2 ┃ IO.println!(x.first)
   ┃               ^

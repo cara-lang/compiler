@@ -1,4 +1,0 @@
-x = (1, "Hello")
-{..} = x
-IO.println!(first)
-IO.println!(second)

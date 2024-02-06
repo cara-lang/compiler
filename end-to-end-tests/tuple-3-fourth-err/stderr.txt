@@ -1,8 +1,0 @@
-E0023: Trying to access a missing tuple element
-
-The tuple has 3 elements but the code below tried to access the fourth element.
-
-main.cara:2:15
-━━┓
-2 ┃ IO.println!(x.fourth)
-  ┃               ^

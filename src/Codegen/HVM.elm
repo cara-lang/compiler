@@ -36,13 +36,9 @@ codegenProgram program =
                         , rules =
                             -- TODO: only generate those that are used (found across the program)?
                             List.range 0 (maxArity - 1)
-                                |> List.concatMap
+                                |> List.map
                                     (\index ->
                                         tupleGetterDef index (Common.tupleIndexToNumericField index)
-                                            :: (BiDict.getReverse index Common.namedTupleFields
-                                                    |> Set.toList
-                                                    |> List.map (tupleGetterDef index)
-                                               )
                                     )
                         }
                     )

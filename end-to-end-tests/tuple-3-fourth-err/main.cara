@@ -1,2 +1,0 @@
-x = (123, "Hello", [])
-IO.println!(x.fourth)

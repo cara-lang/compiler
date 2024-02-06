@@ -1,6 +1,0 @@
-E0001: Unknown variable
-
-main.cara:3:13
-━━┓
-3 ┃ IO.println!(first)
-  ┃             ^

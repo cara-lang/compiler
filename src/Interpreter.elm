@@ -1108,7 +1108,7 @@ interpretCallVal stmtMonad =
             VRecordGetter field ->
                 case argVals of
                     [ VTuple values ] ->
-                        interpretRecordGetDict env ( field, tupleToNumericAndWordyRecord values )
+                        interpretRecordGetDict env ( field, tupleToNumericRecord values )
 
                     [ VRecord fields ] ->
                         interpretRecordGetDict env ( field, fields )
@@ -1650,7 +1650,7 @@ interpretRecordGet stmtMonad =
         Interpreter.do (interpretExpr stmtMonad env record) <| \env1 recordVal ->
         case recordVal of
             VTuple values ->
-                interpretTupleGetDict env1 ( field, tupleToNumericAndWordyRecord values )
+                interpretTupleGetDict env1 ( field, tupleToNumericRecord values )
 
             VRecord fields ->
                 interpretRecordGetDict env1 ( field, fields )
@@ -1675,65 +1675,10 @@ interpretTupleGetDict =
     \env ( field, fields ) ->
         case Dict.get field fields of
             Nothing ->
-                let
-                    err =
-                        if isTupleGetter field then
-                            AccessingMissingTupleElement field
-
-                        else
-                            TupleUnknownField field
-                in
-                Outcome.fail err
+                Outcome.fail (AccessingMissingTupleElement field)
 
             Just content ->
                 Outcome.succeed env content
-
-
-isTupleGetter : String -> Bool
-isTupleGetter field =
-    let
-        isNumericTupleGetter =
-            String.startsWith "el" field
-                && (String.toInt (String.dropLeft 2 field) /= Nothing)
-
-        isWordyTupleGetter =
-            Set.member field wordyTupleGetters
-
-        isMissingWordyTupleGetter =
-            Set.member field missingWordyTupleGetters
-    in
-    isNumericTupleGetter || isWordyTupleGetter || isMissingWordyTupleGetter
-
-
-wordyTupleGetters : Set String
-wordyTupleGetters =
-    List.range 0 9
-        |> List.filterMap tupleIndexToWordyField
-        |> Set.fromList
-
-
-missingWordyTupleGetters : Set String
-missingWordyTupleGetters =
-    Set.fromList
-        [ "eleventh"
-        , "twelth"
-        , "thirteenth"
-        , "fourteenth"
-        , "fifteenth"
-        , "sixteenth"
-        , "seventeenth"
-        , "eighteenth"
-        , "ninteenth"
-        , "twentieth"
-        ]
-
-
-tupleIndexToWordyField : Int -> Maybe String
-tupleIndexToWordyField n =
-    Common.namedTupleFields
-        |> BiDict.getReverse n
-        |> Set.toList
-        |> List.head
 
 
 {-| Useful for spreads
@@ -1742,22 +1687,6 @@ tupleToNumericRecord : List Value -> Dict String Value
 tupleToNumericRecord values =
     values
         |> List.indexedMap (\i value -> ( Common.tupleIndexToNumericField i, value ))
-        |> Dict.fromList
-
-
-{-| Useful for record gets
--}
-tupleToNumericAndWordyRecord : List Value -> Dict String Value
-tupleToNumericAndWordyRecord values =
-    values
-        |> List.indexedMap
-            (\i value ->
-                [ Just ( Common.tupleIndexToNumericField i, value )
-                , tupleIndexToWordyField i |> Maybe.map (\field -> ( field, value ))
-                ]
-                    |> List.filterMap identity
-            )
-        |> List.concat
         |> Dict.fromList
 
 
@@ -2013,7 +1942,7 @@ interpretRecordExprContent stmtMonad =
                         Outcome.succeed env1 (Dict.toList fields)
 
                     VTuple values ->
-                        Outcome.succeed env1 (Dict.toList (tupleToNumericAndWordyRecord values))
+                        Outcome.succeed env1 (Dict.toList (tupleToNumericRecord values))
 
                     _ ->
                         Outcome.fail SpreadingNonRecord

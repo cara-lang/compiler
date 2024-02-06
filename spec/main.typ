@@ -1009,7 +1009,7 @@ Tuples start from length 2, since:
 
 #todo[Mention how Cara deals with leading/trailing commas in tuples.]
 
-#todo[Mention the implicit getters for tuples: `.el1 .. .elN`, `.first .. .tenth`. Mention them being one-indexed.]
+#todo[Mention the implicit getters for tuples: `.el1 .. .elN-1`.]
 
 === Lists <list-expr>
 
