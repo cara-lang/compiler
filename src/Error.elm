@@ -325,7 +325,7 @@ title error =
                     "Record field not found: " ++ field
 
                 EffectfulStmtInPureBlock_ ->
-                    "Effectful statement in a pure block"
+                    "Bang used outside effect block"
 
                 UnnecessaryBang ->
                     "Unnecessary bang"
@@ -609,8 +609,7 @@ code error =
                     "E0007"
 
                 EffectfulStmtInPureBlock_ ->
-                    -- TODO
-                    "EXXXX"
+                    "E0027"
 
                 UnnecessaryBang ->
                     -- TODO

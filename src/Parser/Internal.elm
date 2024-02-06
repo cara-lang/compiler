@@ -4,7 +4,7 @@ module Parser.Internal exposing
     , map, map2, andThen, skip, keep
     , many, manyUntilEOF
     , separatedList, separatedNonemptyList
-    , maybe, butNot, butNot_, disallowed
+    , maybe, butNot, butNot_, butNotU, butNotU_, disallowed
     , lazy
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
@@ -21,7 +21,7 @@ module Parser.Internal exposing
 @docs map, map2, andThen, skip, keep
 @docs many, manyUntilEOF
 @docs separatedList, separatedNonemptyList
-@docs maybe, butNot, butNot_, disallowed
+@docs maybe, butNot, butNot_, butNotU, butNotU_, disallowed
 @docs lazy
 @docs isAtEnd, skipEol, skipEolBeforeIndented
 @docs token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
@@ -198,8 +198,11 @@ many childParser =
             go : List a -> Parser (List a)
             go acc tokens_ =
                 case childParser tokens_ of
-                    Err _ ->
+                    Err ( _, _, RecoverableError ) ->
                         Ok ( List.reverse acc, tokens_ )
+
+                    Err (( _, _, UnrecoverableError ) as err) ->
+                        Err err
 
                     Ok ( child, tokens__ ) ->
                         go (child :: acc) tokens__
@@ -651,7 +654,7 @@ butNot disallowedValue err parser =
             |> Result.andThen
                 (\( value, newTokens ) ->
                     if value == disallowedValue then
-                        failUnrecoverably_ tokens err
+                        fail_ tokens err
 
                     else
                         Ok ( value, newTokens )
@@ -660,6 +663,38 @@ butNot disallowedValue err parser =
 
 butNot_ : (a -> Bool) -> ParserError -> Parser a -> Parser a
 butNot_ disallowedPred err parser =
+    \tokens ->
+        parser tokens
+            |> Result.andThen
+                (\( value, newTokens ) ->
+                    if disallowedPred value then
+                        fail_ tokens err
+
+                    else
+                        Ok ( value, newTokens )
+                )
+
+
+{-| Unrecoverable variant of `butNot`
+-}
+butNotU : a -> ParserError -> Parser a -> Parser a
+butNotU disallowedValue err parser =
+    \tokens ->
+        parser tokens
+            |> Result.andThen
+                (\( value, newTokens ) ->
+                    if value == disallowedValue then
+                        failUnrecoverably_ tokens err
+
+                    else
+                        Ok ( value, newTokens )
+                )
+
+
+{-| Unrecoverable variant of `butNot_`
+-}
+butNotU_ : (a -> Bool) -> ParserError -> Parser a -> Parser a
+butNotU_ disallowedPred err parser =
     \tokens ->
         parser tokens
             |> Result.andThen

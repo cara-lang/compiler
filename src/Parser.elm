@@ -527,31 +527,6 @@ unaryOperatorAnnotationStmt =
         |> Parser.andThen identity
 
 
-{-|
-
-    : expr
-    = 123
-
-    This will try to eat an expr, and fail if it succeeds in doing that.
-    Stand-alone pure expressions (not being bound to a name) are disallowed.
-    `E0011: Unused expression` should be raised.
-
--}
-unusedExprStmt : Parser a
-unusedExprStmt =
-    Parser.succeed (\e _ -> e)
-        |> Parser.keep expr
-        |> Parser.keep
-            (Parser.oneOf
-                { commited =
-                    [ ( [ T EOL ], Parser.succeed () )
-                    ]
-                , noncommited = []
-                }
-            )
-        |> Parser.disallowed UnusedExpression
-
-
 binaryOperatorName : Parser BinaryOp
 binaryOperatorName =
     Parser.tokenData Token.getBacktickString
@@ -841,7 +816,6 @@ statement =
             , unaryOperatorDefStmt
             , binaryOperatorAnnotationStmt
             , unaryOperatorAnnotationStmt
-            , unusedExprStmt
             ]
         }
 
@@ -917,7 +891,7 @@ letStatement =
         |> Parser.keep letModifier
         |> Parser.keep
             (pattern
-                |> Parser.butNot PWildcard AssignmentOfExprToUnderscore
+                |> Parser.butNotU PWildcard AssignmentOfExprToUnderscore
             )
         |> Parser.keep
             -- (COLON type)?
@@ -1554,7 +1528,7 @@ blockExpr =
                 (Parser.succeed identity
                     |> Parser.keep
                         (Parser.lazy (\() -> statement)
-                            |> Parser.butNot_ AST.isEffectfulStmt EffectfulStmtInPureBlock
+                            |> Parser.butNotU_ AST.isEffectfulStmt EffectfulStmtInPureBlock
                         )
                     |> Parser.skip Parser.skipEol
                 )
