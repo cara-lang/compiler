@@ -1559,7 +1559,15 @@ blockExpr =
                     |> Parser.skip Parser.skipEol
                 )
             )
-        |> Parser.keep (Parser.lazy (\() -> expr))
+        |> Parser.keep
+            (Parser.oneOf
+                { commited = []
+                , noncommited =
+                    [ Parser.lazy (\() -> expr)
+                    , Parser.failUnrecoverably BlockExprWithNoReturnExpr
+                    ]
+                }
+            )
         |> Parser.skip (Parser.token EOL)
         |> Parser.skip Parser.skipEol
         |> Parser.skip (Parser.token RBrace)

@@ -79,6 +79,7 @@ type ParserError
     | UnusedExpression F.Expr
     | IfWithoutElse { cond : F.Expr, then_ : F.Expr }
     | ExpectedSpecificFunctionName -- Shouldn't be visible to the user
+    | BlockExprWithNoReturnExpr
 
 
 type InterpreterError
@@ -276,6 +277,9 @@ title error =
 
                 ExpectedSpecificFunctionName ->
                     "Expected specific function name"
+
+                BlockExprWithNoReturnExpr ->
+                    "Block expression with no return expression"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of
@@ -554,6 +558,9 @@ code error =
                 ExpectedSpecificFunctionName ->
                     -- TODO
                     "EXXXX"
+
+                BlockExprWithNoReturnExpr ->
+                    "E0032"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of

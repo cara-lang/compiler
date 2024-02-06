@@ -5,4 +5,3 @@ foo(a) = {
 
 ret = foo(5)
 IO.println!(ret)
-
