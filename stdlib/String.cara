@@ -1,0 +1,102 @@
+// depends on Char
+
+module String {
+
+  opaque type String =
+    | Empty
+    | Cons(Char,String)
+     
+  /* TODO
+  extend module Gen {
+  }
+  */
+
+  fromChar : Char -> String
+  fromChar(c) = Cons(c,Empty)
+
+  test: fromChar('x') == "x"
+  test: fromChar('y') == "y"
+
+  map : (Char -> Char) -> String -> String
+  map(f,str) = {
+
+    go : String -> String -> String
+    go(Empty,acc) = acc
+    go(Cons(c,rest),acc) = go(rest,acc++f(c))
+
+    go(str,[])
+
+  }
+
+  test: map(Char.toUpper,"hello") == "HELLO"
+  test: map(#(_),"whatever") == "whatever"
+
+  // TODO filter?
+
+  concat : List[String] -> String
+  concat(strs) = {
+
+    go : List[String] -> String -> String
+    go([],acc) = acc
+    go([x,...xs],acc) = go(xs,acc++x)
+
+    go(strs,"")
+
+  }
+
+  test: concat([]) == ""
+  test: concat(["x"]) == "x"
+  test: concat(["x","y"]) == "xy"
+  test: concat(["x ",""]) == "x "
+  // TODO properties, see joinWith for inspiration
+
+  joinWith : String -> List[String] -> String
+  joinWith(_,[]) = ""
+  joinWith(sep,[str,...strs]) = {
+
+    go : List[String] -> String -> String
+    go([],acc) = acc
+    go([x,...xs],acc) = go(xs,acc++sep++x)
+
+    go(strs,str)
+
+  }
+
+  test "joinWith(\"\") == concat" with List[String]:
+    \strs -> joinWith("",strs) == concat(strs)
+
+  test "joinWith(_,[]) == \"\"" with String:
+    \sep -> joinWith(sep,[]) == ""
+
+  test "joinWith(_,[s]) == s" with (String,String):
+    \sep,str -> joinWith(sep,[str]) == str
+
+  test: joinWith("",[]) == ""
+  test: joinWith(",",[]) == ""
+
+  test: joinWith("",["1"]) == "1"
+  test: joinWith(",",["1"]) == "1"
+
+  test: joinWith("",["1","2","3"]) == "123"
+  test: joinWith(",",["1","2","3"]) == "1,2,3"
+  test: joinWith(" and ",["1","2"]) == "1 and 2"
+  test: joinWith("\n",["1","2"]) == 
+      `
+      1
+      2
+      `
+
+  // TODO property: length(joinWith(sep,strs)) == sum(List.map(length,strs)) + (max(0,(List.length(strs) - 1)) * length(sep))
+
+  joinWith : Char -> List[String] -> String
+  joinWith(c,strs) = joinWith(fromChar(c),strs)
+
+  // TODO length (whatever that means in unicode)
+  // TODO toList (of something unicode)
+  // TODO contains?(Char)
+  // TODO contains?(String)
+  // TODO repeat
+
+  // TODO go through other stdlibs and -extras
+
+}

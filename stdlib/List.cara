@@ -43,7 +43,7 @@ module List {
 
     go : List[a] -> List[b] -> List[b]
     go([],acc) = acc
-    go([x,...xs],acc) = go(xs,f(x)++acc)
+    go([x,...xs],acc) = go(xs,acc++f(x))
 
     go(xs,[])
 
@@ -172,9 +172,9 @@ module List {
   test: uncons([1]) == Just((1,[]))
   test: uncons([1,2,3]) == Just((1,[2,3]))
 
-  isEmpty? : List[a] -> Bool
-  isEmpty?(Empty) = True
-  isEmpty?(_)     = False
+  empty? : List[a] -> Bool
+  empty?(Empty) = True
+  empty?(_)     = False
 
   test: empty?(empty)
   test "cons is not empty" with (Int,List[Int]):

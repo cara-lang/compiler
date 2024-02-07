@@ -52,6 +52,7 @@ declaration =
         { commited =
             [ ( [ T Private, T Type, T Alias ], typeAliasDecl )
             , ( [ T Type, T Alias ], typeAliasDecl )
+            , ( [ T Intrinsic, T Type ], intrinsicTypeDecl )
             , ( [ T Private, T Type ], typeDecl )
             , ( [ T Opaque, T Type ], typeDecl )
             , ( [ T Type ], typeDecl )
@@ -98,24 +99,29 @@ functionDefStmt =
                                         firstBranch
                                         (List.map (\( _, _, branch ) -> branch) rest)
 
-                                {- the idea is: LetPrivate wins, like True with || -}
+                                smush : LetModifier -> LetModifier -> LetModifier
+                                smush mod1 mod2 =
+                                    case ( mod1, mod2 ) of
+                                        ( _, LetNoModifier ) ->
+                                            mod1
+
+                                        ( LetNoModifier, _ ) ->
+                                            mod2
+
+                                        ( _, LetPrivate ) ->
+                                            mod1
+
+                                        ( LetPrivate, _ ) ->
+                                            mod2
+
+                                        ( LetIntrinsic, LetIntrinsic ) ->
+                                            LetIntrinsic
+
                                 finalMod =
-                                    case firstMod of
-                                        LetPrivate ->
-                                            LetPrivate
-
-                                        LetNoModifier ->
-                                            List.foldl
-                                                (\( newMod, _, _ ) acc ->
-                                                    case newMod of
-                                                        LetPrivate ->
-                                                            LetPrivate
-
-                                                        LetNoModifier ->
-                                                            acc
-                                                )
-                                                LetNoModifier
-                                                rest
+                                    List.foldl
+                                        (\( otherMod, _, _ ) accMod -> smush accMod otherMod)
+                                        firstMod
+                                        rest
                             in
                             SFunctionDef
                                 { mod = finalMod
@@ -136,7 +142,7 @@ functionDefStmt =
 functionBranch : Maybe String -> Parser ( LetModifier, String, FunctionBranch )
 functionBranch neededName =
     Parser.succeed (\mod name args body -> ( mod, name, { args = args, body = body } ))
-        |> Parser.keep letModifier
+        |> Parser.keep letModifierNonIntrinsic
         |> Parser.keep
             (lowerName
                 |> (case neededName of
@@ -166,21 +172,24 @@ functionBranch neededName =
 
 {-|
 
-    : PRIVATE?
+    : (PRIVATE|INTRINSIC)?
 
 -}
 letModifier : Parser LetModifier
 letModifier =
-    Parser.maybe (Parser.token Private)
-        |> Parser.map
-            (\maybePrivate ->
-                case maybePrivate of
-                    Nothing ->
-                        LetNoModifier
+    Parser.oneOf
+        { commited =
+            [ ( [ T Private ], Parser.succeed LetPrivate |> Parser.skip (Parser.token Private) )
+            , ( [ T Intrinsic ], Parser.succeed LetIntrinsic |> Parser.skip (Parser.token Intrinsic) )
+            ]
+        , noncommited = [ Parser.succeed LetNoModifier ]
+        }
 
-                    Just () ->
-                        LetPrivate
-            )
+
+letModifierNonIntrinsic : Parser LetModifier
+letModifierNonIntrinsic =
+    letModifier
+        |> Parser.butNot LetIntrinsic UnexpectedIntrinsic
 
 
 {-|
@@ -244,16 +253,56 @@ unaryOperatorDefStmt =
 
 {-|
 
+    : INTRINSIC TYPE UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)?
+    = intrinsic type Unit
+    = intrinsic type IO[a]
+
+-}
+intrinsicTypeDecl : Parser Decl
+intrinsicTypeDecl =
+    Parser.succeed
+        (\name vars -> DIntrinsicType { name = name, vars = vars })
+        |> Parser.skip (Parser.token Intrinsic)
+        |> Parser.skip (Parser.token Type)
+        |> Parser.keep upperName
+        |> Parser.keep
+            (Parser.maybe
+                (Parser.separatedNonemptyList
+                    { left = Token.LBracket
+                    , right = Token.RBracket
+                    , sep = Token.Comma
+                    , item = typevar
+                    , skipEol = False
+                    , allowTrailingSep = False
+                    }
+                )
+                |> Parser.map
+                    (\maybeTypevars ->
+                        case maybeTypevars of
+                            Nothing ->
+                                []
+
+                            Just ( t, ts ) ->
+                                t :: ts
+                    )
+            )
+        |> Parser.inContext InIntrinsicTypeDecl
+
+
+{-|
+
     : (PRIVATE | OPAQUE)? TYPE UPPER_NAME (LBRACKET typevar (COMMA typevar)* RBRACKET)? EQ constructorList
     = type Unit = Unit
     = private type MyList[a] = Empty | Cons(a,MyList[a])
     = opaque type Html[msg] = Inert(InertHtml) | Eventful(EventfulHtml[msg])
 
+    Note intrinsic types do have their own declaration
+
 -}
 typeDecl : Parser Decl
 typeDecl =
     Parser.succeed (\mod name vars constructors -> DType { mod = mod, name = name, vars = vars, constructors = constructors })
-        |> Parser.keep typeModifier
+        |> Parser.keep typeModifierNonIntrinsic
         |> Parser.skip (Parser.token Type)
         |> Parser.keep upperName
         |> Parser.keep
@@ -429,26 +478,32 @@ constructorArg =
         |> Parser.keep type_
 
 
+{-|
+
+    : (PRIVATE|OPAQUE|INTRINSIC)?
+
+-}
 typeModifier : Parser TypeModifier
 typeModifier =
     Parser.oneOf
         { commited =
-            [ ( [ T Private ]
-              , Parser.succeed TypePrivate
-                    |> Parser.skip (Parser.token Private)
-              )
-            , ( [ T Opaque ]
-              , Parser.succeed TypeOpaque
-                    |> Parser.skip (Parser.token Opaque)
-              )
+            [ ( [ T Private ], Parser.succeed TypePrivate |> Parser.skip (Parser.token Private) )
+            , ( [ T Opaque ], Parser.succeed TypeOpaque |> Parser.skip (Parser.token Opaque) )
+            , ( [ T Intrinsic ], Parser.succeed TypeIntrinsic |> Parser.skip (Parser.token Intrinsic) )
             ]
         , noncommited = [ Parser.succeed TypeNoModifier ]
         }
 
 
+typeModifierNonIntrinsic : Parser TypeModifier
+typeModifierNonIntrinsic =
+    typeModifier
+        |> Parser.butNot TypeIntrinsic UnexpectedIntrinsic
+
+
 {-|
 
-    : PRIVATE? LOWER_NAME COLON type
+    : (PRIVATE|INTRINSIC)? LOWER_NAME COLON type
     = x : Int
 
 -}
@@ -464,7 +519,7 @@ valueAnnotationStmt =
 
 {-|
 
-    : PRIVATE? BACKTICK_STRING COLON type
+    : (PRIVATE|INTRINSIC)? BACKTICK_STRING COLON type
                                      ^^^^ needs to be `x -> y -> z`
                ^^^^^^^^^^^^^^^ needs to be BinaryOp
     = `-` : Int -> Int -> Int
@@ -504,7 +559,7 @@ binaryOperatorAnnotationStmt =
 
 {-|
 
-    : PRIVATE? BACKTICK_STRING COLON type ARROW type
+    : (PRIVATE|INTRINSIC)? BACKTICK_STRING COLON type ARROW type
                ^^^^^^^^^^^^^^^ needs to be UnaryOp
     = `-` : Int -> Int
 
@@ -865,7 +920,7 @@ letBangStatement =
                 , bang = bang_
                 }
         )
-        |> Parser.keep letModifier
+        |> Parser.keep letModifierNonIntrinsic
         |> Parser.keep pattern
         |> Parser.keep
             -- (COLON type)?
@@ -903,7 +958,7 @@ letStatement =
                 , expr = expr_
                 }
         )
-        |> Parser.keep letModifier
+        |> Parser.keep letModifierNonIntrinsic
         |> Parser.keep
             (pattern
                 |> Parser.butNotU PWildcard AssignmentOfExprToUnderscore
@@ -2433,13 +2488,14 @@ prefixUnaryOpExpr tokenType op =
 
 {-|
 
-    : expr ${tokenTag} expr
+    : expr ${tokenTag} EOL* expr
       ^^^^^^^^^^^^^^^^ already parsed
 
 -}
 binaryOpExpr : BinaryOp -> InfixParser Expr
 binaryOpExpr op { left, precedence, isRight } =
     Parser.succeed (\right -> BinaryOp left op right)
+        |> Parser.skip Parser.skipEol
         |> Parser.keep (exprAux precedence isRight)
 
 

@@ -61,6 +61,9 @@ interpretDecl =
             DType r ->
                 interpretTypeDecl env r
 
+            DIntrinsicType r ->
+                interpretIntrinsicTypeDecl env r
+
             DTypeAlias r ->
                 interpretTypeAlias env r
 
@@ -309,6 +312,21 @@ interpretUseModule =
 
             modulePath =
                 moduleId.qualifiers ++ [ moduleId.name ]
+        in
+        Outcome.succeed env ()
+
+
+interpretIntrinsicTypeDecl :
+    Interpreter
+        { name : String
+        , vars : List String
+        }
+        ()
+interpretIntrinsicTypeDecl =
+    \env r ->
+        let
+            _ =
+                Debug.log (Console.dark "TODO interpretIntrinsicTypeDecl") ()
         in
         Outcome.succeed env ()
 

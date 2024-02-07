@@ -218,6 +218,7 @@ type TypeModifier
     = TypeNoModifier
     | TypePrivate
     | TypeOpaque
+    | TypeIntrinsic
 
 
 type TypeAliasModifier
@@ -228,6 +229,7 @@ type TypeAliasModifier
 type LetModifier
     = LetNoModifier
     | LetPrivate
+    | LetIntrinsic
 
 
 type Decl
@@ -242,6 +244,10 @@ type Decl
         , name : String
         , vars : List String
         , constructors : List TypeConstructor
+        }
+    | DIntrinsicType
+        { name : String
+        , vars : List String
         }
     | DModule
         { mod : ModuleModifier
@@ -764,6 +770,9 @@ letModifierToString mod =
 
         LetPrivate ->
             "private"
+
+        LetIntrinsic ->
+            "intrinsic"
 
 
 withSpaceToRightIfNotEmpty : String -> String

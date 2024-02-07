@@ -431,6 +431,9 @@ lower source i row col =
                 "extend" ->
                     token Extend
 
+                "intrinsic" ->
+                    token Intrinsic
+
                 _ ->
                     token (LowerName name)
 

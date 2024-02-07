@@ -34,6 +34,9 @@ desugarDecl decl =
                     }
                 ]
 
+        F.DIntrinsicType r ->
+            Debug.Extra.todo1 "desugar intrinsic type" r
+
         F.DModule r ->
             Debug.Extra.todo1 "desugar module" r
 

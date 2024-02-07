@@ -5,6 +5,7 @@ WANTED:
 * record destructuring that allows renaming
 
 * String pattern matching ("ABC" ++ rest ++ "DEF"), similar to List pattern matching
+    * TODO somehow also pattern match on a char? `'C' ++ str` seems easy enough but what about arbitrary char?
 
 * `[]`(): the postfix "array-access" operator
     * [n], [-n], [m..n], [m...n], [str] 

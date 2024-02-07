@@ -81,6 +81,7 @@ type ParserError
     | IfWithoutElse { cond : F.Expr, then_ : F.Expr }
     | ExpectedSpecificFunctionName -- Shouldn't be visible to the user
     | BlockExprWithNoReturnExpr
+    | UnexpectedIntrinsic
 
 
 type InterpreterError
@@ -121,6 +122,7 @@ type ParserContext
     = -- Declarations
       InTypeAliasDecl
     | InTypeDecl
+    | InIntrinsicTypeDecl
     | InExtendModuleDecl
     | InModuleDecl
     | InTestDecl
@@ -307,6 +309,9 @@ title error =
 
                 BlockExprWithNoReturnExpr ->
                     "Block expression with no return expression"
+
+                UnexpectedIntrinsic ->
+                    "Unexpected `intrinsic`"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of
@@ -588,6 +593,10 @@ code error =
 
                 BlockExprWithNoReturnExpr ->
                     "E0032"
+
+                UnexpectedIntrinsic ->
+                    -- TODO
+                    "EXXXX"
 
         InterpreterError ( _, interpreterError ) ->
             case interpreterError of

@@ -86,6 +86,7 @@ type Type
     | Private
     | Opaque
     | Extend
+    | Intrinsic
     | Backslash
     | Arrow
     | Underscore
@@ -626,6 +627,9 @@ toString t =
 
         Extend ->
             "Extend"
+
+        Intrinsic ->
+            "Intrinsic"
 
         Backslash ->
             "Backslash"
