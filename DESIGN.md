@@ -2,6 +2,8 @@ WANTED:
 
 * arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
 
+* record destructuring that allows renaming
+
 * String pattern matching ("ABC" ++ rest ++ "DEF"), similar to List pattern matching
 
 * `[]`(): the postfix "array-access" operator
