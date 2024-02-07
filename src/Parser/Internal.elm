@@ -5,10 +5,10 @@ module Parser.Internal exposing
     , many, manyUntilEOF
     , separatedList, separatedNonemptyList
     , maybe, butNot, butNot_, butNotU, butNotU_, disallowed
-    , lazy
+    , lazy, inContext
     , isAtEnd, skipEol, skipEolBeforeIndented
     , token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
-    , getTokens, moveLeft, moveRight, rewind
+    , getTokens, moveLeft, moveRight, rewindTo
     , log, logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
     , TokenPred(..), oneOf
     , InfixParserTable, InfixParser, pratt
@@ -22,17 +22,17 @@ module Parser.Internal exposing
 @docs many, manyUntilEOF
 @docs separatedList, separatedNonemptyList
 @docs maybe, butNot, butNot_, butNotU, butNotU_, disallowed
-@docs lazy
+@docs lazy, inContext
 @docs isAtEnd, skipEol, skipEolBeforeIndented
 @docs token, tokenData, peekToken, peekTokenAfterEol, ifNextIs
-@docs getTokens, moveLeft, moveRight, rewind
+@docs getTokens, moveLeft, moveRight, rewindTo
 @docs log, logCurrent, logCurrentBefore, logCurrentAround, logCurrentAfter
 @docs TokenPred, oneOf
 @docs InfixParserTable, InfixParser, pratt
 
 -}
 
-import Error exposing (ParserError(..))
+import Error exposing (ParserContext, ParserError(..))
 import List.Zipper as Zipper exposing (Zipper)
 import Loc exposing (Loc)
 import Token exposing (Token, Type(..))
@@ -45,13 +45,16 @@ type ErrorSeverity
 
 type alias Parser a =
     Zipper Token
-    ->
-        Result
-            ( Loc
-            , ParserError
-            , ErrorSeverity
-            )
-            ( a, Zipper Token )
+    -> List ParserContext
+    -> Result Error ( a, Zipper Token, List ParserContext )
+
+
+type alias Error =
+    { loc : Loc
+    , error : ParserError
+    , severity : ErrorSeverity
+    , context : List ParserContext
+    }
 
 
 type alias InfixParser a =
@@ -77,21 +80,22 @@ type alias InfixParserCase a =
 
 succeed : a -> Parser a
 succeed a =
-    \tokens -> Ok ( a, tokens )
+    \tokens context -> Ok ( a, tokens, context )
 
 
 fail : ParserError -> Parser a
 fail err =
-    \tokens -> fail_ tokens err
+    \tokens context -> fail_ tokens context err
 
 
-fail_ : Zipper Token -> ParserError -> Result ( Loc, ParserError, ErrorSeverity ) a
-fail_ tokens err =
+fail_ : Zipper Token -> List ParserContext -> ParserError -> Result Error a
+fail_ tokens context err =
     Err
-        ( (Zipper.current tokens).loc
-        , err
-        , RecoverableError
-        )
+        { loc = (Zipper.current tokens).loc
+        , error = err
+        , severity = RecoverableError
+        , context = context
+        }
 
 
 {-| Bails out of any `oneOf`s.
@@ -99,45 +103,46 @@ Reports error directly to user.
 -}
 failUnrecoverably : ParserError -> Parser a
 failUnrecoverably err =
-    \tokens -> failUnrecoverably_ tokens err
+    \tokens context -> failUnrecoverably_ tokens context err
 
 
-failUnrecoverably_ : Zipper Token -> ParserError -> Result ( Loc, ParserError, ErrorSeverity ) a
-failUnrecoverably_ tokens err =
+failUnrecoverably_ : Zipper Token -> List ParserContext -> ParserError -> Result Error a
+failUnrecoverably_ tokens context err =
     Err
-        ( (Zipper.current tokens).loc
-        , err
-        , UnrecoverableError
-        )
+        { loc = (Zipper.current tokens).loc
+        , error = err
+        , severity = UnrecoverableError
+        , context = context
+        }
 
 
 map : (a -> b) -> Parser a -> Parser b
 map fn parser =
-    \tokens ->
-        parser tokens
-            |> Result.map (Tuple.mapFirst fn)
+    \tokens context ->
+        parser tokens context
+            |> Result.map (\( a, b, c ) -> ( fn a, b, c ))
 
 
 map2 : (a -> b -> c) -> Parser a -> Parser b -> Parser c
 map2 fn pA pB =
-    \tokens ->
-        pA tokens
+    \tokens context ->
+        pA tokens context
             |> Result.andThen
-                (\( a, tokensA ) ->
-                    pB tokensA
+                (\( a, tokensA, contextA ) ->
+                    pB tokensA contextA
                         |> Result.map
-                            (\( b, tokensB ) ->
-                                ( fn a b, tokensB )
+                            (\( b, tokensB, contextB ) ->
+                                ( fn a b, tokensB, contextB )
                             )
                 )
 
 
 andThen : (a -> Parser b) -> Parser a -> Parser b
 andThen fn parser =
-    \tokens ->
-        case parser tokens of
-            Ok ( a, tokens_ ) ->
-                fn a tokens_
+    \tokens context ->
+        case parser tokens context of
+            Ok ( a, tokens_, context_ ) ->
+                fn a tokens_ context_
 
             Err err ->
                 Err err
@@ -150,25 +155,26 @@ isAtEnd tokens =
 
 skipEol : Parser ()
 skipEol =
-    \tokens ->
+    \tokens context ->
         Ok
             ( ()
             , tokens
                 |> Zipper.find (\t -> t.type_ /= EOL)
                 -- TODO maybe return an error instead?
                 |> Maybe.withDefault tokens
+            , context
             )
 
 
 skipEolBeforeIndented : Parser ()
 skipEolBeforeIndented =
-    \tokens ->
+    \tokens context ->
         let
-            go : Parser ()
-            go current =
+            go : Zipper Token -> Zipper Token
+            go currentTokens =
                 case
-                    ( (Zipper.current current).type_
-                    , Zipper.next current
+                    ( (Zipper.current currentTokens).type_
+                    , Zipper.next currentTokens
                     )
                 of
                     ( EOL, Just next ) ->
@@ -178,13 +184,17 @@ skipEolBeforeIndented =
 
                         else
                             -- next is not indented, stop
-                            Ok ( (), current )
+                            currentTokens
 
                     _ ->
                         -- either not EOL or we're at the last token, stop
-                        Ok ( (), current )
+                        currentTokens
+
+            finalTokens : Zipper Token
+            finalTokens =
+                go tokens
         in
-        go tokens
+        Ok ( (), finalTokens, context )
 
 
 {-| Consumes 0+ children.
@@ -193,21 +203,23 @@ In case a child raises an error, stops looping.
 -}
 many : Parser a -> Parser (List a)
 many childParser =
-    \tokens ->
+    \tokens context ->
         let
             go : List a -> Parser (List a)
-            go acc tokens_ =
-                case childParser tokens_ of
-                    Err ( _, _, RecoverableError ) ->
-                        Ok ( List.reverse acc, tokens_ )
+            go acc tokens_ context_ =
+                case childParser tokens_ context_ of
+                    Err err ->
+                        case err.severity of
+                            RecoverableError ->
+                                Ok ( List.reverse acc, tokens_, context_ )
 
-                    Err (( _, _, UnrecoverableError ) as err) ->
-                        Err err
+                            UnrecoverableError ->
+                                Err err
 
-                    Ok ( child, tokens__ ) ->
-                        go (child :: acc) tokens__
+                    Ok ( child, tokens__, context__ ) ->
+                        go (child :: acc) tokens__ context__
         in
-        go [] tokens
+        go [] tokens context
 
 
 {-| Consumes 0+ children.
@@ -215,22 +227,22 @@ Either ends at EOF or re-raises the child's error.
 -}
 manyUntilEOF : Parser a -> Parser (List a)
 manyUntilEOF childParser =
-    \tokens ->
+    \tokens context ->
         let
             go : List a -> Parser (List a)
-            go acc tokens_ =
+            go acc tokens_ context_ =
                 if isAtEnd tokens_ then
-                    Ok ( List.reverse acc, tokens_ )
+                    Ok ( List.reverse acc, tokens_, context_ )
 
                 else
-                    case childParser tokens_ of
+                    case childParser tokens_ context_ of
                         Err err ->
                             Err err
 
-                        Ok ( child, tokens__ ) ->
-                            go (child :: acc) tokens__
+                        Ok ( child, tokens__, context__ ) ->
+                            go (child :: acc) tokens__ context__
         in
-        go [] tokens
+        go [] tokens context
 
 
 {-|
@@ -355,13 +367,13 @@ A more optimized/lazier variant of Parser.maybe?
 -}
 ifNextIs : Token.Type -> Parser a -> Parser (Maybe a)
 ifNextIs token_ parser =
-    \tokens ->
+    \tokens context ->
         if (Zipper.current tokens).type_ == token_ then
-            parser tokens
-                |> Result.map (Tuple.mapFirst Just)
+            parser tokens context
+                |> Result.map (\( a, b, c ) -> ( Just a, b, c ))
 
         else
-            Ok ( Nothing, tokens )
+            Ok ( Nothing, tokens, context )
 
 
 type TokenPred
@@ -386,15 +398,15 @@ oneOf config =
         fail EmptyOneOf
 
     else
-        \tokens ->
+        \tokens context ->
             -- Try commited first: pick the first commited parser whose prefix agrees with the current tokens
             case oneOfCommited tokens config.commited of
                 Nothing ->
                     -- If none agrees, just pick the first noncommited parser that succeeds.
-                    oneOfNoncommited config.noncommited tokens
+                    oneOfNoncommited config.noncommited tokens context
 
                 Just parser ->
-                    parser tokens
+                    parser tokens context
 
 
 oneOfCommited : Zipper Token -> List ( List TokenPred, Parser a ) -> Maybe (Parser a)
@@ -434,46 +446,52 @@ prefixMatches prefix tokens =
 
 oneOfNoncommited : List (Parser a) -> Parser a
 oneOfNoncommited noncommited =
-    \tokens ->
+    \tokens context ->
         let
-            go : Maybe ( Loc, ParserError ) -> List (Parser a) -> Result ( Loc, ParserError, ErrorSeverity ) ( a, Zipper Token )
-            go furthestError parsers =
+            go :
+                Maybe ( Loc, ParserError )
+                -> List (Parser a)
+                -> List ParserContext
+                -> Result Error ( a, Zipper Token, List ParserContext )
+            go furthestError parsers context_ =
                 case parsers of
                     [] ->
                         case furthestError of
                             Nothing ->
-                                fail_ tokens OneOfDidntMatchAnyCommited
+                                fail_ tokens context_ OneOfDidntMatchAnyCommited
 
                             Just ( _, error ) ->
-                                fail_ tokens error
+                                fail_ tokens context_ error
 
                     parser :: rest ->
-                        case parser tokens of
-                            Err ( newLoc, err, RecoverableError ) ->
-                                let
-                                    newFurthestError : ( Loc, ParserError )
-                                    newFurthestError =
-                                        case furthestError of
-                                            Nothing ->
-                                                ( newLoc, err )
+                        case parser tokens context_ of
+                            Err err ->
+                                case err.severity of
+                                    RecoverableError ->
+                                        let
+                                            newFurthestError : ( Loc, ParserError )
+                                            newFurthestError =
+                                                case furthestError of
+                                                    Nothing ->
+                                                        ( err.loc, err.error )
 
-                                            Just ( oldLoc, oldErr ) ->
-                                                if Loc.compare oldLoc newLoc == LT then
-                                                    -- old < new, new is further
-                                                    ( newLoc, err )
+                                                    Just ( oldLoc, oldErr ) ->
+                                                        if Loc.compare oldLoc err.loc == LT then
+                                                            -- old < new, new is further
+                                                            ( err.loc, err.error )
 
-                                                else
-                                                    ( oldLoc, oldErr )
-                                in
-                                go (Just newFurthestError) rest
+                                                        else
+                                                            ( oldLoc, oldErr )
+                                        in
+                                        go (Just newFurthestError) rest context_
 
-                            (Err ( _, _, UnrecoverableError )) as err ->
-                                err
+                                    UnrecoverableError ->
+                                        Err err
 
                             Ok ok ->
                                 Ok ok
         in
-        go Nothing noncommited
+        go Nothing noncommited context
 
 
 type Step state a
@@ -482,18 +500,18 @@ type Step state a
 
 
 loop : state -> (state -> Parser (Step state a)) -> Parser a
-loop state callback tokens =
-    case callback state tokens of
+loop state callback tokens context =
+    case callback state tokens context of
         Err err ->
             Err err
 
-        Ok ( step, newTokens ) ->
+        Ok ( step, newTokens, newContext ) ->
             case step of
                 Loop newState ->
-                    loop newState callback newTokens
+                    loop newState callback newTokens newContext
 
                 Done result ->
-                    Ok ( result, newTokens )
+                    Ok ( result, newTokens, newContext )
 
 
 pratt :
@@ -575,55 +593,55 @@ pratt config =
 
 moveLeft : Parser ()
 moveLeft =
-    \tokens ->
+    \tokens context ->
         case Zipper.previous tokens of
             Nothing ->
-                fail_ tokens CouldntMoveLeft
+                fail_ tokens context CouldntMoveLeft
 
             Just prevTokens ->
-                Ok ( (), prevTokens )
+                Ok ( (), prevTokens, context )
 
 
 moveRight : Parser ()
 moveRight =
-    \tokens ->
+    \tokens context ->
         case Zipper.next tokens of
             Nothing ->
-                fail_ tokens RanPastEndOfTokens
+                fail_ tokens context RanPastEndOfTokens
 
             Just nextTokens ->
-                Ok ( (), nextTokens )
+                Ok ( (), nextTokens, context )
 
 
 token : Token.Type -> Parser ()
 token type_ =
-    \tokens ->
+    \tokens context ->
         case Zipper.next tokens of
             Nothing ->
-                fail_ tokens RanPastEndOfTokens
+                fail_ tokens context RanPastEndOfTokens
 
             Just nextTokens ->
                 if (Zipper.current tokens).type_ == type_ then
-                    Ok ( (), nextTokens )
+                    Ok ( (), nextTokens, context )
 
                 else
-                    fail_ tokens <| ExpectedToken type_
+                    fail_ tokens context (ExpectedToken type_)
 
 
 tokenData : (Token.Type -> Maybe a) -> Parser a
 tokenData getter =
-    \tokens ->
+    \tokens context ->
         case Zipper.next tokens of
             Nothing ->
-                fail_ tokens RanPastEndOfTokens
+                fail_ tokens context RanPastEndOfTokens
 
             Just nextTokens ->
                 case getter (Zipper.current tokens).type_ of
                     Nothing ->
-                        fail_ tokens CouldntGetTokenData
+                        fail_ tokens context CouldntGetTokenData
 
                     Just data ->
-                        Ok ( data, nextTokens )
+                        Ok ( data, nextTokens, context )
 
 
 skip : Parser this -> Parser prev -> Parser prev
@@ -638,40 +656,40 @@ keep this fnP =
 
 maybe : Parser a -> Parser (Maybe a)
 maybe parser =
-    \tokens ->
-        case parser tokens of
+    \tokens context ->
+        case parser tokens context of
             Err _ ->
-                Ok ( Nothing, tokens )
+                Ok ( Nothing, tokens, context )
 
-            Ok ( a, nextTokens ) ->
-                Ok ( Just a, nextTokens )
+            Ok ( a, nextTokens, nextContext ) ->
+                Ok ( Just a, nextTokens, nextContext )
 
 
 butNot : a -> ParserError -> Parser a -> Parser a
 butNot disallowedValue err parser =
-    \tokens ->
-        parser tokens
+    \tokens context ->
+        parser tokens context
             |> Result.andThen
-                (\( value, newTokens ) ->
+                (\( value, newTokens, newContext ) ->
                     if value == disallowedValue then
-                        fail_ tokens err
+                        fail_ tokens context err
 
                     else
-                        Ok ( value, newTokens )
+                        Ok ( value, newTokens, newContext )
                 )
 
 
 butNot_ : (a -> Bool) -> ParserError -> Parser a -> Parser a
 butNot_ disallowedPred err parser =
-    \tokens ->
-        parser tokens
+    \tokens context ->
+        parser tokens context
             |> Result.andThen
-                (\( value, newTokens ) ->
+                (\( value, newTokens, newContext ) ->
                     if disallowedPred value then
-                        fail_ tokens err
+                        fail_ tokens context err
 
                     else
-                        Ok ( value, newTokens )
+                        Ok ( value, newTokens, newContext )
                 )
 
 
@@ -679,15 +697,15 @@ butNot_ disallowedPred err parser =
 -}
 butNotU : a -> ParserError -> Parser a -> Parser a
 butNotU disallowedValue err parser =
-    \tokens ->
-        parser tokens
+    \tokens context ->
+        parser tokens context
             |> Result.andThen
-                (\( value, newTokens ) ->
+                (\( value, newTokens, newContext ) ->
                     if value == disallowedValue then
-                        failUnrecoverably_ tokens err
+                        failUnrecoverably_ tokens context err
 
                     else
-                        Ok ( value, newTokens )
+                        Ok ( value, newTokens, newContext )
                 )
 
 
@@ -695,15 +713,15 @@ butNotU disallowedValue err parser =
 -}
 butNotU_ : (a -> Bool) -> ParserError -> Parser a -> Parser a
 butNotU_ disallowedPred err parser =
-    \tokens ->
-        parser tokens
+    \tokens context ->
+        parser tokens context
             |> Result.andThen
-                (\( value, newTokens ) ->
+                (\( value, newTokens, newContext ) ->
                     if disallowedPred value then
-                        failUnrecoverably_ tokens err
+                        failUnrecoverably_ tokens context err
 
                     else
-                        Ok ( value, newTokens )
+                        Ok ( value, newTokens, newContext )
                 )
 
 
@@ -715,22 +733,23 @@ disallowed err parser =
 
 peekToken : Parser Token.Type
 peekToken =
-    \tokens ->
-        Ok ( (Zipper.current tokens).type_, tokens )
+    \tokens context ->
+        Ok ( (Zipper.current tokens).type_, tokens, context )
 
 
 peekTokenAfterEol : Parser Token.Type
 peekTokenAfterEol =
-    \tokens ->
+    \tokens context ->
         case Zipper.find (\t -> t.type_ /= EOL) tokens of
             Nothing ->
-                fail RanPastEndOfTokens tokens
+                fail RanPastEndOfTokens tokens context
 
             Just newTokens ->
                 Ok
                     ( (Zipper.current newTokens).type_
                     , -- intentionally the old ones:
                       tokens
+                    , context
                     )
 
 
@@ -769,15 +788,22 @@ logCurrentAround label parser =
 
 lazy : (() -> Parser a) -> Parser a
 lazy fn =
-    \tokens ->
-        fn () tokens
+    \tokens context ->
+        fn () tokens context
+
+
+inContext : ParserContext -> Parser a -> Parser a
+inContext context parser =
+    \tokens oldContext ->
+        parser tokens (context :: oldContext)
+            |> Result.map (\( a, t, _ ) -> ( a, t, oldContext ))
 
 
 getTokens : Parser (Zipper Token)
 getTokens =
-    \tokens -> Ok ( tokens, tokens )
+    \tokens context -> Ok ( tokens, tokens, context )
 
 
-rewind : Zipper Token -> Parser ()
-rewind tokens =
-    \_ -> Ok ( (), tokens )
+rewindTo : Zipper Token -> Parser ()
+rewindTo tokens =
+    \_ context -> Ok ( (), tokens, context )

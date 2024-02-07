@@ -2,7 +2,7 @@ module Parser exposing (parse)
 
 import AST.Frontend as AST exposing (..)
 import Console
-import Error exposing (Error(..), ParserError(..))
+import Error exposing (Error(..), ParserContext(..), ParserError(..))
 import Id exposing (Id)
 import Intrinsic
 import Lexer
@@ -16,21 +16,21 @@ import Parser.Internal as Parser exposing (InfixParser, InfixParserTable, Parser
 import Token exposing (Token, Type(..))
 
 
-parse : List Token -> Result ( Loc, ParserError ) AST.Program
+parse : List Token -> Result ( Loc, ParserError, List ParserContext ) AST.Program
 parse tokensList =
-    parseWith program tokensList
+    parseWith program tokensList []
 
 
-parseWith : Parser a -> List Token -> Result ( Loc, ParserError ) a
-parseWith parser tokensList =
+parseWith : Parser a -> List Token -> List ParserContext -> Result ( Loc, ParserError, List ParserContext ) a
+parseWith parser tokensList context =
     case Zipper.fromList tokensList of
         Nothing ->
-            Err ( Loc.zero, ExpectedNonemptyTokens )
+            Err ( Loc.zero, ExpectedNonemptyTokens, context )
 
         Just tokens ->
-            parser tokens
-                |> Result.map Tuple.first
-                |> Result.mapError (\( loc, err, _ ) -> ( loc, err ))
+            parser tokens context
+                |> Result.map (\( a, _, _ ) -> a)
+                |> Result.mapError (\err -> ( err.loc, err.error, err.context ))
 
 
 program : Parser AST.Program
@@ -124,6 +124,7 @@ functionDefStmt =
                                 }
                         )
             )
+        |> Parser.inContext InFunctionDefStmt
 
 
 {-|
@@ -204,6 +205,7 @@ binaryOperatorDefStmt =
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep expr
+        |> Parser.inContext InBinaryOperatorDefStmt
 
 
 patternWithType : Parser ( Pattern, Maybe AST.Type )
@@ -237,6 +239,7 @@ unaryOperatorDefStmt =
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep expr
+        |> Parser.inContext InUnaryOperatorDefStmt
 
 
 {-|
@@ -276,6 +279,7 @@ typeDecl =
             )
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.keep constructorList
+        |> Parser.inContext InTypeDecl
 
 
 {-|
@@ -325,6 +329,7 @@ typeAliasDecl =
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep type_
+        |> Parser.inContext InTypeAliasDecl
 
 
 {-|
@@ -454,6 +459,7 @@ valueAnnotationStmt =
         |> Parser.keep (Parser.tokenData Token.getLowerName)
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep type_
+        |> Parser.inContext InValueAnnotationStmt
 
 
 {-|
@@ -493,6 +499,7 @@ binaryOperatorAnnotationStmt =
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep type_
         |> Parser.andThen identity
+        |> Parser.inContext InBinaryOperatorAnnotationStmt
 
 
 {-|
@@ -525,6 +532,7 @@ unaryOperatorAnnotationStmt =
         |> Parser.skip (Parser.token Colon)
         |> Parser.keep type_
         |> Parser.andThen identity
+        |> Parser.inContext InUnaryOperatorAnnotationStmt
 
 
 binaryOperatorName : Parser BinaryOp
@@ -634,6 +642,7 @@ statementDecl : Parser Decl
 statementDecl =
     statement
         |> Parser.map DStatement
+        |> Parser.inContext InStmtDecl
 
 
 {-|
@@ -677,6 +686,7 @@ moduleDecl =
             )
         |> Parser.skip Parser.skipEol
         |> Parser.skip (Parser.token RBrace)
+        |> Parser.inContext InModuleDecl
 
 
 {-|
@@ -708,6 +718,7 @@ extendModuleDecl =
             )
         |> Parser.skip Parser.skipEol
         |> Parser.skip (Parser.token RBrace)
+        |> Parser.inContext InExtendModuleDecl
 
 
 testDecl : Parser Decl
@@ -723,6 +734,7 @@ testDecl =
             , propertyGenTestDecl
             ]
         }
+        |> Parser.inContext InTestDecl
 
 
 {-|
@@ -818,6 +830,7 @@ statement =
             , unaryOperatorAnnotationStmt
             ]
         }
+        |> Parser.inContext InStmt
 
 
 {-|
@@ -832,6 +845,7 @@ useModuleStatement =
     Parser.succeed SUseModule
         |> Parser.skip (Parser.token Use)
         |> Parser.keep upperIdentifier
+        |> Parser.inContext InUseModuleStmt
 
 
 {-|
@@ -864,6 +878,7 @@ letBangStatement =
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep bang
+        |> Parser.inContext InLetBangStmt
 
 
 {-|
@@ -904,11 +919,13 @@ letStatement =
         |> Parser.skip (Parser.token Token.Eq)
         |> Parser.skip Parser.skipEolBeforeIndented
         |> Parser.keep expr
+        |> Parser.inContext InLetStmt
 
 
 pattern : Parser Pattern
 pattern =
     patternAux 0 False
+        |> Parser.inContext InPattern
 
 
 patternAux : Int -> Bool -> Parser Pattern
@@ -933,6 +950,7 @@ prefixPattern =
             , ( [ T False_ ], boolPattern )
             , ( [ P Token.isInt ], intPattern )
             , ( [ P Token.isFloat ], floatPattern )
+            , ( [ P Token.isChar ], charPattern )
             , ( [ T LParen ], tuplePattern )
             , ( [ T LBracket ], listPattern )
             , ( [ T Token.Minus, P Token.isInt ], negatedIntPattern )
@@ -1063,6 +1081,18 @@ floatPattern : Parser Pattern
 floatPattern =
     Parser.tokenData Token.getFloat
         |> Parser.map PFloat
+
+
+{-|
+
+    : CHAR
+    = 'a'
+
+-}
+charPattern : Parser Pattern
+charPattern =
+    Parser.tokenData Token.getChar
+        |> Parser.map PChar
 
 
 {-|
@@ -1408,6 +1438,7 @@ bangStatement : Parser Stmt
 bangStatement =
     bang
         |> Parser.map SBang
+        |> Parser.inContext InBangStmt
 
 
 {-|
@@ -1450,6 +1481,7 @@ bang =
 expr : Parser Expr
 expr =
     exprAux 0 False
+        |> Parser.inContext InExpr
 
 
 exprAux : Int -> Bool -> Parser Expr
@@ -2146,7 +2178,7 @@ parseStringInterpolation str =
                                         else
                                             ( False, insideOpening )
 
-                                    parseResult : Result ( Loc, ParserError ) Expr
+                                    parseResult : Result ( Loc, ParserError, List ParserContext ) Expr
                                     parseResult =
                                         exprToParse
                                             |> (Lexer.lex
@@ -2154,13 +2186,14 @@ parseStringInterpolation str =
                                                         (\( loc, lexerError ) ->
                                                             ( loc
                                                             , CouldntLexInsideStringInterpolation ( loc, lexerError )
+                                                            , []
                                                             )
                                                         )
                                                )
-                                            |> Result.andThen (parseWith expr)
+                                            |> Result.andThen (\tokens -> parseWith expr tokens [])
                                 in
                                 case parseResult of
-                                    Err ( _, err ) ->
+                                    Err ( _, err, _ ) ->
                                         Parser.fail err
 
                                     Ok interpolatedExpr ->

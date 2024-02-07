@@ -9,8 +9,8 @@ type Key =
 toInt : Event -> Int
 toInt(event) =
   case event of
-    KeyDown (Key('q') | Escape) -> 0
-    KeyDown (Up | Key('k')) -> 1
+    KeyDown(Key('q') | Escape) -> 0
+    KeyDown(Up | Key('k')) -> 1
     _ -> 2
 
 IO.println!(KeyDown(Up))

@@ -3,6 +3,7 @@ module Error exposing
     , Error(..)
     , InterpreterError(..)
     , LexerError(..)
+    , ParserContext(..)
     , ParserError(..)
     , code
     , inspect
@@ -20,7 +21,7 @@ import Value exposing (Value)
 
 type Error
     = LexerError ( Loc, LexerError )
-    | ParserError ( Loc, ParserError )
+    | ParserError ( Loc, ParserError, List ParserContext )
     | InterpreterError ( Loc, InterpreterError )
     | DesugarError ( Loc, DesugarError )
 
@@ -114,6 +115,32 @@ type InterpreterError
 
 type DesugarError
     = DestructuringNonSingletonConstructor
+
+
+type ParserContext
+    = -- Declarations
+      InTypeAliasDecl
+    | InTypeDecl
+    | InExtendModuleDecl
+    | InModuleDecl
+    | InTestDecl
+    | InStmtDecl
+      -- Statements
+    | InStmt
+    | InUseModuleStmt
+    | InLetBangStmt
+    | InLetStmt
+    | InBangStmt
+    | InFunctionDefStmt
+    | InValueAnnotationStmt
+    | InBinaryOperatorDefStmt
+    | InUnaryOperatorDefStmt
+    | InBinaryOperatorAnnotationStmt
+    | InUnaryOperatorAnnotationStmt
+      --
+    | InExpr
+      --
+    | InPattern
 
 
 title : Error -> String
@@ -215,7 +242,7 @@ title error =
                 InvalidHexInt ->
                     "Invalid hexadecimal integer"
 
-        ParserError ( _, parserError ) ->
+        ParserError ( _, parserError, _ ) ->
             case parserError of
                 ExpectedNonemptyTokens ->
                     -- Shouldn't happen
@@ -481,7 +508,7 @@ code error =
                     -- TODO
                     "EXXXX"
 
-        ParserError ( _, parserError ) ->
+        ParserError ( _, parserError, _ ) ->
             case parserError of
                 ExpectedNonemptyTokens ->
                     -- TODO
@@ -681,7 +708,7 @@ loc error =
         LexerError ( loc_, _ ) ->
             loc_
 
-        ParserError ( loc_, _ ) ->
+        ParserError ( loc_, _, _ ) ->
             loc_
 
         InterpreterError ( loc_, _ ) ->
@@ -697,8 +724,10 @@ inspect error =
         LexerError ( _, err ) ->
             "LexerError: " ++ Debug.toString err
 
-        ParserError ( _, err ) ->
-            "ParserError: " ++ Debug.toString err
+        ParserError ( _, err, context ) ->
+            "ParserError: {ERR} (context: {CONTEXT})"
+                |> String.replace "{ERR}" (Debug.toString err)
+                |> String.replace "{CONTEXT}" (Debug.toString (List.reverse context))
 
         InterpreterError ( _, err ) ->
             "InterpreterError: " ++ Debug.toString err
