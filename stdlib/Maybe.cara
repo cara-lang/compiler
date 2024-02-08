@@ -22,13 +22,13 @@ module Maybe {
   withDefault(toDefault, Nothing) = toDefault()
   withDefault(_, Just(a)) = a
 
-  isJust? : Maybe[a] -> Bool
-  isJust?(Nothing) = False
-  isJust?(Just(_)) = True
+  just? : Maybe[a] -> Bool
+  just?(Nothing) = False
+  just?(Just(_)) = True
 
-  isNothing? : Maybe[a] -> Bool
-  isNothing?(Nothing) = True
-  isNothing?(Just(_)) = False
+  nothing? : Maybe[a] -> Bool
+  nothing?(Nothing) = True
+  nothing?(Just(_)) = False
 
   flatten : Maybe[Maybe[a]] -> Maybe[a]
   flatten(Nothing) = Nothing
