@@ -13,4 +13,8 @@ module Prelude {
   `..`(n) = Seq.numbersFrom(n)
   */
 
+  applyNTimes : Int -> (a -> a) -> a -> a
+  applyNTimes(0,_,value) = value
+  applyNTimes(n,fn,value) = applyNTimes(n-1,fn,fn(value))
+
 }
