@@ -4,6 +4,16 @@ WANTED:
 
 * record destructuring that allows renaming
 
+* case..of that takes the same pattern across multiple cases:
+```
+  match t with
+  | ML.Var (pos, _) | ML.Hole (pos, _) | ML.Abs (pos, _, _)
+  | ML.App (pos, _, _) | ML.Let (pos, _, _, _, _) | ML.Annot (pos, _, _)
+  | ML.Tuple (pos, _) | ML.LetProd (pos, _, _, _)
+  | ML.Variant (pos, _, _) | ML.Match (pos, _, _)
+    -> pos
+```
+
 * String pattern matching ("ABC" ++ rest ++ "DEF"), similar to List pattern matching
     * TODO somehow also pattern match on a char? `'C' ++ str` seems easy enough but what about arbitrary char?
 
