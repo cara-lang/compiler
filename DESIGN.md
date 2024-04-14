@@ -1,5 +1,7 @@
 WANTED:
 
+* reference page (all on one page) - https://tour.gleam.run/everything/ - Cmd+F friendly
+
 * arbitrary precision integers as the default (do we ever want 8-bit 16-bit ones etc?)
 
 * record destructuring that allows renaming
