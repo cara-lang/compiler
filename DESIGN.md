@@ -6,6 +6,8 @@ WANTED:
 
 * record destructuring that allows renaming
 
+* pattern match pinning? ^, allowing to check against variables and not just literals?
+
 * case..of that takes the same pattern across multiple cases:
 ```
   match t with
