@@ -1,0 +1,5 @@
+seed = Random.initSeed(0)
+x0 = Random.int(0,20) |> Random.run(seed)
+x1 = Random.int(0,20) |> Random.run(seed)
+IO.println!(x0)
+IO.println!(x1)
