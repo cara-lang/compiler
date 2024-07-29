@@ -79,6 +79,8 @@ WANTED:
 
 ----------------------
 
+lambda syntax like TS and Kotlin? `(i: X, j: Y) => expression`? Would be more familiar than Elm's `\i j -> expression` or Roc's `\i,j -> expression`
+
 GADTs?
 
 Would really love them to make more precise constructors and more powerful pattern matching:
