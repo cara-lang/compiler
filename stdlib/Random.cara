@@ -40,12 +40,24 @@ module Random {
   run : Seed -> Random[a] -> (a, Seed)
   run(seed,R(fn)) = fn(seed)
 
-  const : a -> Random[a]
-  const(a) = R(\s -> (a,s))
+  constant : a -> Random[a]
+  constant(a) = R(\seed -> (a, seed))
 
-  test: run(initSeed(0),const(5)).el1 == 5
-  test: run(initSeed(1),const(5)).el1 == 5
-  test "const: seed doesn't matter" with (Gen.seed,Gen.int):
-    \seed,n -> run(seed,const(n)).el1 == n
+  test: run(initSeed(0),constant(5)).el1 == 5
+  test: run(initSeed(1),constant(5)).el1 == 5
+  test "constant: seed doesn't matter" with (Gen.seed,Gen.int):
+    \seed,n -> run(seed,constant(n)).el1 == n
 
+  pure : a -> Random[a]
+  pure(a) = constant(a)
+
+  bind : Random[a] -> (a -> Random[b]) -> Random[b]
+  bind(R(genA),fn) = R(\seed -> {
+    (result, newSeed) = genA(seed)
+    R(genB) = fn(result)
+    genB(newSeed)
+  })
+
+  andThen : (a -> Random[b]) -> Random[a] -> Random[b]
+  andThen(fn,r) = bind(r,fn)
 }
