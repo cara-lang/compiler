@@ -17,7 +17,21 @@ if (filename.length === 0) {
   Deno.exit(1);
 }
 
+let stdlibFiles = [];
+for await (const dirEntry of Deno.readDir('stdlib')) {
+  if (dirEntry.isFile) {
+    stdlibFiles.push(`stdlib/${dirEntry.name}`);
+  }
+}
+
+const stdlibSources = await Promise.all(
+  stdlibFiles.map(file =>
+    Deno.readTextFile(file)
+        .then(content => ({file,content}))
+  )
+);
+
 const sourceCode: string = await Deno.readTextFile(filename);
 
-const app = Elm.Main.init({flags: {sourceCode}});
+const app = Elm.Main.init({flags: {sourceCode, stdlibSources}});
 registerPorts(app);

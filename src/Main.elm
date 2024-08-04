@@ -100,7 +100,7 @@ logParsed ast =
 
 isCompilingToHVM : Bool
 isCompilingToHVM =
-    False
+    True
 
 
 process : File -> Env Value -> ( Model, Cmd Msg )
