@@ -36,6 +36,7 @@ timestampFmt = "hh:mm:ss.fff"
 isPrime(n) =
   2..sqrt(n)
     |> Seq.any(#(n % _ == 0))
+    |> not
 
 x = isPrime(1111111111111111111)
 
