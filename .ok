@@ -2,4 +2,4 @@ build: yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js
 test: clr && ok build && ./src/test.ts
 run: ./src/run.ts "$1"
 hvm: hvm run -f "$1"
-example: chokidar src | while read X; do ok build && ok run "example.cara" && ok hvm "example.hvm"; done
+example: chokidar "**/*.cara" "**/*.ts" "**/*.elm" --initial -c "yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm.js && ./src/run.ts example.cara && hvm run-c example.hvm"
