@@ -5,7 +5,7 @@ DIM="\e[2m";
 
 function compile {
   # deno check test.ts src/*.ts 2>&1
-  yarn elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm-unreadable.js \
+  npx elm-esm make src/Main.elm src/TestRunner.elm --output=dist/elm-unreadable.js \
     && elm-make-readable dist/elm-unreadable.js dist/elm.js \
     && ./src/test.ts 2>&1 | \
       tee \
@@ -45,6 +45,6 @@ function run {
 
 run;
 
-chokidar src stdlib | while read WHATEVER; do
+npx chokidar src stdlib | while read WHATEVER; do
   run;
 done;
